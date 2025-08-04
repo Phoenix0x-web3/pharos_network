@@ -1,0 +1,86 @@
+[{
+  "name": "createPool",
+  "type": "function",
+  "inputs": [
+    {
+      "name": "tokenA",
+      "type": "address"
+    },
+    {
+      "name": "tokenB",
+      "type": "address"
+    },
+    {
+      "name": "fee",
+      "type": "uint24"
+    }
+  ],
+  "outputs": [
+    {
+      "name": "pool",
+      "type": "address"
+    }
+  ],
+  "stateMutability": "nonpayable"
+},
+  {
+  "name": "createAndInitializePoolIfNecessary",
+  "type": "function",
+  "inputs": [
+    {
+      "name": "token0",
+      "type": "address"
+    },
+    {
+      "name": "token1",
+      "type": "address"
+    },
+    {
+      "name": "fee",
+      "type": "uint24"
+    },
+    {
+      "name": "sqrtPriceX96",
+      "type": "uint160"
+    }
+  ],
+  "outputs": [
+    {
+      "name": "pool",
+      "type": "address"
+    }
+  ],
+  "stateMutability": "payable"
+},
+
+     {
+        "inputs": [
+            {
+                "internalType": "address",
+                "name": "tokenA",
+                "type": "address"
+            },
+            {
+                "internalType": "address",
+                "name": "tokenB",
+                "type": "address"
+            },
+            {
+                "internalType": "uint24",
+                "name": "fee",
+                "type": "uint24"
+            }
+        ],
+        "name": "getPool",
+        "outputs": [
+            {
+                "internalType": "address",
+                "name": "pool",
+                "type": "address"
+            }
+        ],
+        "stateMutability": "view",
+        "type": "function"
+    }
+
+]

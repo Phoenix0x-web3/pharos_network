@@ -1,0 +1,50 @@
+#Settings for the application
+
+# Whether to encrypt private keys
+private_key_encryption: true
+
+# Number of threads to use for processing wallets
+threads: 1
+
+# BY DEFAULT: [] - all wallets
+# Example: [1, 3, 8] - will run only 1, 3 and 8 wallets
+exact_wallets_to_run: []
+
+# Whether to shuffle the list of wallets before processing
+shuffle_wallets: true
+
+# Sleep time in hours after full execution of tasks
+sleep_after_each_cycle_hours: 0
+
+# Random pause between wallets in seconds
+random_pause_between_wallets:
+  min: 5
+  max: 60
+
+# Random pause between actions in seconds (1 - 2 hrs default)
+activity_action_delay:
+  min: 3600
+  max: 5600
+
+# Random pause between actions in seconds
+random_pause_between_actions:
+  min: 5
+  max: 30
+#liquidity percent of coin balance
+swap_percent:
+  min: 5
+  max: 30
+
+#liquidity percent of native coin balance
+liquidity_percent:
+  min: 5
+  max: 30
+
+# Invite Codes for pharosnetwork, example [invite_code1, invite_code2]
+invite_codes: []
+
+# Telegram Bot ID for notifications
+tg_bot_id: ""
+
+# You can find your chat ID by messaging @userinfobot or using https://web.telegram.org/. (example 1540239116)
+tg_user_id: ""

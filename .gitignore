@@ -1,0 +1,15 @@
+.idea/*
+.venv/*
+.git/*
+dev/*
+**/__pycache__/*
+new_wallets.csv
+*.db
+.env
+test_*
+files/*
+files/
+dev/
+venv
+/shelf/
+/workspace.xml
