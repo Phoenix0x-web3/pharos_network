@@ -6,7 +6,6 @@ from loguru import logger
 from libs.eth_async.client import Client
 from libs.base import Base
 from modules.pharos_portal import PharosPortal
-from modules.tesst_module import TestModule
 from modules.zenith import Zenith
 
 from utils.db_api.models import Wallet
