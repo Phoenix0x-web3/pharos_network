@@ -193,17 +193,23 @@ class Zenith(Base):
             )
         if token1 == from_token:
             amount_out_min = TokenAmount(
-                amount=float(amount.Ether) / price * (100 - slippage) / 100
+                amount=float(amount.Ether) / price * (100 - slippage) / 100,
             )
 
-        logger.debug(f'{self.wallet} | Trying to swap {amount.Ether:.5f} {from_token.title} to '
+        logger.info(f'{self.wallet} | Trying to swap {amount.Ether:.5f} {from_token.title} to '
                     f'{amount_out_min.Ether:.5f} {to_token.title}')
+
+        if not to_token_is_phrs:
+            amount_out_min = TokenAmount(
+                amount=amount_out_min.Ether,
+                decimals=await self.client.transactions.get_decimals(contract=from_token.address)
+            )
 
         data = TxArgs(
             tokenIn=from_token.address,
             tokenOut=to_token.address,
             fee=500, #3000 if from_token_is_phrs else 500,
-            recepient=self.client.account.address if from_token_is_phrs else '0x0000000000000000000000000000000000000002',
+            recepient=self.client.account.address if not to_token_is_phrs else '0x0000000000000000000000000000000000000002',
             amountIn=amount.Wei,
             amountOutMinimum=0 if from_token_is_phrs else amount_out_min.Wei,
             sqrtPriceLimitX96=0
