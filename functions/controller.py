@@ -7,6 +7,7 @@ from loguru import logger
 from libs.eth_async.client import Client
 from libs.base import Base
 from modules.pharos_portal import PharosPortal
+from modules.pns import PNS
 from modules.primus import Primus
 from modules.zenith import Zenith
 
@@ -29,6 +30,7 @@ class Controller:
         self.twitter = TwitterClient(user=wallet)
         self.zenith = Zenith(client=client, wallet=wallet)
         self.primus = Primus(client=client, wallet=wallet)
+        self.pns = PNS(client=client, wallet=wallet)
 
     @controller_log('CheckIn')
     async def check_in_task(self):
