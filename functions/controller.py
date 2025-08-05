@@ -1,6 +1,7 @@
 import asyncio
 import random
 
+from faker import Faker
 from loguru import logger
 
 from libs.eth_async.client import Client
@@ -102,6 +103,7 @@ class Controller:
                     if 'Retweet' in name:
                         retweet = query_to_json(task['url'])
                         result = await self.twitter.retweet(tweet_id=retweet['tweet_id'])
+
                         await asyncio.sleep(random.randint(3, 7))
 
                         if result:
@@ -110,8 +112,16 @@ class Controller:
 
                     if 'Reply' in name:
                         retweet = query_to_json(task['url'])
-                        #todo reply
-                        #print('Reply', retweet['in_reply_to'])
+                        faker = Faker()
+
+                        fake_sentence = faker.sentence(variable_nb_words=False)
+                        result = await self.twitter.reply(tweet_id=retweet['in_reply_to'], reply_text=fake_sentence)
+
+                        await asyncio.sleep(random.randint(3, 7))
+
+                        if result:
+                            task_status = await self.pharos_portal.verify_task(task=task)
+                            results.append(task_status)
 
             return results
 
