@@ -39,9 +39,11 @@ async def select_random_action(controller: Controller, wallet: Wallet):
 
         possible_actions += [
             lambda: controller.random_swap(),
+            lambda: controller.primus.tip(),
         ]
         weights += [
-            4
+            4,
+            3
         ]
 
     if possible_actions:

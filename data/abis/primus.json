@@ -1,0 +1,30 @@
+ [
+    {
+        "inputs": [
+            {
+                "components": [
+                    {"internalType": "uint32", "name": "tokenType", "type": "uint32"},
+                    {"internalType": "address", "name": "tokenAddress", "type": "address"}
+                ],
+                "internalType": "struct TipToken",
+                "name": "token",
+                "type": "tuple"
+            },
+            {
+                "components": [
+                    {"internalType": "string", "name": "idSource", "type": "string"},
+                    {"internalType": "string", "name": "id", "type": "string"},
+                    {"internalType": "uint256", "name": "amount", "type": "uint256"},
+                    {"internalType": "uint256[]", "name": "nftIds", "type": "uint256[]"}
+                ],
+                "internalType": "struct TipRecipientInfo",
+                "name": "recipient",
+                "type": "tuple"
+            }
+        ],
+        "name": "tip",
+        "outputs": [],
+        "stateMutability": "payable",
+        "type": "function"
+    }
+]

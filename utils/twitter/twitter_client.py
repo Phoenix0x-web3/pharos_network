@@ -263,6 +263,30 @@ class TwitterClient():
             logger.warning(f"{self.user} Failed to retweet")
             return False
 
+    async def reply(self, tweet_id: int, reply_text: str) -> bool:
+        """
+        Reply the specified tweet
+
+        Args:
+            tweet_id: ID of the tweet to retweet
+            reply_text: Text for reply
+        Returns:
+            Success status
+        """
+
+        if not self.twitter_client:
+            initialize = await self.initialize()
+            if not initialize:
+                raise Exception("Can't initialize twitter client")
+
+        reply_id = await self.twitter_client.reply(tweet_id=tweet_id, text=reply_text)
+
+        if reply_id:
+            logger.success(f"{self.user} Reply successful {reply_id}")
+            return True
+        else:
+            logger.warning(f"{self.user} Failed to reply ")
+            return False
 
     async def like_tweet(self, tweet_id: int) -> bool:
         """

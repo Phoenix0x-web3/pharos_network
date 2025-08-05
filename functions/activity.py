@@ -83,7 +83,7 @@ async def random_activity_task(wallet, semaphore):
 
         except BaseException as e:
             await update_next_action_time(private_key=wallet.private_key, seconds=960)
-            logger.exception(f'Core | Activity | {e}')
+            logger.exception(f'Core | Activity | {wallet} |{e}')
             return
             
 async def execute(wallets : Wallet, task_func, timeout_hours : int = 0):
