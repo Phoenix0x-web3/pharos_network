@@ -78,17 +78,14 @@ class Controller:
         raise Exception(status)
 
     @controller_log('Twitter Tasks')
-    async def twitter_tasks(self):
+    async def twitter_tasks(self, twitter_tasks: list):
 
-        social_to_do = await self.pharos_portal.tasks_flow()
-        #todo only twitter tasks in pharos_portal module
-        #print(social_to_do)
         results = []
 
         try:
             await self.twitter.initialize()
 
-            for task in social_to_do:
+            for task in twitter_tasks:
                 if task['task_type'] == 'twitter':
                     #todo follow, retweet, reply in twitter
                     name = task['name']

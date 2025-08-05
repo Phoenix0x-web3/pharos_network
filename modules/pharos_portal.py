@@ -1,3 +1,4 @@
+import asyncio
 import random
 import secrets
 
@@ -182,6 +183,8 @@ class PharosPortal(Base):
 
         await self.check_in()
 
+        await asyncio.sleep(random.randint(2, 5))
+
         faucet_status = await self.get_faucet_status()
 
         if faucet_status.get('data').get('is_able_to_faucet'):
@@ -353,17 +356,11 @@ class PharosPortal(Base):
 
         social_to_do = [social_task for social_task in social_tasks if social_task['task_id'] not in completed_task_ids]
 
-        return social_to_do
+        twitter_tasks = [task for task in social_to_do if task['task_type'] == 'twitter']
+        discrod_tasks = [task for task in social_to_do if task['task_type'] == 'discord']
 
-        for task in social_to_do:
+        return twitter_tasks, discrod_tasks
 
-            if task['task_type'] == 'twitter':
-                #todo follow, retweet, reply in twitter
-
-                task = await self.verify_task(task=task)
-                logger.success(task)
-
-        return social_to_do
 
     async def verify_task(self, task: dict) -> dict:
 

@@ -145,7 +145,8 @@ class PNS(Base):
         rcpt2 = await tx2.wait_for_receipt(client=self.client, timeout=300)
 
         if rcpt2:
-            return f"Success mint {name}.phrs | cost {amount.Ether} PHRS"
+            await asyncio.sleep(random.randint(2, 4))
+            return await self.set_address()
 
         return f"Failed | register | {name}.phrs"
 
@@ -201,7 +202,6 @@ class PNS(Base):
                     },
                     'operationName': 'getNamesForAddress',
                 }
-        print(json.dumps(payload, indent=4))
 
         r = await self.session.post(
             url='https://graphql.pharosname.com/',

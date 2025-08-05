@@ -18,7 +18,6 @@ async def select_random_action(controller: Controller, wallet: Wallet):
     possible_actions = []
     weights = []
 
-
     wallet_balance = await controller.client.wallet.balance()
 
     if wallet_balance.Ether == 0:
@@ -28,6 +27,8 @@ async def select_random_action(controller: Controller, wallet: Wallet):
 
         faucet_status = await controller.pharos_portal.get_faucet_status()
 
+        twitter_tasks, discord_tasks = await controller.pharos_portal.tasks_flow()
+
         if faucet_status.get('data').get('is_able_to_faucet'):
 
             possible_actions += [
@@ -36,6 +37,27 @@ async def select_random_action(controller: Controller, wallet: Wallet):
             weights += [
                 10
             ]
+
+        if len(twitter_tasks) > 0:
+
+            possible_actions += [
+                lambda: controller.twitter_tasks(twitter_tasks=twitter_tasks),
+            ]
+            weights += [
+                5
+            ]
+
+        if wallet_balance.Ether > 0.35:
+            domains = await controller.pns.check_pns_domain()
+
+            if len(domains) == 0:
+
+                possible_actions += [
+                    lambda: controller.pns.mint(),
+                ]
+                weights += [
+                    4
+                ]
 
         possible_actions += [
             lambda: controller.random_swap(),
