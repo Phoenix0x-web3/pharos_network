@@ -177,6 +177,7 @@ class TwitterClient():
 
         # Check if already following the user
         is_following = await self._check_if_following(user_id=user.id)
+
         if is_following:
             logger.info(f"{self.user} Already following @{clean_account_name}")
             return True

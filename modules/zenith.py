@@ -104,7 +104,7 @@ class Zenith(Base):
             to_token = random.choice(tokens)
 
         if from_token.address != Contracts.PHRS.address:
-            amount = await self.client.wallet.balance(token=from_token)
+            amount = float((balance_map[from_token.title]))
         else:
             amount = float((balance_map[from_token.title])) * percent_to_swap
 
@@ -180,7 +180,7 @@ class Zenith(Base):
                     amount: TokenAmount,
                     from_token: RawContract,
                     to_token: RawContract,
-                    slippage: float = 1.0):
+                    slippage: float = 3.0):
 
         contract = await self.client.contracts.get(contract_address=ZENITH_SWAP_ROUTER)
 
@@ -242,7 +242,7 @@ class Zenith(Base):
             if await self.approve_interface(
                     token_address=from_token.address,
                     spender=contract.address,
-                    amount=amount
+                    amount=None
             ):
                 await asyncio.sleep(2)
             else:

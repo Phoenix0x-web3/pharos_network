@@ -92,7 +92,6 @@ class Controller:
                     if 'Follow' in name:
                         follow = query_to_json(task['url'])
                         result = await self.twitter.follow_account(account_name=follow['screen_name'])
-
                         await asyncio.sleep(random.randint(3, 7))
 
                         if result:
@@ -126,6 +125,7 @@ class Controller:
 
         except Exception as e:
             logger.error(e)
+            return f'Failed | {e}'
 
         finally:
             await self.twitter.close()

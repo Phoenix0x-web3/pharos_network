@@ -132,7 +132,7 @@ class PNS(Base):
 
         reg_data = contract.encode_abi(
             "register",
-            args=[name, owner, DURATION, secret, RESOLVER, [], True, 0]
+            args=[name, owner, DURATION, secret, RESOLVER.address, [], True, 0]
         )
 
         tx_register = TxParams(
