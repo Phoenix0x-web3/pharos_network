@@ -28,3 +28,9 @@ SALT_PATH = os.path.join(FILES_DIR, 'salt.dat')
 
 CIPHER_SUITE = None
 LOCK = asyncio.Lock()
+
+LOGS_DIR = os.path.join(FILES_DIR, 'logs')
+LOG_FILE = os.path.join(LOGS_DIR, 'log.log')
+ERRORS_FILE = os.path.join(LOGS_DIR, 'errors.log')
+logger.add(ERRORS_FILE, level='ERROR')
+logger.add(LOG_FILE, level='INFO')
