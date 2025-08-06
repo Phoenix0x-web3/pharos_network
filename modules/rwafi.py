@@ -45,8 +45,13 @@ class AquaFlux(Base):
         self.proxy = proxy
         self.session = BaseAsyncSession(proxy=self.proxy)  # <— твоя сессия
         self._token: Optional[str] = None
-
-    # -------------------- HTTP --------------------
+        self.base_headers = {
+            "Accept": "application/json, text/plain, */*",
+            "Origin": "https://playground.aquaflux.pro",
+            "Referer": "https://playground.aquaflux.pro/",
+            "User-Agent": "Mozilla/5.0",
+            "Content-Type": "application/json",
+        }
 
     async def _post(self, path: str, payload: dict, auth: bool = False) -> dict:
         headers = {
@@ -70,12 +75,13 @@ class AquaFlux(Base):
         }
         if auth and self._token:
             headers["Authorization"] = f"Bearer {self._token}"
+
         return await self.session.get(f"{BASE_API}{path}", headers=headers)
 
     async def _login(self) -> bool:
         ts_ms = int(time.time() * 1000)
         msg = f"Sign in to AquaFlux with timestamp: {ts_ms}"
-        signed = self.client.account.sign_message(encode_defunct(text=msg))
+        signed = self.sign_message(text=msg)
         payload = {
             "address": self.client.account.address,
             "message": msg,
@@ -103,8 +109,6 @@ class AquaFlux(Base):
         except Exception:
             return False
 
-    # -------------------- On-chain helpers --------------------
-
     async def _contract(self):
         return await self.client.contracts.get(contract_address=AQUAFLUX)
 
@@ -113,14 +117,11 @@ class AquaFlux(Base):
         try:
             fn = "hasClaimedPremiumNFT" if premium else "hasClaimedStandardNFT"
             data = c.encode_abi(fn, args=[self.client.account.address])
-            # view-call через eth_call
             res = await self.client.transactions.call(to=c.address, data=data)
             # bool кодируется как ...0001 / ...0000
             return bool(int(res, 16))
         except Exception:
             return False
-
-    # -------------------- Actions (только encode_abi + sign_and_send) --------------------
 
     @action_log("Aquaflux | Claim tokens")
     async def claim_tokens(self) -> str:

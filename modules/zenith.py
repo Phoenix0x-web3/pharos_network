@@ -39,6 +39,7 @@ class Zenith(Base):
         self.wallet = wallet
 
     #todo Zenith Faucet
+
     @action_log('Swap')
     async def swaps_controller(self, to_native=False):
 

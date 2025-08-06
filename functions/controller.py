@@ -4,19 +4,20 @@ import random
 from faker import Faker
 from loguru import logger
 
+from data.settings import Settings
 from libs.eth_async.client import Client
 from libs.base import Base
 from modules.pharos_portal import PharosPortal
 from modules.pns import PNS
 from modules.primus import Primus
 from modules.zenith import Zenith
+from test_func_builder_2 import swaps_count
 
 from utils.db_api.models import Wallet
 from utils.db_api.wallet_api import db
 from utils.logs_decorator import controller_log
 from utils.query_json import query_to_json
 from utils.twitter.twitter_client import TwitterClient
-
 
 class Controller:
     __controller__ = 'Controller'
@@ -130,11 +131,52 @@ class Controller:
         finally:
             await self.twitter.close()
 
-                    #task = await self.pharos_portal.verify_task(task=task)
+    async def build_actions(self):
 
-        #return social_to_do
+        final_actions = []
+        settings = Settings()
 
+        swaps_count = random.randint(settings.swaps_count_min, settings.swaps_count_max)
+        tips_count = random.randint(settings.tips_count_min, settings.tips_count_max)
 
+        wallet_balance = await self.client.wallet.balance()
+
+        if wallet_balance.Ether == 0:
+
+            try:
+                register = await self.faucet_task(registration=True)
+                logger.success(register)
+
+            except Exception as e:
+                return e
+
+        if wallet_balance:
+            faucet_status = await self.pharos_portal.get_faucet_status()
+
+            twitter_tasks, discord_tasks = await self.pharos_portal.tasks_flow()
+
+            if faucet_status.get('data').get('is_able_to_faucet'):
+                final_actions.append(lambda: self.faucet_task())
+
+            if len(twitter_tasks) > 0:
+                final_actions.append(lambda: self.twitter_tasks(twitter_tasks=twitter_tasks))
+
+            if wallet_balance.Ether > 0.35:
+                domains = await self.pns.check_pns_domain()
+
+                if len(domains) == 0:
+                    final_actions.append(lambda: self.pns.mint())
+
+            swaps = [lambda: self.random_swap() for _ in range(swaps_count)]
+
+            tips = [lambda: self.primus.tip() for _ in range(tips_count)]
+
+            all_actions = swaps + tips
+            random.shuffle(all_actions)
+
+            final_actions += all_actions
+
+        return final_actions
 
     async def stake_tasks(self):
         # todo random stake with logs

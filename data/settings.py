@@ -24,4 +24,9 @@ class Settings(Singleton):
         self.invite_codes = json_data.get("invite_codes", [])
         self.activity_action_delay_from = json_data.get("activity_action_delay", {}).get('min')
         self.activity_action_delay_to = json_data.get("activity_action_delay", {}).get('max')
+        self.swaps_count_min = json_data.get("swaps_count", {}).get('min')
+        self.swaps_count_max = json_data.get("swaps_count", {}).get('max')
+        self.tips_count_min = json_data.get("tips_count", {}).get('min')
+        self.tips_count_max = json_data.get("tips_count", {}).get('max')
+
 

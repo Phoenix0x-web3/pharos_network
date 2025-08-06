@@ -16,6 +16,8 @@ from data.settings import Settings
 from utils.encryption import check_encrypt_param
 from utils.update_expired import update_next_action_time, update_expired
 
+_running_wallets: set[int] = set()
+_pending_tasks: set[asyncio.Task] = set()
 
 async def random_activity():
     #check_encrypt_param()
@@ -37,11 +39,29 @@ async def random_activity():
             if not wallets:
                 continue
 
-            if wallets:
-                semaphore = asyncio.Semaphore(settings.threads)
-                tasks = [random_activity_task(wallet=wallet, semaphore=semaphore) for wallet in wallets]
+            semaphore = asyncio.Semaphore(settings.threads)
 
-                await asyncio.gather(*tasks)
+            async def sem_task(wallet: Wallet):
+
+                async with semaphore:
+                    try:
+                        await random_activity_task(wallet=wallet)
+
+                    except Exception as e:
+                        logger.error(f"[{wallet.id}] failed: {e}")
+
+            if wallets:
+
+                for wallet in wallets:
+
+                    if wallet.id in _running_wallets:
+                        continue
+
+                    _running_wallets.add(wallet.id)
+
+                    t = asyncio.create_task(sem_task(wallet))
+                    _pending_tasks.add(t)
+                    t.add_done_callback(_pending_tasks.discard)
 
         except Exception as e:
             logger.error(f"Activity Main Task | Error {e}")
@@ -49,42 +69,76 @@ async def random_activity():
         finally:
             await asyncio.sleep(delay)
 
-async def random_activity_task(wallet, semaphore):
+async def random_activity_task(wallet, semaphore = None):
     settings = Settings()
     delay = 10
 
-    async with semaphore:
-        try:
+    #async with semaphore:
 
-            client = Client(private_key=wallet.private_key, network=Networks.PharosTestnet, proxy=wallet.proxy)
-            controller = Controller(client=client, wallet=wallet)
+    try:
+        client = Client(private_key=wallet.private_key, network=Networks.PharosTestnet, proxy=wallet.proxy)
+        controller = Controller(client=client, wallet=wallet)
 
-            logger.info(f'{wallet} | Started Activity Tasks | Choosing Action')
 
-            action = await select_random_action(controller=controller, wallet=wallet)
 
-            status = await action()
+        actions = await controller.build_actions()
 
-            if 'Failed' not in status:
-                await update_next_action_time(
-                    private_key=wallet.private_key,
-                    seconds=random.randint(settings.activity_action_delay_from, settings.activity_action_delay_to)
-                )
+        logger.info(f'{wallet} | Started Activity Tasks | Wallet will do {len(actions)} actions')
 
-                logger.success(f'Activity | {status}')
+        for action in actions:
 
-                await asyncio.sleep(delay)
+            sleep = random.randint(settings.random_pause_between_actions_min,
+                                   settings.random_pause_between_actions_max)
+            try:
+                status = await action()
+                if 'Failed' not in status:
+                    logger.success(status)
 
-            else:
-                await update_next_action_time(private_key=wallet.private_key, seconds=960)
-                #db.commit()
-                logger.error(f'Activity | {status}')
-                return
+                else:
+                    logger.error(status)
 
-        except BaseException as e:
-            await update_next_action_time(private_key=wallet.private_key, seconds=960)
-            #logger.error(f'Core | Activity | {wallet} |{e}')
-            return
+            except Exception as e:
+                logger.error(e)
+                continue
+
+            finally:
+                logger.info(f"{wallet} | Start sleeping {sleep} secs for next action ")
+                await asyncio.sleep(sleep)
+
+        await update_next_action_time(
+            private_key=wallet.private_key,
+            seconds=random.randint(settings.activity_action_delay_from, settings.activity_action_delay_to)
+        )
+
+    except Exception as e:
+        #await update_next_action_time(private_key=wallet.private_key, seconds=960)
+        logger.error(f'Core | Activity | {wallet} |{e}')
+
+
+        #     action = await select_random_action(controller=controller, wallet=wallet)
+        #
+        #     status = await action()
+        #
+        #     if 'Failed' not in status:
+        #         await update_next_action_time(
+        #             private_key=wallet.private_key,
+        #             seconds=random.randint(settings.activity_action_delay_from, settings.activity_action_delay_to)
+        #         )
+        #
+        #         logger.success(f'Activity | {status}')
+        #
+        #         await asyncio.sleep(delay)
+        #
+        #     else:
+        #         await update_next_action_time(private_key=wallet.private_key, seconds=960)
+        #         #db.commit()
+        #         logger.error(f'Activity | {status}')
+        #         return
+        #
+        # except BaseException as e:
+        #     await update_next_action_time(private_key=wallet.private_key, seconds=960)
+        #     #logger.error(f'Core | Activity | {wallet} |{e}')
+        #     return
             
 async def execute(wallets : Wallet, task_func, timeout_hours : int = 0):
     

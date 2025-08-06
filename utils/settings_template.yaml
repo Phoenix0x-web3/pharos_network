@@ -28,7 +28,7 @@ activity_action_delay:
 
 # Random pause between actions in seconds
 random_pause_between_actions:
-  min: 5
+  min: 20
   max: 30
 #liquidity percent of coin balance
 swap_percent:
@@ -38,6 +38,16 @@ swap_percent:
 #liquidity percent of native coin balance
 liquidity_percent:
   min: 5
+  max: 30
+
+#swaps action count
+swaps_count:
+  min: 15
+  max: 30
+
+#tips action count
+tips_count:
+  min: 15
   max: 30
 
 # Invite Codes for pharosnetwork, example [invite_code1, invite_code2]
