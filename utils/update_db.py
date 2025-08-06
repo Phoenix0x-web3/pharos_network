@@ -30,7 +30,7 @@ def update_expired() -> None:
     for wallet in expired_wallets:
 
         wallet.next_activity_action_time = now + timedelta(
-            seconds=random.randint(0, int(settings.activity_action_delay_to / 3 ))
+            seconds=random.randint(0, int(settings.random_pause_wallet_after_completion_max / 3 ))
         )
         logger.info(
             f'{wallet}: Action time was re-generated: '
@@ -44,6 +44,18 @@ async def update_next_action_time(private_key: str, seconds: int) -> bool:
         now = datetime.now()
         wallet = get_wallet_by_private_key(private_key=private_key)
         wallet.next_activity_action_time = now + timedelta(seconds=seconds)
+        
+        async with LOCK:
+            db.commit()
+        return True
+    except BaseException:
+        return False
+
+async def update_points_invites(private_key: str, points: int, invite_code : str) -> bool:
+    try:
+        wallet = get_wallet_by_private_key(private_key=private_key)
+        wallet.points = points
+        wallet.invite_code = invite_code
         
         async with LOCK:
             db.commit()

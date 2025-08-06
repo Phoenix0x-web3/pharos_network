@@ -11,13 +11,13 @@ from modules.pharos_portal import PharosPortal
 from modules.pns import PNS
 from modules.primus import Primus
 from modules.zenith import Zenith
-from test_func_builder_2 import swaps_count
 
 from utils.db_api.models import Wallet
 from utils.db_api.wallet_api import db
 from utils.logs_decorator import controller_log
 from utils.query_json import query_to_json
 from utils.twitter.twitter_client import TwitterClient
+from utils.update_db import update_points_invites
 
 class Controller:
     __controller__ = 'Controller'
@@ -181,3 +181,15 @@ class Controller:
     async def stake_tasks(self):
         # todo random stake with logs
         pass
+    
+    
+    async def update_db_by_user_info(self):
+        await self.pharos_portal.login()
+
+        user_data = await self.pharos_portal.get_user_info()
+        
+        total_points = user_data.get('TotalPoints')
+        invite_code = user_data.get('InviteCode')
+        
+        await update_points_invites(self.wallet.private_key, total_points, invite_code)
+        

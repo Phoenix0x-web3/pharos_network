@@ -17,7 +17,8 @@ from utils.db_api.models import Wallet
 from utils.logs_decorator import controller_log, action_log
 from utils.twitter.twitter_client import TwitterClient
 from utils.twitter.twitter_oauth import Twitter
-
+from utils.db_api.wallet_api import db
+from sqlalchemy import and_
 
 class PharosPortal(Base):
 
@@ -89,22 +90,31 @@ class PharosPortal(Base):
 
         message, timestamp = self._siwe_message(nonce=nonce)
         sig = await self.sign_message(text=message)
-
-        invite_code = random.choice(settings.invite_codes)
+        
 
         payload = {
             'address': self.client.account.address,
             'signature': sig,
             'wallet': self.wallet.wallet_type,
             'nonce': str(nonce),
-            'invite_code': invite_code,
             'chain_id': '688688',
             'timestamp': timestamp,
             'domain': 'testnet.pharosnetwork.xyz',
         }
 
-        if not registration or len(settings.invite_codes) == 0:
-            payload.pop('invite_code')
+        if registration:
+            # Get invite codes from settings and database
+            invite_codes_from_db = [
+                code[0] for code in db.all(Wallet.invite_code, Wallet.invite_code != "")
+            ]
+                    
+            all_invite_codes = list(set(settings.invite_codes + invite_codes_from_db))
+                        
+            # Randomly select an invite code if available
+            invite_code = random.choice(all_invite_codes) if all_invite_codes else ""
+        
+            if invite_code:
+                payload["invite_code"] = invite_code
 
         r = await self.session.post(
             f"{self.BASE}/user/login",
@@ -136,7 +146,7 @@ class PharosPortal(Base):
             timeout=120,
         )
 
-        parsed_url = urlparse(r.headers.get('location'))
+        
 
         return r.headers.get('location')
 

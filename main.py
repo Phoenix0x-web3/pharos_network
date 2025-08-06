@@ -3,7 +3,7 @@ import platform
 
 import inquirer
 from colorama import Fore
-from inquirer.themes import GreenPassion
+from inquirer.themes import Default
 from rich.console import Console
 from utils.create_files import create_files
 from functions.activity import activity
@@ -35,7 +35,7 @@ async def choose_action():
         )
     ]
 
-    answers = inquirer.prompt(cat_question, theme=GreenPassion())
+    answers = inquirer.prompt(cat_question, theme=Default())
     category = answers.get("category")
 
     if category == "Exit":
@@ -58,7 +58,7 @@ async def choose_action():
         )
     ]
 
-    act_answer = inquirer.prompt(act_question, theme=GreenPassion())
+    act_answer = inquirer.prompt(act_question, theme=Default())
     action = act_answer["action"]
 
     if action == "Import wallets to Database":
