@@ -143,12 +143,11 @@ class Controller:
 
         if wallet_balance.Ether == 0:
 
-            try:
-                register = await self.faucet_task(registration=True)
-                logger.success(register)
+          
+            register = await self.faucet_task(registration=True)
+            logger.success(register)
 
-            except Exception as e:
-                return e
+       
 
         if wallet_balance:
             faucet_status = await self.pharos_portal.get_faucet_status()

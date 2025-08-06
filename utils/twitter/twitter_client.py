@@ -63,7 +63,7 @@ class TwitterClient():
         # Twitter client configuration
         self.client_config = {
             "wait_on_rate_limit": True,
-            "auto_relogin": True,
+            "auto_relogin": False,
             "update_account_info_on_startup": True,
             #TODO: Import CAPMONSTER_API_KEY
             "capsolver_api_key": "CAPMONSTER_API_KEY",
