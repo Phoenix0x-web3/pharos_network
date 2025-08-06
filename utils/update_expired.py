@@ -30,7 +30,7 @@ def update_expired() -> None:
     for wallet in expired_wallets:
 
         wallet.next_activity_action_time = now + timedelta(
-            minutes=random.randint(0, int(settings.activity_action_delay_to / 3 ))
+            seconds=random.randint(0, int(settings.activity_action_delay_to / 3 ))
         )
         logger.info(
             f'{wallet}: Action time was re-generated: '

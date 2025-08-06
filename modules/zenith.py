@@ -202,7 +202,7 @@ class Zenith(Base):
                 amount=float(amount.Ether) / price * (100 - slippage) / 100,
             )
 
-        logger.info(f'{self.wallet} | Trying to swap {amount.Ether:.5f} {from_token.title} to '
+        logger.debug(f'{self.wallet} | Trying to swap {amount.Ether:.5f} {from_token.title} to '
                     f'{amount_out_min.Ether:.5f} {to_token.title}')
 
         if not to_token_is_phrs:

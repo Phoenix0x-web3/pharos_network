@@ -222,7 +222,7 @@ class PNS(Base):
         name = req[0].get('labelName')
 
         data = TxArgs(
-            node = node,
+            node = Web3.to_bytes(hexstr=node),
             coin_type = int("0x800a8230", 16),
             a = Web3.to_bytes(hexstr=self.client.account.address)
         ).tuple()
