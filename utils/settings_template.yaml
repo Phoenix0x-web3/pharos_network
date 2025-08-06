@@ -21,8 +21,8 @@ random_pause_between_wallets:
   min: 5
   max: 60
 
-# Random pause between actions in seconds (7 - 8 hrs default)
-activity_action_delay:
+# Delay before running the same wallet again after it has completed all actions (7 - 8 hrs default)
+random_pause_wallet_after_completion:
   min: 26000
   max: 30000
 
@@ -50,7 +50,7 @@ tips_count:
   min: 15
   max: 30
 
-# Invite Codes for pharosnetwork, example [invite_code1, invite_code2]
+# Invite Codes for pharos network, example [invite_code1, invite_code2]
 invite_codes: []
 
 # Telegram Bot ID for notifications

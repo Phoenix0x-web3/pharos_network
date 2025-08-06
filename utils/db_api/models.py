@@ -18,6 +18,7 @@ class Wallet(Base):
     twitter_token: Mapped[str] = mapped_column(default=None, nullable=True)
     next_activity_action_time: Mapped[datetime | None] = mapped_column(default=None, nullable=True)
     points: Mapped[int] = mapped_column(default=0)
+    invite_code: Mapped[str] = mapped_column(default="")
     wallet_type: Mapped[str] = mapped_column(default='')
     completed: Mapped[bool] = mapped_column(default=False)
 

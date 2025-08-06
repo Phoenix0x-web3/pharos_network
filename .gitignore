@@ -13,3 +13,4 @@ dev/
 venv
 /shelf/
 /workspace.xml
+.vscode/*

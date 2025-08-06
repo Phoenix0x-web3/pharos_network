@@ -19,7 +19,7 @@ def get_wallet_by_private_key(private_key: str, sqlite_query: bool = False) -> W
   
 def get_wallet_by_address(address: str, sqlite_query: bool = False) -> Wallet | None:
     if sqlite_query:
-        return db.execute('SELECT * FROM wallets WHERE private_key = ?', (private_key,), True)
+        return db.execute('SELECT * FROM wallets WHERE address = ?', (address,), True)
 
     return db.one(Wallet, Wallet.address == address)
   

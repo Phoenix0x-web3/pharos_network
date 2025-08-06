@@ -11,7 +11,7 @@ print("Creating virtual environment...")
 subprocess.run([sys.executable, "-m", "venv", venv_dir], check=True)
 
 if is_windows:
-    activate = os.path.join(venv_dir, "Scripts", "activate.bat")
+    activate = os.path.join(venv_dir, "Scripts", "activate")
 else:
     activate = f"source {venv_dir}/bin/activate"
 
