@@ -17,8 +17,7 @@ from libs.eth_async.client import Client
 from libs.eth_async.data.models import RawContract, TokenAmount, TxArgs
 from libs.eth_async.utils.files import read_json
 from utils.db_api.models import Wallet
-from utils.logs_decorator import action_log
-
+from utils.logs_decorator import action_log, controller_log
 
 PNS_CONTROLLER = RawContract(
     title="PNS_Controller",
@@ -78,7 +77,7 @@ class PNS(Base):
 
         return name
 
-    @action_log("Domain Mint")
+    @controller_log("Domain Mint")
     async def mint(self, domain: str | None = None) -> str:
         contract = await self.client.contracts.get(contract_address=PNS_CONTROLLER)
         name = domain or self._rand_domain()
