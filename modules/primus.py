@@ -12,7 +12,7 @@ from libs.eth_async.data.models import RawContract, TxArgs, TokenAmount
 from libs.eth_async.utils.files import read_json
 from libs.eth_async.utils.utils import randfloat
 from utils.db_api.models import Wallet
-from utils.logs_decorator import action_log
+from utils.logs_decorator import action_log, controller_log
 
 PRIMUS = RawContract(
     title="Primus",
@@ -36,7 +36,7 @@ class Primus(Base):
         return prefix + "".join(random.choice(charset) for _ in range(random.randint(5, 12)))
 
 
-    @action_log("Tip Sender")
+    @controller_log("Tip Sender")
     async def tip(self) -> str:
         contract = await self.client.contracts.get(contract_address=PRIMUS)
 
