@@ -30,15 +30,14 @@ async def random_activity():
         try:
             now = datetime.now()
 
-            wallets: List[Wallet] = db.all(
-                Wallet,
-                Wallet.next_activity_action_time <= now
-            )
-            
             if Settings().exact_wallets_to_run:
                 wallets = [w for i, w in enumerate(wallets, start=1) if i in Settings().exact_wallets_to_run]
 
-
+            else:
+                wallets: List[Wallet] = db.all(
+                    Wallet,
+                    Wallet.next_activity_action_time <= now
+                )
             if not wallets:
                 continue
 
@@ -118,11 +117,12 @@ async def random_activity_task(wallet, semaphore = None):
     except Exception as e:
  
         logger.error(f'Core | Activity | {wallet} |{e}')
-        
-    logger.info(f'{wallet} | finished activity tasks points [{wallet.points}]')
 
- 
-            
+    finally:
+        _running_wallets.remove(wallet.id)
+        logger.info(f'{wallet} | finished activity tasks points [{wallet.points}]')
+
+
 async def execute(wallets : Wallet, task_func, timeout_hours : int = 0):
     
     while True:
