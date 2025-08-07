@@ -119,7 +119,7 @@ class Import:
                 changed = False
 
                 if wallet_instance.address == client.account.address:
-                    wallet_instance.private_key = prk_encrypt(decoded_private_key) if '0x' in wl.private_key else wl.private_key
+                    wallet_instance.private_key = prk_encrypt(decoded_private_key) if not 'gAAAA' in wl.private_key else wl.private_key
                     changed = True
 
                 if wallet_instance.proxy != wl.proxy:
@@ -142,7 +142,7 @@ class Import:
                 continue
 
             wallet_instance = Wallet(
-                private_key=prk_encrypt(wl.private_key) if '0x' in wl.private_key else wl.private_key,
+                private_key=prk_encrypt(wl.private_key) if not 'gAAAA' in wl.private_key else wl.private_key,
                 address=client.account.address,
                 proxy=wl.proxy,
                 twitter_token=wl.twitter_token,
