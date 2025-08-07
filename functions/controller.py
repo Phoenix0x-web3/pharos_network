@@ -17,7 +17,7 @@ from utils.db_api.wallet_api import db
 from utils.logs_decorator import controller_log
 from utils.query_json import query_to_json
 from utils.twitter.twitter_client import TwitterClient
-from utils.update_db import update_points_invites
+from utils.db_update import update_points_invites
 
 class Controller:
     __controller__ = 'Controller'

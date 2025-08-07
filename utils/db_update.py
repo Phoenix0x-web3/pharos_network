@@ -26,11 +26,23 @@ def update_expired() -> None:
         return
 
     settings = Settings()
-    
-    for wallet in expired_wallets:
+    first_start_wallets = [w for w in expired_wallets if w.next_activity_action_time is None]
+    already_scheduled_wallets = [w for w in expired_wallets if w.next_activity_action_time is not None]
 
+    next_time = now
+    
+    if Settings().shuffle_wallets:
+        random.shuffle(first_start_wallets)
+            
+    for wallet in first_start_wallets:
+        offset = random.randint(30, 120)  # random delay between 30s and 120s
+        next_time += timedelta(seconds=offset)
+        wallet.next_activity_action_time = next_time
+        logger.info(f'{wallet}: First startup – scheduled at {wallet.next_activity_action_time}')
+
+    for wallet in already_scheduled_wallets:
         wallet.next_activity_action_time = now + timedelta(
-            seconds=random.randint(0, int(settings.random_pause_wallet_after_completion_max / 3 ))
+            seconds=random.randint(0, int(settings.random_pause_wallet_after_completion_max))
         )
         logger.info(
             f'{wallet}: Action time was re-generated: '

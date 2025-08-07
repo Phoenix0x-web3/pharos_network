@@ -14,7 +14,7 @@ from utils.db_api.models import Wallet
 from utils.db_api.wallet_api import db
 from data.settings import Settings
 from utils.encryption import check_encrypt_param
-from utils.update_db import update_next_action_time, update_expired
+from utils.db_update import update_next_action_time, update_expired
 
 _running_wallets: set[int] = set()
 _pending_tasks: set[asyncio.Task] = set()
