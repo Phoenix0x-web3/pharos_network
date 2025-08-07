@@ -16,7 +16,6 @@ from urllib.parse import urlparse, parse_qs, unquote
 from utils.db_api.models import Wallet
 from utils.logs_decorator import controller_log, action_log
 from utils.twitter.twitter_client import TwitterClient
-from utils.twitter.twitter_oauth import Twitter
 from utils.db_api.wallet_api import db
 from sqlalchemy import and_
 
