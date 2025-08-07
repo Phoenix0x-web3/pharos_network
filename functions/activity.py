@@ -31,6 +31,11 @@ async def random_activity():
             now = datetime.now()
 
             if Settings().exact_wallets_to_run:
+
+                wallets: List[Wallet] = db.all(
+                    Wallet
+                )
+
                 wallets = [w for i, w in enumerate(wallets, start=1) if i in Settings().exact_wallets_to_run]
 
             else:
