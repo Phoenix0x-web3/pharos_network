@@ -13,14 +13,6 @@ exact_wallets_to_run: []
 # Whether to shuffle the list of wallets before processing
 shuffle_wallets: true
 
-# Sleep time in hours after full execution of tasks
-sleep_after_each_cycle_hours: 0
-
-# Random pause between wallets in seconds
-random_pause_between_wallets:
-  min: 5
-  max: 60
-
 # Delay before running the same wallet again after it has completed all actions (7 - 8 hrs default)
 random_pause_wallet_after_completion:
   min: 26000
@@ -30,6 +22,7 @@ random_pause_wallet_after_completion:
 random_pause_between_actions:
   min: 20
   max: 30
+  
 #liquidity percent of coin balance
 swap_percent:
   min: 5
