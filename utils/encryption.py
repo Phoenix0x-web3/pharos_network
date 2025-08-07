@@ -75,7 +75,7 @@ def get_private_key(enc_value: str) -> str:
 
 def prk_encrypt(value: str) -> str:
     if Settings().private_key_encryption:
-        if '0x' in value:
+        if not 'gAAAA' in value:
             return config.CIPHER_SUITE.encrypt(value.encode()).decode()
 
     return value
