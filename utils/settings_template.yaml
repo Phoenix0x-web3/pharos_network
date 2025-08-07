@@ -13,6 +13,9 @@ exact_wallets_to_run: []
 # Whether to shuffle the list of wallets before processing
 shuffle_wallets: true
 
+# Hide wallet address in logs
+hide_wallet_address_log: true
+
 # Delay before running the same wallet again after it has completed all actions (7 - 8 hrs default)
 random_pause_wallet_after_completion:
   min: 26000

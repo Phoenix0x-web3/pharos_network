@@ -3,6 +3,7 @@ from datetime import datetime
 
 from sqlalchemy.orm import DeclarativeBase
 from sqlalchemy.orm import Mapped, mapped_column
+from data.settings import Settings
 
 class Base(DeclarativeBase):
     pass
@@ -24,4 +25,6 @@ class Wallet(Base):
 
 
     def __repr__(self):
+        if Settings().hide_wallet_address_log:
+            return f'[{self.id}]'
         return f'[{self.id}][{self.address}]'
