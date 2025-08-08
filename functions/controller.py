@@ -144,6 +144,7 @@ class Controller:
 
         swaps_count = random.randint(settings.swaps_count_min, settings.swaps_count_max)
         tips_count = random.randint(settings.tips_count_min, settings.tips_count_max)
+        autostake_count = random.randint(settings.autostake_count_min, settings.autostake_count_max)
 
         wallet_balance = await self.client.wallet.balance()
 
@@ -173,7 +174,7 @@ class Controller:
 
             tips = [lambda: self.primus.tip() for _ in range(tips_count)]
 
-            autostake = [lambda: self.autostaking_task()]
+            autostake = [lambda: self.autostaking_task() for _ in range(autostake_count)]
 
             all_actions = swaps + tips + autostake
             random.shuffle(all_actions)

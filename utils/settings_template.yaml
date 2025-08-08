@@ -31,6 +31,10 @@ random_pause_between_actions:
 swap_percent:
   min: 5
   max: 30
+#liquidity percent of coin balance
+stake_percent:
+  min: 5
+  max: 10
 
 #liquidity percent of native coin balance
 liquidity_percent:
@@ -47,6 +51,10 @@ tips_count:
   min: 15
   max: 30
 
+#autostake action count
+autostake_count:
+  min: 1
+  max: 4
 # Invite Codes for pharos network, example [invite_code1, invite_code2]
 invite_codes: []
 

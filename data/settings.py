@@ -20,6 +20,8 @@ class Settings(Singleton):
         self.random_pause_between_actions_max = json_data.get("random_pause_between_actions", {}).get("max")
         self.swap_percent_from = json_data.get("swap_percent", {}).get("min")
         self.swap_percent_to = json_data.get("swap_percent", {}).get("max")
+        self.stake_percent_min = json_data.get("stake_percent", {}).get("min")
+        self.stake_percent_max = json_data.get("stake_percent", {}).get("max")
         self.tg_bot_id = json_data.get("tg_bot_id", "")
         self.tg_user_id = json_data.get("tg_user_id", "")
         self.invite_codes = json_data.get("invite_codes", [])
@@ -29,6 +31,8 @@ class Settings(Singleton):
         self.swaps_count_max = json_data.get("swaps_count", {}).get('max')
         self.tips_count_min = json_data.get("tips_count", {}).get('min')
         self.tips_count_max = json_data.get("tips_count", {}).get('max')
+        self.autostake_count_min = json_data.get("autostake_count", {}).get('min')
+        self.autostake_count_max = json_data.get("autostake_count", {}).get('max')
         self.retry = json_data.get("retry", {})
 
 
