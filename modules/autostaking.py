@@ -436,7 +436,6 @@ class AutoStaking(Base):
         changes = await self._generate_change_transactions(change_tx=tx_list)
         last_tx = {}
 
-        tx_count = 0
         sleep = random.randint(settings.random_pause_between_actions_min, settings.random_pause_between_actions_max)
 
         for key, value in changes.items():
