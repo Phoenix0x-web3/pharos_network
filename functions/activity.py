@@ -165,6 +165,9 @@ async def activity(action: int):
     else:
         wallets = all_wallets
 
+    if action == 2:
+        await execute(wallets, twitter_tasks, Settings().sleep_after_each_cycle_hours)
+        
     if action == 3:
         await execute(wallets, random_swaps, Settings().sleep_after_each_cycle_hours)
 
@@ -185,3 +188,25 @@ async def random_swaps(wallet):
 
     except Exception as e:
         logger.error(e)
+        
+async def twitter_tasks(wallet):
+    client = Client(private_key=wallet.private_key, proxy=wallet.proxy, network=Networks.PharosTestnet)
+
+    controller = Controller(client=client, wallet=wallet)
+    try:
+        twitter_tasks, discord_tasks = await controller.pharos_portal.tasks_flow()
+        if not twitter_tasks:
+            logger.info(f"{wallet} No new twitter tasks available")
+            return
+        result = await controller.twitter_tasks(twitter_tasks=twitter_tasks)
+
+        if 'Failed' not in result:
+            logger.success(result)
+
+            return result
+
+        logger.error(result)
+
+    except Exception as e:
+        logger.error(e)
+                

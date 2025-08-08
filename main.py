@@ -16,7 +16,7 @@ console = Console()
 PROJECT = 'Pharos Network'
 
 PROJECT_ACTIONS =   [
-                    "1. Randomize Activity",
+                    "1. Run All Tasks In Random Order",
                     "2. Twitter Tasks",
                     "3. Swaps",
                     "Back"
