@@ -55,13 +55,13 @@ class Import:
     @staticmethod
     def parse_wallet_from_txt() -> List[Dict[str, Optional[str]]]:
 
-        private_keys   = read_lines("privatekeys.txt")
+        private_keys   = read_lines("private_keys.txt")
         proxies        = read_lines("proxy.txt")
         twitter_tokens = read_lines("twitter_tokens.txt")
         discord_tokens = read_lines("discord_tokens.txt")
 
         if not private_keys or not proxies:
-            raise ValueError("File privatekeys.txt и proxy.txt must contain information")
+            raise ValueError("File private_keys.txt и proxy.txt must contain information")
 
         record_count = len(private_keys)
 
@@ -137,7 +137,7 @@ class Import:
                 if changed:
                     db.commit()
                     edited.append(wallet_instance)
-                    remove_line_from_file(wl.private_key, "privatekeys.txt")
+                    remove_line_from_file(wl.private_key, "private_keys.txt")
 
                 continue
 
@@ -150,7 +150,7 @@ class Import:
                 wallet_type = random.choice(['Metamask', 'Rabby Wallet', 'OKX Wallet'])
             )
 
-            remove_line_from_file(wl.private_key, "privatekeys.txt")
+            remove_line_from_file(wl.private_key, "private_keys.txt")
 
             if not wallet_instance.twitter_token:
                 logger.warning(f'{wallet_instance.id} | {wallet_instance.address} | Twitter Token not found, Twitter Action will be skipped')
@@ -256,7 +256,7 @@ class Sync:
 class Export:
 
     _FILES = {
-        "private_key":   "exported_privatekeys.txt",
+        "private_key":   "exported_private_keys.txt",
         "proxy":         "exported_proxy.txt",
         "twitter_token": "exported_twitter_tokens.txt",
         "discord_token": "exported_discord_tokens.txt",
