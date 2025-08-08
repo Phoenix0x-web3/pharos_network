@@ -399,7 +399,7 @@ class AutoStaking(Base):
 
         current_position = current_position.get('positions')
 
-        logger.debug(f"{self.wallet} | got current_positions")
+        logger.debug(f"{self.wallet} | {self.__module_name__} | got current_positions")
 
         balance_map = await self.stable_coins_balances()
 
@@ -441,7 +441,7 @@ class AutoStaking(Base):
         for key, value in changes.items():
             tx = await self.send_raw_tx(data=value)
             last_tx = value
-            logger.debug(f'{self.wallet} | tx_success: {tx}, start sleeping for {sleep} secs')
+            logger.debug(f'{self.wallet} | {self.__module_name__} | tx_success: {tx}, start sleeping for {sleep} secs')
             tx_count += 1
 
             await asyncio.sleep(sleep)
