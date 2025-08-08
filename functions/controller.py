@@ -164,11 +164,11 @@ class Controller:
             if len(twitter_tasks) > 0:
                 final_actions.append(lambda: self.twitter_tasks(twitter_tasks=twitter_tasks))
 
-            # if wallet_balance.Ether > 0.35:
-            #     domains = await self.pns.check_pns_domain()
-            #
-            #     if len(domains) == 0:
-            #         final_actions.append(lambda: self.pns.mint())
+            if wallet_balance.Ether > 0.35:
+                domains = await self.pns.check_pns_domain()
+
+                if len(domains) == 0:
+                    final_actions.append(lambda: self.pns.mint())
 
             swaps = [lambda: self.random_swap() for _ in range(swaps_count)]
 

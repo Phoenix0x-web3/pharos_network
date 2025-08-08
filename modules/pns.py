@@ -46,36 +46,15 @@ class PNS(Base):
 
     @staticmethod
     def _rand_domain(length: int = 9) -> str:
+        from faker import Faker
+        prefix = random.randint(3, 5)
+        name = Faker().user_name()
 
-        try:
-            from faker import Faker
-            fake = Faker()
-            w1 = fake.word().lower()
-            w2 = fake.word().lower()
-        except Exception:
-            words = [
-                "alpha", "beta", "gamma", "delta", "omega", "nova", "meta",
-                "aero", "neon", "pixel", "terra", "luna", "orbit", "zen", "quark"
-            ]
-            w1, w2 = random.choice(words), random.choice(words)
+        symbols = ['-', '_', '|']
 
-        name = f"{w1}-{w2}"
-        name = "".join(ch for ch in name if ch.isalnum() or ch == "-").strip("-")
-        while "--" in name:
-            name = name.replace("--", "-")
+        new_nickname = name + random.choice(symbols) + Faker().word()[:prefix]
 
-
-        if length and len(name) > length:
-
-            cut1 = max(1, min(len(w1), (length - 1) // 2))
-            cut2 = max(1, min(len(w2), length - 1 - cut1))
-            name = f"{w1[:cut1]}-{w2[:cut2]}".strip("-")
-
-
-        if len(name) < 3:
-            name = (name + "-x")[:max(3, length or 3)].strip("-")
-
-        return name
+        return new_nickname
 
     @controller_log("Domain Mint")
     async def mint(self, domain: str | None = None) -> str:
@@ -120,9 +99,9 @@ class PNS(Base):
         if not rcpt1:
             return f"Failed | commit | {name}.phrs"
 
-        delay = 60
+        delay = random.randint(60, 90)
 
-        logger.debug(f'{self.wallet} | {self.__module_name__} | Awaiting {delay} for commintment applying ')
+        logger.debug(f'{self.wallet} | {self.__module_name__} | Awaiting {delay} secs for commintment applying ')
         await asyncio.sleep(delay)
 
         price = await contract.functions.rentPrice(name, DURATION).call()
@@ -144,7 +123,8 @@ class PNS(Base):
         rcpt2 = await tx2.wait_for_receipt(client=self.client, timeout=300)
 
         if rcpt2:
-            await asyncio.sleep(random.randint(2, 4))
+            logger.success(f'{self.wallet} | {self.__module_name__} | Domain Minted | Awaiting {delay} secs for set PNS ')
+            await asyncio.sleep(delay)
             return await self.set_address()
 
         return f"Failed | register | {name}.phrs"
