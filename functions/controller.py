@@ -173,7 +173,9 @@ class Controller:
 
             tips = [lambda: self.primus.tip() for _ in range(tips_count)]
 
-            all_actions = swaps + tips
+            autostake = [lambda: self.autostaking_task()]
+
+            all_actions = swaps + tips + autostake
             random.shuffle(all_actions)
 
             final_actions += all_actions
