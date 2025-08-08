@@ -334,7 +334,7 @@ class AutoStaking(Base):
         balance_map = {}
 
         for stable in stables:
-            percent = random.randint(settings.swap_percent_from, settings.swap_percent_to)
+            percent = random.randint(settings.stake_percent_min, settings.stake_percent_max)
 
             balance = await self.client.wallet.balance(token=stable)
             balance_map[stable] = float(balance.Ether) * percent
