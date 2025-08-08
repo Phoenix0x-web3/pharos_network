@@ -86,8 +86,6 @@ async def random_activity_task(wallet, semaphore = None):
         client = Client(private_key=wallet.private_key, network=Networks.PharosTestnet, proxy=wallet.proxy)
         controller = Controller(client=client, wallet=wallet)
 
-
-
         actions = await controller.build_actions()
 
         logger.info(f'{wallet} | Started Activity Tasks | Wallet will do {len(actions)} actions')
@@ -169,8 +167,6 @@ async def activity(action: int):
 
     if action == 3:
         await execute(wallets, random_swaps, Settings().sleep_after_each_cycle_hours)
-
-
 
 
 async def random_swaps(wallet):

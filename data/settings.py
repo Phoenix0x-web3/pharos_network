@@ -29,5 +29,6 @@ class Settings(Singleton):
         self.swaps_count_max = json_data.get("swaps_count", {}).get('max')
         self.tips_count_min = json_data.get("tips_count", {}).get('min')
         self.tips_count_max = json_data.get("tips_count", {}).get('max')
+        self.retry = json_data.get("retry", {})
 
 

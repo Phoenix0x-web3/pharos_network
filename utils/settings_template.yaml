@@ -6,6 +6,7 @@ private_key_encryption: true
 # Number of threads to use for processing wallets
 threads: 1
 
+retry: 3
 # BY DEFAULT: [] - all wallets
 # Example: [1, 3, 8] - will run only 1, 3 and 8 wallets
 exact_wallets_to_run: []
