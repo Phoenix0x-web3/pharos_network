@@ -5,6 +5,7 @@ from faker import Faker
 from loguru import logger
 
 from data.settings import Settings
+from modules.autostaking import AutoStaking
 from libs.eth_async.client import Client
 from libs.base import Base
 from modules.pharos_portal import PharosPortal
@@ -32,6 +33,7 @@ class Controller:
         self.zenith = Zenith(client=client, wallet=wallet)
         self.primus = Primus(client=client, wallet=wallet)
         self.pns = PNS(client=client, wallet=wallet)
+        self.autostaking = AutoStaking(client=client, wallet=wallet)
 
     @controller_log('CheckIn')
     async def check_in_task(self):
@@ -131,6 +133,10 @@ class Controller:
         finally:
             await self.twitter.close()
 
+    @controller_log('AutoStaking')
+    async def autostaking_task(self):
+        return await self.autostaking.autostacking_flow()
+
     async def build_actions(self):
 
         final_actions = []
@@ -142,12 +148,9 @@ class Controller:
         wallet_balance = await self.client.wallet.balance()
 
         if wallet_balance.Ether == 0:
-
-          
             register = await self.faucet_task(registration=True)
             logger.success(register)
 
-       
 
         if wallet_balance:
             faucet_status = await self.pharos_portal.get_faucet_status()
