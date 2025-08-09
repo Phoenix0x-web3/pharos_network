@@ -1,17 +1,17 @@
 import asyncio
 import time
-from typing import Optional
+from typing import Optional, Dict, Any
 
-from eth_account.messages import encode_defunct
 from web3 import Web3
 from web3.types import TxParams
 
 from libs.base import Base
-from libs.baseAsyncSession import BaseAsyncSession
 from libs.eth_async.client import Client
 from libs.eth_async.data.models import RawContract, TokenAmount
+from libs.twitter.base import BaseAsyncSession
 from utils.db_api.models import Wallet
 from utils.logs_decorator import action_log
+from utils.retry import async_retry
 
 AQUAFLUX = RawContract(
     title="AquafluxNFT",
@@ -23,13 +23,17 @@ AQUAFLUX = RawContract(
         {"type": "function", "name": "combinePS", "stateMutability": "nonpayable", "inputs": [{"name": "amount", "type": "uint256"}], "outputs": []},
         {"type": "function", "name": "hasClaimedStandardNFT", "stateMutability": "view", "inputs": [{"name": "owner", "type": "address"}], "outputs": [{"type": "bool"}]},
         {"type": "function", "name": "hasClaimedPremiumNFT",  "stateMutability": "view", "inputs": [{"name": "owner", "type": "address"}], "outputs": [{"type": "bool"}]},
-        {"type": "function", "name": "mint", "stateMutability": "nonpayable",
-         "inputs": [
-             {"name": "nftType", "type": "uint8"},
-             {"name": "expiresAt", "type": "uint256"},
-             {"name": "signature", "type": "bytes"}
-         ],
-         "outputs": []},
+        {
+            "type": "function",
+            "name": "mint",
+            "stateMutability": "nonpayable",
+            "inputs": [
+                {"name": "nftType", "type": "uint8"},
+                {"name": "expiresAt", "type": "uint256"},
+                {"name": "signature", "type": "bytes"},
+            ],
+            "outputs": [],
+        },
     ],
 )
 
@@ -43,114 +47,149 @@ class AquaFlux(Base):
         self.client = client
         self.wallet = wallet
         self.proxy = proxy
-        self.session = BaseAsyncSession(proxy=self.proxy)  # <— твоя сессия
+        self.session = BaseAsyncSession(proxy=self.wallet.proxy)
         self._token: Optional[str] = None
+
         self.base_headers = {
             "Accept": "application/json, text/plain, */*",
             "Origin": "https://playground.aquaflux.pro",
             "Referer": "https://playground.aquaflux.pro/",
-            "User-Agent": "Mozilla/5.0",
             "Content-Type": "application/json",
+            "User-Agent": self.session.user_agent,
         }
 
-    async def _post(self, path: str, payload: dict, auth: bool = False) -> dict:
-        headers = {
-            "Accept": "application/json, text/plain, */*",
-            "Origin": "https://playground.aquaflux.pro",
-            "Referer": "https://playground.aquaflux.pro/",
-            "User-Agent": "Mozilla/5.0",
-            "Content-Type": "application/json",
-        }
-        if auth and self._token:
-            headers["Authorization"] = f"Bearer {self._token}"
-        # ожидаем, что твоя BaseAsyncSession возвращает уже json (dict)
-        return await self.session.post(f"{BASE_API}{path}", json=payload, headers=headers)
+    # =========================
+    # HTTP helpers (with retry)
+    # =========================
 
-    async def _get(self, path: str, auth: bool = True) -> dict:
-        headers = {
-            "Accept": "application/json, text/plain, */*",
-            "Origin": "https://playground.aquaflux.pro",
-            "Referer": "https://playground.aquaflux.pro/",
-            "User-Agent": "Mozilla/5.0",
-        }
+    @async_retry(retries=3, delay=3, to_raise=False)
+    async def _post(self, path: str, payload: Dict[str, Any], *, auth: bool = False) -> Optional[Dict[str, Any]]:
+        headers = dict(self.base_headers)
         if auth and self._token:
             headers["Authorization"] = f"Bearer {self._token}"
 
-        return await self.session.get(f"{BASE_API}{path}", headers=headers)
+        r = await self.session.post(
+            url=f"{BASE_API}{path}",
+            headers=headers,
+            json=payload,
+            timeout=120,
+        )
+        r.raise_for_status()
+        try:
+            return r.json()
+        except Exception:
+            from json import loads
+            return loads(r.text or "{}")
 
+    @async_retry(retries=3, delay=3, to_raise=False)
+    async def _get(self, path: str, *, auth: bool = True) -> Optional[Dict[str, Any]]:
+        headers = dict(self.base_headers)
+        if auth and self._token:
+            headers["Authorization"] = f"Bearer {self._token}"
+
+        r = await self.session.get(
+            url=f"{BASE_API}{path}",
+            headers=headers,
+            timeout=120,
+        )
+        r.raise_for_status()
+        try:
+            return r.json()
+        except Exception:
+            from json import loads
+            return loads(r.text or "{}")
+
+    # =========================
+    # API auth & helpers
+    # =========================
+
+    @async_retry(retries=3, delay=3, to_raise=False)
     async def _login(self) -> bool:
         ts_ms = int(time.time() * 1000)
         msg = f"Sign in to AquaFlux with timestamp: {ts_ms}"
-        signed = self.sign_message(text=msg)
+        sig = await self.sign_message(text=msg)
+
         payload = {
             "address": self.client.account.address,
             "message": msg,
-            "signature": Web3.to_hex(signed.signature),
+            "signature": sig,
         }
-        try:
-            data = await self._post("/users/wallet-login", payload, auth=False)
-            self._token = data["data"]["accessToken"]
-            return True
-        except Exception:
+
+        data = await self._post("/users/wallet-login", payload, auth=False)
+        if not data:
             return False
 
-    async def _get_signature(self, nft_type: int):
+        token = (data.get("data") or {}).get("accessToken")
+        if not token:
+            return False
+
+        self._token = token
+        return True
+
+    @async_retry(retries=3, delay=3, to_raise=False)
+    async def _get_signature(self, nft_type: int) -> Optional[tuple[int, str]]:
         data = await self._post(
             "/users/get-signature",
             {"walletAddress": self.client.account.address, "requestedNftType": nft_type},
             auth=True,
         )
-        return int(data["data"]["expiresAt"]), data["data"]["signature"]
+        if not data or "data" not in data:
+            return None
+        d = data["data"]
+        return int(d["expiresAt"]), d["signature"]
 
+    @async_retry(retries=3, delay=3, to_raise=False)
     async def _is_twitter_bound(self) -> bool:
-        try:
-            data = await self._get("/users/twitter/binding-status", auth=True)
-            return bool(data.get("data", {}).get("isBound", False))
-        except Exception:
-            return False
+        data = await self._get("/users/twitter/binding-status", auth=True)
+        return bool((data or {}).get("data", {}).get("isBound", False))
 
     async def _contract(self):
         return await self.client.contracts.get(contract_address=AQUAFLUX)
 
     async def _already_minted(self, premium: bool) -> bool:
-        c = await self.client.contracts.get(contract_address=AQUAFLUX)
         try:
+            c = await self._contract()
             fn = "hasClaimedPremiumNFT" if premium else "hasClaimedStandardNFT"
             data = c.encode_abi(fn, args=[self.client.account.address])
             res = await self.client.transactions.call(to=c.address, data=data)
-            # bool кодируется как ...0001 / ...0000
             return bool(int(res, 16))
         except Exception:
             return False
 
+    # =========================
+    # On-chain actions
+    # =========================
+
     @action_log("Aquaflux | Claim tokens")
     async def claim_tokens(self) -> str:
-        c = await self.client.contracts.get(contract_address=AQUAFLUX)
+        c = await self._contract()
         data = c.encode_abi("claimTokens", args=[])
         tx = await self.client.transactions.sign_and_send(TxParams(
             to=c.address,
             data=data,
-            value=0
+            value=0,
         ))
         await asyncio.sleep(2)
         rcpt = await tx.wait_for_receipt(client=self.client, timeout=300)
-        return "Success | claimTokens" if rcpt and rcpt.status == 1 else "Failed | claimTokens"
+        return "Success | claimTokens" if rcpt and getattr(rcpt, "status", 1) == 1 else "Failed | claimTokens"
 
     @action_log("Aquaflux | Combine")
     async def combine(self, variant: str = "combineCS", amount_ether: float = 100) -> str:
         if variant not in {"combineCS", "combinePC", "combinePS"}:
             variant = "combineCS"
+
         c = await self._contract()
         amount = TokenAmount(amount=amount_ether)
         data = c.encode_abi(variant, args=[amount.Wei])
+
         tx = await self.client.transactions.sign_and_send(TxParams(
             to=c.address,
             data=data,
-            value=0
+            value=0,
         ))
         await asyncio.sleep(2)
         rcpt = await tx.wait_for_receipt(client=self.client, timeout=300)
-        return f"Success | {variant} {amount.Ether} PHRS" if rcpt and rcpt.status == 1 else f"Failed | {variant}"
+        return f"Success | {variant} {amount.Ether} PHRS" if rcpt and getattr(rcpt, "status", 1) == 1 else f"Failed | {variant}"
 
     @action_log("Aquaflux | Mint")
     async def mint(self, nft_type: str = "standard") -> str:
@@ -165,10 +204,10 @@ class AquaFlux(Base):
         if await self._already_minted(premium=premium):
             return f"Failed | already minted {nft_type}"
 
-        try:
-            expires_at, sig_hex = await self._get_signature(1 if premium else 0)
-        except Exception as e:
-            return f"Failed | signature {e}"
+        sig = await self._get_signature(1 if premium else 0)
+        if not sig:
+            return "Failed | signature"
+        expires_at, sig_hex = sig
 
         c = await self._contract()
         sig_bytes = Web3.to_bytes(hexstr=sig_hex)
@@ -177,8 +216,8 @@ class AquaFlux(Base):
         tx = await self.client.transactions.sign_and_send(TxParams(
             to=c.address,
             data=data,
-            value=0
+            value=0,
         ))
         await asyncio.sleep(2)
         rcpt = await tx.wait_for_receipt(client=self.client, timeout=300)
-        return f"Success | mint {nft_type}" if rcpt and rcpt.status == 1 else f"Failed | mint {nft_type}"
+        return f"Success | mint {nft_type}" if rcpt and getattr(rcpt, "status", 1) == 1 else f"Failed | mint {nft_type}"

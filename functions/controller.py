@@ -8,6 +8,7 @@ from data.settings import Settings
 from modules.autostaking import AutoStaking
 from libs.eth_async.client import Client
 from libs.base import Base
+from modules.brokex import Brokex
 from modules.pharos_portal import PharosPortal
 from modules.pns import PNS
 from modules.primus import Primus
@@ -34,6 +35,7 @@ class Controller:
         self.primus = Primus(client=client, wallet=wallet)
         self.pns = PNS(client=client, wallet=wallet)
         self.autostaking = AutoStaking(client=client, wallet=wallet)
+        self.brokex = Brokex(client=client, wallet=wallet)
 
     @controller_log('CheckIn')
     async def check_in_task(self):
@@ -137,6 +139,11 @@ class Controller:
     async def autostaking_task(self):
         return await self.autostaking.autostacking_flow()
 
+    @controller_log('Brokex USDC Faucet')
+    async def brokex_faucet(self):
+
+        return await self.brokex.claim_faucet()
+
     async def build_actions(self):
 
         final_actions = []
@@ -176,7 +183,10 @@ class Controller:
 
             autostake = [lambda: self.autostaking_task() for _ in range(autostake_count)]
 
-            all_actions = swaps + tips + autostake
+            brokex = [lambda: self.brokex_faucet()]
+
+            all_actions = swaps + tips + autostake + brokex
+
             random.shuffle(all_actions)
 
             final_actions += all_actions

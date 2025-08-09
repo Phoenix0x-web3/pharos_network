@@ -272,10 +272,10 @@ class AutoStaking(Base):
         receipt = await tx.wait_for_receipt(client=self.client, timeout=300)
 
         if receipt:
-            return "Success MocUSD Faucet"
+            return f"{self.wallet} | {self.__module_name__} | Success MocUSD Faucet"
 
 
-        return "Failed MocUSD Faucet"
+        return f"{self.wallet} | {self.__module_name__} |Failed MocUSD Faucet"
 
     @async_retry(retries=3, delay=3, to_raise=False)
     async def _financial_portfolio_recommendation(
