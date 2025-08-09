@@ -120,6 +120,10 @@ async def random_activity_task(wallet, semaphore = None):
     except Exception as e:
  
         logger.error(f'Core | Activity | {wallet} |{e}')
+        await update_next_action_time(
+            private_key=wallet.private_key,
+            seconds=random.randint(1200, 1600)
+        )
 
     finally:
         _running_wallets.remove(wallet.id)
