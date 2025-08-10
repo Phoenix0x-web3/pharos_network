@@ -195,9 +195,9 @@ class AutoStaking(Base):
         return base64.b64encode(ciphertext).decode("ascii")
 
     async def _payload_recommendation(
-            self, usdc_amount: float,
-            usdt_amount: float,
-            musd_amount: float,
+            self, usdc_amount: TokenAmount,
+            usdt_amount: TokenAmount,
+            musd_amount: TokenAmount,
             user_positions: list = None) -> Dict[str, Any]:
 
         to_units = lambda v: str(int(v * 10 ** 6))
@@ -213,9 +213,9 @@ class AutoStaking(Base):
                     "symbol": "USDC",
                     "decimals": 6,
                     "address": USDC.address,
-                    "assets": to_units(usdc_amount),
+                    "assets": float(usdc_amount.Ether),
                     "price": 1,
-                    "assetsUsd": usdc_amount,
+                    "assetsUsd": usdc_amount.Wei,
                 },
                 {
                     "chain": {"id": self.client.network.chain_id},
@@ -223,9 +223,9 @@ class AutoStaking(Base):
                     "symbol": "USDT",
                     "decimals": 6,
                     "address": USDT.address,
-                    "assets": to_units(usdt_amount),
+                    "assets": float(usdt_amount.Ether),
                     "price": 1,
-                    "assetsUsd": usdt_amount,
+                    "assetsUsd": usdt_amount.Wei,
                 },
                 {
                     "chain": {"id": self.client.network.chain_id},
@@ -233,9 +233,9 @@ class AutoStaking(Base):
                     "symbol": "MockUSD",
                     "decimals": 6,
                     "address": MUSD.address,
-                    "assets": to_units(musd_amount),
+                    "assets": float(musd_amount.Ether),
                     "price": 1,
-                    "assetsUsd": musd_amount,
+                    "assetsUsd": musd_amount.Wei,
                 },
             ],
             "chainIds": [self.client.network.chain_id],
@@ -280,9 +280,9 @@ class AutoStaking(Base):
     @async_retry(retries=3, delay=3, to_raise=False)
     async def _financial_portfolio_recommendation(
         self,
-            usdc_amount: float,
-            usdt_amount: float,
-            musd_amount: float,
+            usdc_amount: TokenAmount,
+            usdt_amount: TokenAmount,
+            musd_amount: TokenAmount,
             user_positions: list = None
     ) -> Optional[Dict[str, Any]]:
 
@@ -340,7 +340,7 @@ class AutoStaking(Base):
             percent = random.randint(settings.stake_percent_min, settings.stake_percent_max)
 
             balance = await self.client.wallet.balance(token=stable)
-            balance_map[stable] = float(balance.Ether) * percent
+            balance_map[stable] = TokenAmount(amount=float(balance.Ether) * percent, decimals=6)
 
         return balance_map
 

@@ -211,8 +211,17 @@ class Controller:
             register = await self.faucet_task(registration=True)
             logger.success(register)
 
+
         if wallet_balance:
             faucet_status = await self.pharos_portal.get_faucet_status()
+
+            if faucet_status.get('data').get('is_able_to_faucet'):
+                final_actions.append(lambda: self.faucet_task())
+
+            if float(wallet_balance.Ether) <= 0.0001:
+                if len(final_actions) == 0:
+
+                    return f"{self.wallet} | Not enought balance for actions | Awaiting for next faucet"
 
             twitter_tasks, discord_tasks = await self.pharos_portal.tasks_flow()
 
@@ -220,8 +229,6 @@ class Controller:
 
             brokex_faucet = await self.brokex.has_claimed()
 
-            if faucet_status.get('data').get('is_able_to_faucet'):
-                final_actions.append(lambda: self.faucet_task())
 
             if len(twitter_tasks) > 0:
                 build_array.append(lambda: self.twitter_tasks(twitter_tasks=twitter_tasks))
@@ -230,7 +237,7 @@ class Controller:
                 domains = await self.pns.check_pns_domain()
 
                 if len(domains) == 0:
-                    build_array.append(lambda: self.pns.mint())
+                    final_actions.append(lambda: self.pns.mint())
 
             if not aquaflux_nft:
                 build_array.append(lambda: self.aquaflux_flow())

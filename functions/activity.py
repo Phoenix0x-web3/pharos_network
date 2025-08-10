@@ -18,6 +18,7 @@ from utils.db_update import update_next_action_time, update_expired
 
 _running_wallets: set[int] = set()
 _pending_tasks: set[asyncio.Task] = set()
+semaphore = asyncio.Semaphore(Settings().threads)
 
 async def random_activity():
     #check_encrypt_param()
@@ -47,21 +48,40 @@ async def random_activity():
             if not wallets:
                 continue
 
-            semaphore = asyncio.Semaphore(Settings().threads)
+           # logger.info(f'Currently Running Wallets: {_running_wallets}')
 
-            async def sem_task(wallet: Wallet):
+            settings = Settings()
+
+            async def sem_task(wallet: Wallet, timeout: float | int = 900):
 
                 async with semaphore:
                     try:
-                        await random_activity_task(wallet=wallet)
+                        async with asyncio.timeout(timeout):
+                            await random_activity_task(wallet=wallet)
 
-                    except Exception as e:
-                        logger.error(f"[{wallet.id}] failed: {e}")
+                    except asyncio.CancelledError:
+
+                        raise
+
+                    except asyncio.TimeoutError:
+                        logger.error(f"{wallet} | wallet-loop timeout after {timeout}s -> drop task")
+
+                        await update_next_action_time(
+                            private_key=wallet.private_key,
+                            seconds=random.randint(settings.random_pause_wallet_after_completion_min, settings.random_pause_wallet_after_completion_max)
+                        )
+
+                    except Exception:
+                        await update_next_action_time(
+                            private_key=wallet.private_key,
+                            seconds=random.randint(1200, 1600)
+                        )
+
+                    finally:
+                        _running_wallets.discard(wallet.id)
 
             if wallets:
-
                 for wallet in wallets:
-
                     if wallet.id in _running_wallets:
                         continue
 
@@ -73,6 +93,7 @@ async def random_activity():
 
         except Exception as e:
             logger.error(f"Activity Main Task | Error {e}")
+
 
         finally:
             await asyncio.sleep(delay)
@@ -89,27 +110,31 @@ async def random_activity_task(wallet, semaphore = None):
 
         actions = await controller.build_actions()
 
-        logger.info(f'{wallet} | Started Activity Tasks | Wallet will do {len(actions)} actions')
+        if isinstance(actions, str):
+            logger.warning(actions)
 
-        for action in actions:
+        else:
+            logger.info(f'{wallet} | Started Activity Tasks | Wallet will do {len(actions)} actions')
 
-            sleep = random.randint(settings.random_pause_between_actions_min,
-                                   settings.random_pause_between_actions_max)
-            try:
-                status = await action()
-                if 'Failed' not in status:
-                    logger.success(status)
+            for action in actions:
 
-                else:
-                    logger.error(status)
+                sleep = random.randint(settings.random_pause_between_actions_min,
+                                       settings.random_pause_between_actions_max)
+                try:
+                    status = await action()
 
-            except Exception as e:
-                logger.error(e)
-                continue
+                    if 'Failed' not in status:
+                        logger.success(status)
+                    else:
+                        logger.error(status)
 
-            finally:
-               # logger.info(f"{wallet} | Start sleeping {sleep} secs for next action ")
-                await asyncio.sleep(sleep)
+                except Exception as e:
+                    logger.error(e)
+                    continue
+
+                finally:
+                   # logger.info(f"{wallet} | Start sleeping {sleep} secs for next action ")
+                    await asyncio.sleep(sleep)
 
         await update_next_action_time(
             private_key=wallet.private_key,
@@ -118,17 +143,13 @@ async def random_activity_task(wallet, semaphore = None):
         
         await controller.update_db_by_user_info()
 
-    except Exception as e:
- 
-        logger.error(f'Core | Activity | {wallet} |{e}')
-        await update_next_action_time(
-            private_key=wallet.private_key,
-            seconds=random.randint(1200, 1600)
-        )
+    except asyncio.CancelledError:
+        raise
 
-    finally:
-        _running_wallets.remove(wallet.id)
-        logger.info(f'{wallet} | finished activity tasks points [{wallet.points}]')
+    except Exception as e:
+        logger.error(f'Core | Activity | {wallet} |{e}')
+        raise e
+
 
 
 async def execute(wallets : Wallet, task_func, timeout_hours : int = 0):
