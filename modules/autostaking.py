@@ -33,7 +33,7 @@ h23cf2WfZ0vwDYzZ8QIDAQAB
 """.strip()
 
 RPC_URL = "https://testnet.dplabs-internal.com/"
-BASE_API = 'https://asia-east2-auto-staking.cloudfunctions.net'
+BASE_API = 'https://asia-east2-auto-staking.cloudfunctions.net/auto_staking_pharos_v2'
 
 USDC = RawContract(
     title="USDC",
@@ -165,6 +165,7 @@ class AutoStaking(Base):
         self.wallet = wallet
         self.proxy = proxy
         self.session = BaseAsyncSession(proxy=self.wallet.proxy)
+        self.auth_token = None
         self.base_headers = {
             "Accept": "application/json, text/plain, */*",
             "Accept-Language": "en-US,en;q=0.9",
@@ -172,11 +173,10 @@ class AutoStaking(Base):
             "Referer": "https://autostaking.pro/",
             "Sec-Fetch-Dest": "empty",
             "Sec-Fetch-Mode": "cors",
-            "Sec-Fetch-Site": "same-site",
-            "authorization": self._auth_token()
+            "Sec-Fetch-Site": "same-site"
         }
 
-    def _auth_token(self) -> str:
+    async def _auth_token(self) -> str:
         from cryptography.hazmat.primitives.asymmetric import padding
         from cryptography.hazmat.primitives import hashes, serialization
         from cryptography.hazmat.backends import default_backend
@@ -194,7 +194,7 @@ class AutoStaking(Base):
         )
         return base64.b64encode(ciphertext).decode("ascii")
 
-    def _payload_recommendation(
+    async def _payload_recommendation(
             self, usdc_amount: float,
             usdt_amount: float,
             musd_amount: float,
@@ -244,7 +244,7 @@ class AutoStaking(Base):
             "env": "pharos",
         }
 
-    def _payload_change_txs(self, change_tx: Any) -> Dict[str, Any]:
+    async def _payload_change_txs(self, change_tx: Any) -> Dict[str, Any]:
         return {
             "user": self.client.account.address,
             "changes": change_tx,
@@ -256,7 +256,7 @@ class AutoStaking(Base):
         next_time = await contract.functions.getNextFaucetClaimTime(self.client.account.address).call()
         return int(next_time)
 
-    action_log('Faucet')
+    @controller_log('Faucet')
     async def claim_faucet(self) -> Optional[str]:
 
         contract = await self.client.contracts.get(contract_address=mvMUSD)
@@ -286,9 +286,11 @@ class AutoStaking(Base):
             user_positions: list = None
     ) -> Optional[Dict[str, Any]]:
 
+        payload = await self._payload_recommendation(usdc_amount, usdt_amount, musd_amount, user_positions=user_positions)
+
         r = await self.session.post(
-            url=f"{BASE_API}/auto_staking_pharos/investment/financial-portfolio-recommendation",
-            json=self._payload_recommendation(usdc_amount, usdt_amount, musd_amount, user_positions=user_positions),
+            url=f"{BASE_API}/investment/financial-portfolio-recommendation",
+            json=payload,
 
             headers=self.base_headers,
             timeout=300,
@@ -311,13 +313,14 @@ class AutoStaking(Base):
 
     @async_retry(retries=5, delay=3, to_raise=False)
     async def _get_user_positions(self):
-        url = f"{BASE_API}/auto_staking_pharos/user/positions?user={self.client.account.address}&env=pharos"
+        url = f"{BASE_API}/user/positions?user={self.client.account.address}&env=pharos"
 
         r = await self.session.get(
             url=url,
             headers=self.base_headers,
             timeout=120,
         )
+
         r.raise_for_status()
 
         return r.json()
@@ -341,13 +344,13 @@ class AutoStaking(Base):
 
         return balance_map
 
-    @async_retry(retries=10, delay=5, to_raise=False)
+    @async_retry(retries=5, delay=3, to_raise=False)
     async def _generate_change_transactions(self, change_tx: Any) -> dict:
 
-        payload = self._payload_change_txs(change_tx)
+        payload = await self._payload_change_txs(change_tx)
 
         r = await self.session.post(
-            url=f"{BASE_API}/auto_staking_pharos/investment/generate-change-transactions",
+            url=f"{BASE_API}/investment/generate-change-transactions",
             headers=self.base_headers,
             json=payload,
             timeout=120,
@@ -385,8 +388,15 @@ class AutoStaking(Base):
 
     async def autostacking_flow(self):
 
-        next_time = await self.get_next_faucet_claim_time()
+        if not self.auth_token:
+            self.auth_token = await self._auth_token()
 
+            self.base_headers = {
+                **self.base_headers,
+                "authorization": self.auth_token
+            }
+
+        next_time = await self.get_next_faucet_claim_time()
         now = int(time.time())
 
         if now >= next_time:

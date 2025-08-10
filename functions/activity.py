@@ -41,7 +41,8 @@ async def random_activity():
             else:
                 wallets: List[Wallet] = db.all(
                     Wallet,
-                    Wallet.next_activity_action_time <= now
+                    Wallet.next_activity_action_time <= now,
+                    order_by=Wallet.next_activity_action_time.asc()
                 )
             if not wallets:
                 continue

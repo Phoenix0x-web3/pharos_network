@@ -30,7 +30,7 @@ class Primus(Base):
 
 
     @staticmethod
-    def _rand_username(platform: str) -> str:
+    async def _rand_username(platform: str) -> str:
         prefix = "@" if platform in {"x", "tiktok"} else ""
         charset = string.ascii_lowercase + string.digits + "_"
         return prefix + "".join(random.choice(charset) for _ in range(random.randint(5, 12)))
@@ -41,7 +41,7 @@ class Primus(Base):
         contract = await self.client.contracts.get(contract_address=PRIMUS)
 
         platform = random.choice(['x', 'tiktok'])
-        username = self._rand_username(platform=platform)
+        username = await self._rand_username(platform=platform)
 
         amount = TokenAmount(
             amount=randfloat(from_=0.000001, to_=0.00001, step=0.000001)
