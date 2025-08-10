@@ -218,6 +218,8 @@ class Controller:
 
             aquaflux_nft = await self.aquaflux.already_minted(premium=True)
 
+            brokex_faucet = await self.brokex.has_claimed()
+
             if faucet_status.get('data').get('is_able_to_faucet'):
                 final_actions.append(lambda: self.faucet_task())
 
@@ -232,6 +234,8 @@ class Controller:
 
             if not aquaflux_nft:
                 build_array.append(lambda: self.aquaflux_flow())
+            if not brokex_faucet:
+                build_array.append(lambda: self.brokex_faucet())
 
             swaps = [lambda: self.random_swap() for _ in range(swaps_count)]
 
@@ -239,11 +243,7 @@ class Controller:
 
             autostake = [lambda: self.autostaking_task() for _ in range(autostake_count)]
 
-            brokex = [lambda: self.brokex_faucet()]
-
-
-            all_actions = swaps + tips + autostake + brokex + build_array
-
+            all_actions = swaps + tips + autostake + build_array
 
             random.shuffle(all_actions)
 
