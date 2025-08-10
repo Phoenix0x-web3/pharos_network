@@ -26,7 +26,7 @@ class DB:
         self.Base = base
         self.Base.metadata.create_all(self.engine)
 
-    def all(self, entities=None, *criterion, stmt=None) -> list:
+    def all(self, entities=None, *criterion, stmt=None , order_by=None) -> list:
         """
         Fetches all rows.
 
@@ -42,7 +42,10 @@ class DB:
             return self.s.query(entities).filter(*criterion).all()
 
         if entities:
-            return self.s.query(entities).all()
+            query = self.s.query(entities)
+            if order_by is not None:
+                query = query.order_by(order_by)
+            return query.all()
 
         return []
 

@@ -12,6 +12,7 @@ from modules.brokex import Brokex
 from modules.pharos_portal import PharosPortal
 from modules.pns import PNS
 from modules.primus import Primus
+from modules.rwafi import AquaFlux
 from modules.zenith import Zenith
 
 from utils.db_api.models import Wallet
@@ -36,6 +37,7 @@ class Controller:
         self.pns = PNS(client=client, wallet=wallet)
         self.autostaking = AutoStaking(client=client, wallet=wallet)
         self.brokex = Brokex(client=client, wallet=wallet)
+        self.aquaflux = AquaFlux(client=client, wallet=wallet)
 
     @controller_log('CheckIn')
     async def check_in_task(self):
@@ -81,6 +83,8 @@ class Controller:
             return status
 
         raise Exception(status)
+
+
 
     @controller_log('Twitter Tasks')
     async def twitter_tasks(self, twitter_tasks: list):
@@ -144,10 +148,59 @@ class Controller:
 
         return await self.brokex.claim_faucet()
 
+    @controller_log('Aquaflux Flow')
+    async def aquaflux_flow(self):
+        settings = Settings()
+        aquaflux_twitter_bound = await self.aquaflux.twitter_bound()
+
+        if not aquaflux_twitter_bound:
+            twitter_auth_url = await self.aquaflux.twitter_initiate()
+
+            oauth2 = await self.twitter.connect_twitter_to_site_oauth2(twitter_auth_url=twitter_auth_url)
+
+            bind_twitter = await self.aquaflux.bind_twitter(callback_data=oauth2)
+
+            if 'Failed' not in bind_twitter:
+                logger.success(bind_twitter)
+                await asyncio.sleep(random.randint(5,10))
+                result = await self.twitter.follow_account(account_name='AquaFluxPro')
+                await asyncio.sleep(random.randint(3, 7))
+
+        check_twitter_following = await self.aquaflux.check_twitter_following()
+
+        if not check_twitter_following:
+            result = await self.twitter.follow_account(account_name='AquaFluxPro')
+            await asyncio.sleep(random.randint(3, 7))
+
+            return await self.aquaflux_flow()
+
+        claim_tokens = await self.aquaflux.claim_tokens()
+
+        if 'Failed' not in claim_tokens:
+            logger.success(claim_tokens)
+            await asyncio.sleep(random.randint(settings.random_pause_between_actions_min, settings.random_pause_between_actions_max))
+
+            combine = await self.aquaflux.combine()
+            if 'Failed' not in combine:
+                logger.success(combine)
+                await asyncio.sleep(
+                    random.randint(settings.random_pause_between_actions_min, settings.random_pause_between_actions_max))
+
+                mint = await self.aquaflux.mint()
+                if 'Failed' not in mint:
+                    return mint
+
+        return 'Failed'
+
+
+
     async def build_actions(self):
 
         final_actions = []
+
         settings = Settings()
+
+        build_array = []
 
         swaps_count = random.randint(settings.swaps_count_min, settings.swaps_count_max)
         tips_count = random.randint(settings.tips_count_min, settings.tips_count_max)
@@ -159,23 +212,27 @@ class Controller:
             register = await self.faucet_task(registration=True)
             logger.success(register)
 
-
         if wallet_balance:
             faucet_status = await self.pharos_portal.get_faucet_status()
 
             twitter_tasks, discord_tasks = await self.pharos_portal.tasks_flow()
 
+            aquaflux_nft = await self.aquaflux.already_minted(premium=True)
+
             if faucet_status.get('data').get('is_able_to_faucet'):
                 final_actions.append(lambda: self.faucet_task())
 
             if len(twitter_tasks) > 0:
-                final_actions.append(lambda: self.twitter_tasks(twitter_tasks=twitter_tasks))
+                build_array.append(lambda: self.twitter_tasks(twitter_tasks=twitter_tasks))
 
             if wallet_balance.Ether > 0.35:
                 domains = await self.pns.check_pns_domain()
 
                 if len(domains) == 0:
-                    final_actions.append(lambda: self.pns.mint())
+                    build_array.append(lambda: self.pns.mint())
+
+            if not aquaflux_nft:
+                build_array.append(lambda: self.aquaflux_flow())
 
             swaps = [lambda: self.random_swap() for _ in range(swaps_count)]
 
@@ -185,7 +242,7 @@ class Controller:
 
             brokex = [lambda: self.brokex_faucet()]
 
-            all_actions = swaps + tips + autostake + brokex
+            all_actions = swaps + tips + autostake + brokex + build_array
 
             random.shuffle(all_actions)
 
@@ -193,11 +250,7 @@ class Controller:
 
         return final_actions
 
-    async def stake_tasks(self):
-        # todo random stake with logs
-        pass
-    
-    
+
     async def update_db_by_user_info(self):
         await self.pharos_portal.login()
 

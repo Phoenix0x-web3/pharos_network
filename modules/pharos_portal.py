@@ -59,7 +59,7 @@ class PharosPortal(Base):
     def __repr__(self):
         return f'{self.__module__} | [{self.client.account.address}]'
 
-    def _siwe_message(self, nonce: int) -> tuple[str, str]:
+    async def _siwe_message(self, nonce: int) -> tuple[str, str]:
 
         issued_at = dt.datetime.utcnow().replace(microsecond=0).isoformat() + "Z"
 
@@ -87,7 +87,7 @@ class PharosPortal(Base):
         settings = Settings()
         nonce = await self.client.wallet.nonce()
 
-        message, timestamp = self._siwe_message(nonce=nonce)
+        message, timestamp = await self._siwe_message(nonce=nonce)
         sig = await self.sign_message(text=message)
         
 

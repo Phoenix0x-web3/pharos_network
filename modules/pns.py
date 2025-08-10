@@ -45,7 +45,7 @@ class PNS(Base):
 
 
     @staticmethod
-    def _rand_domain(length: int = 9) -> str:
+    async def _rand_domain(length: int = 9) -> str:
         from faker import Faker
         prefix = random.randint(3, 5)
         name = Faker().user_name()
@@ -57,9 +57,9 @@ class PNS(Base):
         return new_nickname
 
     @controller_log("Domain Mint")
-    async def mint(self, domain: str | None = None) -> str:
+    async def mint(self) -> str:
         contract = await self.client.contracts.get(contract_address=PNS_CONTROLLER)
-        name = domain or self._rand_domain()
+        name = await self._rand_domain()
         owner = self.client.account.address
         secret = HexBytes(os.urandom(32))
 
