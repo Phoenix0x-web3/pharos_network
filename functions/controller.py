@@ -148,6 +148,7 @@ class Controller:
 
         return await self.brokex.claim_faucet()
 
+
     @controller_log('Aquaflux Flow')
     async def aquaflux_flow(self):
         settings = Settings()
@@ -191,9 +192,7 @@ class Controller:
                     return mint
 
         return 'Failed'
-
-
-
+      
     async def build_actions(self):
 
         final_actions = []
@@ -242,7 +241,9 @@ class Controller:
 
             brokex = [lambda: self.brokex_faucet()]
 
+
             all_actions = swaps + tips + autostake + brokex + build_array
+
 
             random.shuffle(all_actions)
 
