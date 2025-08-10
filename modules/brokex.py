@@ -11,7 +11,7 @@ from libs.eth_async.client import Client
 from libs.eth_async.data.models import RawContract, DefaultABIs, TokenAmount
 from libs.twitter.base import BaseAsyncSession
 from utils.db_api.models import Wallet
-from utils.logs_decorator import action_log
+from utils.logs_decorator import action_log, controller_log
 from utils.retry import async_retry
 
 
@@ -166,7 +166,7 @@ class Brokex(Base):
         }
 
 
-    async def _has_claimed(self) -> Optional[bool]:
+    async def has_claimed(self) -> Optional[bool]:
 
         contract = await self.client.contracts.get(contract_address=FAUCET_ROUTER)
 
@@ -174,20 +174,20 @@ class Brokex(Base):
         return res
 
     async def claim_faucet(self) -> str:
-        claimed = await self._has_claimed()
+        # claimed = await self.has_claimed()
+        #
+        # if not claimed:
 
-        if not claimed:
+        contract = await self.client.contracts.get(contract_address=FAUCET_ROUTER)
+        data = contract.encode_abi("claim", args=[])
 
-            contract = await self.client.contracts.get(contract_address=FAUCET_ROUTER)
-            data = contract.encode_abi("claim", args=[])
+        tx = await self.client.transactions.sign_and_send(TxParams(
+            to=contract.address,
+            data=data,
+            value=0
+        ))
+        await asyncio.sleep(2)
+        receipt = await tx.wait_for_receipt(client=self.client, timeout=300)
 
-            tx = await self.client.transactions.sign_and_send(TxParams(
-                to=contract.address,
-                data=data,
-                value=0
-            ))
-            await asyncio.sleep(2)
-            receipt = await tx.wait_for_receipt(client=self.client, timeout=300)
-
-            if receipt:
-                return "Success | Claim faucet" if receipt else "Failed | Claim faucet"
+        if receipt:
+            return "Success Claimed" if receipt else "Failed | Claim faucet"
