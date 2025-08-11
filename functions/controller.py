@@ -212,6 +212,8 @@ class Controller:
             register = await self.faucet_task(registration=True)
             logger.success(register)
 
+            await asyncio.sleep(9, 12)
+            wallet_balance = await self.client.wallet.balance()
 
         if wallet_balance:
             faucet_status = await self.pharos_portal.get_faucet_status()
