@@ -56,8 +56,8 @@ async def random_activity():
 
                 async with semaphore:
                     try:
-                        async with asyncio.timeout(timeout):
-                            await random_activity_task(wallet=wallet)
+                        #async with asyncio.timeout(timeout):
+                        await random_activity_task(wallet=wallet)
 
                     except asyncio.CancelledError:
 

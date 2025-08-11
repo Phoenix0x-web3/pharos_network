@@ -469,7 +469,7 @@ class Networks:
             name='pharos testnet',
             rpc=RPC_MAP['pharos'],
             chain_id=688688,
-            tx_type=0,
+            tx_type=2,
             coin_symbol='PHRS',
             decimals=18,
             explorer='',
