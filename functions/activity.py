@@ -48,11 +48,11 @@ async def random_activity():
             if not wallets:
                 continue
 
-            #logger.info(f'Currently Running Wallets: {_running_wallets}')
+            logger.info(f'Currently Running Wallets: {_running_wallets}')
 
             settings = Settings()
 
-            async def sem_task(wallet: Wallet, timeout: float | int = 900):
+            async def sem_task(wallet: Wallet, timeout: float | int = 1200):
 
                 async with semaphore:
                     try:
