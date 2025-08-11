@@ -48,7 +48,7 @@ async def random_activity():
             if not wallets:
                 continue
 
-            logger.info(f'Currently Running Wallets: {_running_wallets}')
+            #logger.info(f'Currently Running Wallets: {_running_wallets}')
 
             settings = Settings()
 
