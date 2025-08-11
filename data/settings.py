@@ -33,6 +33,8 @@ class Settings(Singleton):
         self.tips_count_max = json_data.get("tips_count", {}).get('max')
         self.autostake_count_min = json_data.get("autostake_count", {}).get('min')
         self.autostake_count_max = json_data.get("autostake_count", {}).get('max')
+        self.lp_count_min = json_data.get("lp_count", {}).get('min')
+        self.lp_count_max = json_data.get("lp_count", {}).get('max')
         self.retry = json_data.get("retry", {})
 
 

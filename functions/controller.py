@@ -204,6 +204,7 @@ class Controller:
         swaps_count = random.randint(settings.swaps_count_min, settings.swaps_count_max)
         tips_count = random.randint(settings.tips_count_min, settings.tips_count_max)
         autostake_count = random.randint(settings.autostake_count_min, settings.autostake_count_max)
+        lp_count = random.randint(settings.lp_count_min, settings.lp_count_max)
 
         wallet_balance = await self.client.wallet.balance()
 
@@ -229,7 +230,6 @@ class Controller:
 
             brokex_faucet = await self.brokex.has_claimed()
 
-
             if len(twitter_tasks) > 0:
                 build_array.append(lambda: self.twitter_tasks(twitter_tasks=twitter_tasks))
 
@@ -250,7 +250,9 @@ class Controller:
 
             autostake = [lambda: self.autostaking_task() for _ in range(autostake_count)]
 
-            all_actions = swaps + tips + autostake + build_array
+            brokex_lp = [lambda: self.brokex.deposit_liquidity() for _ in range(lp_count)]
+
+            all_actions = swaps + tips + autostake + build_array + brokex_lp
 
             random.shuffle(all_actions)
 
