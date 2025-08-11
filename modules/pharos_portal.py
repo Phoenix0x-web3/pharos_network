@@ -15,6 +15,7 @@ from urllib.parse import urlparse, parse_qs, unquote
 
 from utils.db_api.models import Wallet
 from utils.logs_decorator import controller_log, action_log
+from utils.retry import async_retry
 from utils.twitter.twitter_client import TwitterClient
 from utils.db_api.wallet_api import db
 from sqlalchemy import and_
@@ -190,7 +191,9 @@ class PharosPortal(Base):
         if not self.auth:
             await self.login()
 
-        await self.check_in()
+        check_in = await self.check_in()
+        if 'Failed' not in str(check_in):
+            logger.success(check_in)
 
         await asyncio.sleep(random.randint(2, 5))
 
@@ -289,7 +292,8 @@ class PharosPortal(Base):
 
         raise Exception(f"Failed: {bind.get('msg')}")
 
-    @action_log('Check In')
+    @async_retry(retries=3, delay=3, to_raise=False)
+    @controller_log('Check In')
     async def check_in(self) -> dict:
 
         if not self.auth:
@@ -315,11 +319,11 @@ class PharosPortal(Base):
 
         if r.json().get('msg') == 'ok':
 
-            return r.json()
+            return 'Success Check In'
 
         if r.json().get('msg') == 'already signed in today':
             #todo return
-            return 'already signed in today'
+            return 'Failed Check In'
 
     async def get_user_tasks(self, user=False) -> dict:
 
