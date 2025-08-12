@@ -33,7 +33,7 @@ h23cf2WfZ0vwDYzZ8QIDAQAB
 """.strip()
 
 RPC_URL = "https://testnet.dplabs-internal.com/"
-BASE_API = 'https://asia-east2-auto-staking.cloudfunctions.net/auto_staking_pharos_v2'
+BASE_API = 'https://asia-east2-auto-staking.cloudfunctions.net/auto_staking_pharos_v3'
 
 USDC = RawContract(
     title="USDC",
