@@ -85,7 +85,6 @@ class Client(BaseHTTPClient):
         max_unlock_attempts: int = 5,
         auto_relogin: bool = True,
         update_account_info_on_startup: bool = True,
-        debug_mode: bool = False,
         **session_kwargs,
     ):
         super().__init__(**session_kwargs)
@@ -97,10 +96,6 @@ class Client(BaseHTTPClient):
         self._update_account_info_on_startup = update_account_info_on_startup
         self.xpff = XPFFHeaderGenerator(user_agent=self._session.headers["User-Agent"])
         self.gql = GQLClient(self)
- 
-        if not debug_mode:
-            logger.remove()
-            logger.add(sys.stderr, level="INFO") # only INFO and above will print
 
     async def __aenter__(self):
         await self.on_startup()

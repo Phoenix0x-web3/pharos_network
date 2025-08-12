@@ -19,6 +19,9 @@ shuffle_wallets: true
 # Hide wallet address in logs
 hide_wallet_address_log: true
 
+# the log level for the application. Options: DEBUG, INFO, WARNING, ERROR
+log_level : INFO
+
 # Delay before running the same wallet again after it has completed all actions (7 - 8 hrs default)
 random_pause_wallet_after_completion:
   min: 26000

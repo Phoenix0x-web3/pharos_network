@@ -13,6 +13,7 @@ class Settings(Singleton):
         self.exact_wallets_to_run = json_data.get("exact_wallets_to_run", [])
         self.shuffle_wallets = json_data.get("shuffle_wallets", True)
         self.hide_wallet_address_log = json_data.get("hide_wallet_address_log", True)
+        self.log_level = json_data.get("log_level", "INFO")
         self.sleep_after_each_cycle_hours = json_data.get("sleep_after_each_cycle_hours", 0)
         self.random_pause_between_wallets_min = json_data.get("random_pause_between_wallets",{}).get("min")
         self.random_pause_between_wallets_max = json_data.get("random_pause_between_wallets", {}).get("max")
