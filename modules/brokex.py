@@ -1,11 +1,13 @@
 import asyncio
 import json
+import random
 from typing import Any, Dict, List, Optional
 
 from loguru import logger
 from web3 import Web3
 from web3.types import TxParams
 
+from data.settings import Settings
 from libs.base import Base
 from libs.eth_async.client import Client
 from libs.eth_async.data.models import RawContract, DefaultABIs, TokenAmount
@@ -165,7 +167,6 @@ class Brokex(Base):
             "Sec-Fetch-Site": "cross-site"
         }
 
-
     async def has_claimed(self) -> Optional[bool]:
 
         contract = await self.client.contracts.get(contract_address=FAUCET_ROUTER)
@@ -191,3 +192,51 @@ class Brokex(Base):
 
         if receipt:
             return "Success Claimed" if receipt else "Failed | Claim faucet"
+
+    @controller_log("Deposit LP")
+    async def deposit_liquidity(self, amount_usdt: float = None) -> str:
+        settings = Settings()
+        usdt_balance = await self.client.wallet.balance(token=USDT)
+        percent = random.randint(settings.stake_percent_min, settings.stake_percent_min) / 100
+        amount = TokenAmount(amount=float(usdt_balance.Ether) * percent / 100, decimals=usdt_balance.decimals)
+
+        if await self.approve_interface(
+                token_address=USDT.address,
+                spender=POOL_ROUTER.address,
+                amount=None
+        ):
+            await asyncio.sleep(2)
+        else:
+            return f' can not approve'
+
+        c = await self.client.contracts.get(contract_address=POOL_ROUTER)
+        data = c.encode_abi("depositLiquidity", args=[int(amount.Wei)])
+
+        tx = await self.client.transactions.sign_and_send(TxParams(
+            to=c.address,
+            data=data,
+            value=0
+        ))
+        await asyncio.sleep(2)
+        rcpt = await tx.wait_for_receipt(client=self.client, timeout=300)
+        return f"Success | Deposit LP {amount} USDT" if rcpt else "Failed | Deposit LP"
+
+    @controller_log("Withdraw LP")
+    async def withdraw_liquidity(self) -> str:
+        settings = Settings()
+        percent = random.randint(settings.stake_percent_min, settings.stake_percent_min) / 100
+
+        c = await self.client.contracts.get(contract_address=POOL_ROUTER)
+        amount = await c.functions.balanceOf(self.client.account.address).call()
+        lp_amount = TokenAmount(amount=amount * percent, wei=True)
+
+        data = c.encode_abi("withdrawLiquidity", args=[int(lp_amount.Wei)])
+
+        tx = await self.client.transactions.sign_and_send(TxParams(
+            to=c.address,
+            data=data,
+            value=0
+        ))
+        await asyncio.sleep(2)
+        rcpt = await tx.wait_for_receipt(client=self.client, timeout=600)
+        return f"Success | Withdraw LP {lp_amount}" if rcpt else "Failed | Withdraw LP"

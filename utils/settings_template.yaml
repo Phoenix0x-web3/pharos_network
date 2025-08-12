@@ -58,6 +58,12 @@ tips_count:
 autostake_count:
   min: 1
   max: 4
+
+# LP action count
+lp_count:
+  min: 5
+  max: 10
+
 # Invite Codes for pharos network, example [invite_code1, invite_code2]
 invite_codes: []
 
