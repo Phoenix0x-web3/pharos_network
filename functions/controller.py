@@ -88,12 +88,12 @@ class Controller:
 
                 await asyncio.sleep(random.randint(5, 10))
 
-            status = await self.pharos_portal.faucet()
+        status = await self.pharos_portal.faucet()
 
-            if 'Failed' not in status:
-                return status
+        if 'Failed' not in status:
+            return status
 
-        raise Exception
+        raise Exception(f"{self.wallet} | Error in Faucet Task")
 
 
     @controller_log('Twitter Tasks')
