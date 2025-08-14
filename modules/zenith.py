@@ -119,26 +119,33 @@ class Zenith(Base):
             )
         )
 
-    async def correct_tokens_position(self, from_token: RawContract, to_token: RawContract):
+    async def correct_tokens_position(self,
+                                      from_token: RawContract,
+                                      to_token: RawContract,
+                                      a_amt: TokenAmount,
+                                      b_amt: TokenAmount = None):
 
         uint160_token0 = int(Web3.to_checksum_address(from_token.address), 16)
         uint160_token1 = int(Web3.to_checksum_address(to_token.address), 16)
 
         if uint160_token0 > uint160_token1:
+            return to_token, from_token, b_amt, a_amt
             token0, token1 = to_token, from_token
         else:
+            return from_token, to_token, a_amt, b_amt
+
             token0, token1 = from_token, to_token
 
         return token0, token1
 
-    async def get_pool_address(self, from_token: RawContract, to_token: RawContract):
+    async def get_pool_address(self, from_token: RawContract, to_token: RawContract, fee: int = 500):
 
         contract_pool = await self.client.contracts.get(contract_address=ZENITH_FACTORY)
 
         data = TxArgs(
             tokenA=from_token.address,
             tokenB=to_token.address,
-            fee=500
+            fee=fee
         ).tuple()
 
         try:
@@ -155,11 +162,20 @@ class Zenith(Base):
             logger.exception(e)
             return None
 
-    async def get_price_pool(self, from_token: RawContract, to_token: RawContract):
+    async def get_price_pool(self,
+                             from_token: RawContract,
+                             to_token: RawContract,
+                             a_amt: TokenAmount,
+                             b_amt: TokenAmount = None,
+                             fee: int = 500):
 
-        from_token, to_token = await self.correct_tokens_position(from_token=from_token, to_token=to_token)
+        from_token, to_token, a_amt, b_amt = await self.correct_tokens_position(
+            from_token=from_token,
+            to_token=to_token,
+            a_amt=a_amt,
+            b_amt=b_amt)
 
-        pool_contract = await self.get_pool_address(from_token, to_token)
+        pool_contract = await self.get_pool_address(from_token=from_token, to_token=to_token, fee=fee)
 
         pool = await self.client.contracts.get(contract_address=pool_contract)
         slot0 = await pool.functions.slot0().call()
@@ -171,11 +187,12 @@ class Zenith(Base):
 
         from_token_decimals = await self.client.transactions.get_decimals(contract=from_token.address)
         to_token_decimals = await self.client.transactions.get_decimals(contract=to_token.address)
+
         price_raw = (sqrt_price / 2 ** 96) ** 2
         price = price_raw * 10 ** (from_token_decimals - to_token_decimals)
 
-        #return price, sqrt_price, current_tick, liquidity, pool_contract
-        return price, from_token, to_token
+
+        return price, from_token, to_token, a_amt, b_amt
 
     async def _swap(self,
                     amount: TokenAmount,
@@ -191,7 +208,7 @@ class Zenith(Base):
         to_token_is_phrs = to_token.address.upper() == Contracts.PHRS.address.upper()
         if to_token_is_phrs: to_token = Contracts.WPHRS
 
-        price, token0, token1 = await self.get_price_pool(from_token, to_token)
+        price, token0, token1, a_amt, b_amt = await self.get_price_pool(from_token, to_token, amount)
 
         if token0 == from_token:
             amount_out_min = TokenAmount(
