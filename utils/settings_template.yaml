@@ -44,8 +44,8 @@ stake_percent:
 
 # Liquidity percent of native coin balance
 liquidity_percent:
-  min: 5
-  max: 30
+  min: 1
+  max: 3
 
 # Swaps action count
 swaps_count:
@@ -67,6 +67,7 @@ lp_count:
   min: 5
   max: 10
 
+
 # Invite Codes for pharos network, example [invite_code1, invite_code2]
 invite_codes: []
 
@@ -75,3 +76,4 @@ tg_bot_id: ""
 
 # You can find your chat ID by messaging @userinfobot or using https://web.telegram.org/. (example 1540239116)
 tg_user_id: ""
+

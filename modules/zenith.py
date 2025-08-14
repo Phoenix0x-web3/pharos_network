@@ -105,7 +105,7 @@ class Zenith(Base):
             to_token = random.choice(tokens)
 
         if from_token.address != Contracts.PHRS.address:
-            amount = float((balance_map[from_token.title]))
+            amount = float((balance_map[from_token.title])) - (float((balance_map[from_token.title])) * percent_to_swap)
         else:
             amount = float((balance_map[from_token.title])) * percent_to_swap
 
@@ -119,26 +119,33 @@ class Zenith(Base):
             )
         )
 
-    async def correct_tokens_position(self, from_token: RawContract, to_token: RawContract):
+    async def correct_tokens_position(self,
+                                      from_token: RawContract,
+                                      to_token: RawContract,
+                                      a_amt: TokenAmount,
+                                      b_amt: TokenAmount = None):
 
         uint160_token0 = int(Web3.to_checksum_address(from_token.address), 16)
         uint160_token1 = int(Web3.to_checksum_address(to_token.address), 16)
 
         if uint160_token0 > uint160_token1:
+            return to_token, from_token, b_amt, a_amt
             token0, token1 = to_token, from_token
         else:
+            return from_token, to_token, a_amt, b_amt
+
             token0, token1 = from_token, to_token
 
         return token0, token1
 
-    async def get_pool_address(self, from_token: RawContract, to_token: RawContract):
+    async def get_pool_address(self, from_token: RawContract, to_token: RawContract, fee: int = 500):
 
         contract_pool = await self.client.contracts.get(contract_address=ZENITH_FACTORY)
 
         data = TxArgs(
             tokenA=from_token.address,
             tokenB=to_token.address,
-            fee=500
+            fee=fee
         ).tuple()
 
         try:
@@ -155,11 +162,20 @@ class Zenith(Base):
             logger.exception(e)
             return None
 
-    async def get_price_pool(self, from_token: RawContract, to_token: RawContract):
+    async def get_price_pool(self,
+                             from_token: RawContract,
+                             to_token: RawContract,
+                             a_amt: TokenAmount,
+                             b_amt: TokenAmount = None,
+                             fee: int = 500):
 
-        from_token, to_token = await self.correct_tokens_position(from_token=from_token, to_token=to_token)
+        from_token, to_token, a_amt, b_amt = await self.correct_tokens_position(
+            from_token=from_token,
+            to_token=to_token,
+            a_amt=a_amt,
+            b_amt=b_amt)
 
-        pool_contract = await self.get_pool_address(from_token, to_token)
+        pool_contract = await self.get_pool_address(from_token=from_token, to_token=to_token, fee=fee)
 
         pool = await self.client.contracts.get(contract_address=pool_contract)
         slot0 = await pool.functions.slot0().call()
@@ -171,11 +187,12 @@ class Zenith(Base):
 
         from_token_decimals = await self.client.transactions.get_decimals(contract=from_token.address)
         to_token_decimals = await self.client.transactions.get_decimals(contract=to_token.address)
+
         price_raw = (sqrt_price / 2 ** 96) ** 2
         price = price_raw * 10 ** (from_token_decimals - to_token_decimals)
 
-        #return price, sqrt_price, current_tick, liquidity, pool_contract
-        return price, from_token, to_token
+
+        return price, from_token, to_token, a_amt, b_amt
 
     async def _swap(self,
                     amount: TokenAmount,
@@ -191,7 +208,9 @@ class Zenith(Base):
         to_token_is_phrs = to_token.address.upper() == Contracts.PHRS.address.upper()
         if to_token_is_phrs: to_token = Contracts.WPHRS
 
-        price, token0, token1 = await self.get_price_pool(from_token, to_token)
+        price, token0, token1, a_amt, b_amt = await self.get_price_pool(from_token, to_token, amount)
+
+
 
         if token0 == from_token:
             amount_out_min = TokenAmount(
@@ -202,7 +221,7 @@ class Zenith(Base):
                 amount=float(amount.Ether) / price * (100 - slippage) / 100,
             )
 
-        logger.debug(f'{self.wallet} | Trying to swap {amount.Ether:.5f} {from_token.title} to '
+        logger.debug(f'{self.wallet} | {self.__module_name__} | Trying to swap {amount.Ether:.5f} {from_token.title} to '
                     f'{amount_out_min.Ether:.5f} {to_token.title}')
 
         if not to_token_is_phrs:
@@ -214,7 +233,7 @@ class Zenith(Base):
         data = TxArgs(
             tokenIn=from_token.address,
             tokenOut=to_token.address,
-            fee=500, #3000 if from_token_is_phrs else 500,
+            fee=random.choice([500, 3000]),
             recepient=self.client.account.address if not to_token_is_phrs else '0x0000000000000000000000000000000000000002',
             amountIn=amount.Wei,
             amountOutMinimum=0 if from_token_is_phrs else amount_out_min.Wei,
@@ -264,3 +283,425 @@ class Zenith(Base):
 
 
         return f'Failed to swap {amount.Ether:.5f} {from_token.title} to {amount_out_min.Ether:.5f} {to_token.title}'
+
+
+FEE_MAP = {
+    500: (-887270, 887270),
+    3000: (-887220, 887220),
+}
+
+POSITION_MANAGER_ABI = [
+    {
+        "inputs": [
+            {
+                "components": [
+                    {"internalType": "address", "name": "token0", "type": "address"},
+                    {"internalType": "address", "name": "token1", "type": "address"},
+                    {"internalType": "uint24", "name": "fee", "type": "uint24"},
+                    {"internalType": "int24", "name": "tickLower", "type": "int24"},
+                    {"internalType": "int24", "name": "tickUpper", "type": "int24"},
+                    {"internalType": "uint256", "name": "amount0Desired", "type": "uint256"},
+                    {"internalType": "uint256", "name": "amount1Desired", "type": "uint256"},
+                    {"internalType": "uint256", "name": "amount0Min", "type": "uint256"},
+                    {"internalType": "uint256", "name": "amount1Min", "type": "uint256"},
+                    {"internalType": "address", "name": "recipient", "type": "address"},
+                    {"internalType": "uint256", "name": "deadline", "type": "uint256"},
+                ],
+                "internalType": "tuple",
+                "name": "",
+                "type": "tuple",
+            }
+        ],
+        "name": "mint",
+        "outputs": [
+            {"internalType": "uint256", "name": "tokenId", "type": "uint256"},
+            {"internalType": "uint128", "name": "liquidity", "type": "uint128"},
+            {"internalType": "uint256", "name": "amount0", "type": "uint256"},
+            {"internalType": "uint256", "name": "amount1", "type": "uint256"},
+        ],
+        "stateMutability": "payable",
+        "type": "function",
+    },
+    {
+        "inputs": [
+            {
+                "components": [
+                    {"internalType": "uint256", "name": "tokenId", "type": "uint256"},
+                    {"internalType": "uint256", "name": "amount0Desired", "type": "uint256"},
+                    {"internalType": "uint256", "name": "amount1Desired", "type": "uint256"},
+                    {"internalType": "uint256", "name": "amount0Min", "type": "uint256"},
+                    {"internalType": "uint256", "name": "amount1Min", "type": "uint256"},
+                    {"internalType": "uint256", "name": "deadline", "type": "uint256"},
+                ],
+                "internalType": "tuple",
+                "name": "",
+                "type": "tuple",
+            }
+        ],
+        "name": "increaseLiquidity",
+        "outputs": [
+            {"internalType": "uint128", "name": "liquidity", "type": "uint128"},
+            {"internalType": "uint256", "name": "amount0", "type": "uint256"},
+            {"internalType": "uint256", "name": "amount1", "type": "uint256"},
+        ],
+        "stateMutability": "payable",
+        "type": "function",
+    },
+    {
+        "inputs": [{"internalType": "address", "name": "owner", "type": "address"}],
+        "name": "balanceOf",
+        "outputs": [{"internalType": "uint256", "name": "", "type": "uint256"}],
+        "stateMutability": "view",
+        "type": "function",
+    },
+    {
+        "inputs": [
+            {"internalType": "address", "name": "owner", "type": "address"},
+            {"internalType": "uint256", "name": "index", "type": "uint256"},
+        ],
+        "name": "tokenOfOwnerByIndex",
+        "outputs": [{"internalType": "uint256", "name": "", "type": "uint256"}],
+        "stateMutability": "view",
+        "type": "function",
+    },
+    {
+        "inputs": [{"internalType": "uint256", "name": "tokenId", "type": "uint256"}],
+        "name": "positions",
+        "outputs": [
+            {"internalType": "uint96", "name": "nonce", "type": "uint96"},
+            {"internalType": "address", "name": "operator", "type": "address"},
+            {"internalType": "address", "name": "token0", "type": "address"},
+            {"internalType": "address", "name": "token1", "type": "address"},
+            {"internalType": "uint24", "name": "fee", "type": "uint24"},
+            {"internalType": "int24", "name": "tickLower", "type": "int24"},
+            {"internalType": "int24", "name": "tickUpper", "type": "int24"},
+            {"internalType": "uint128", "name": "liquidity", "type": "uint128"},
+            {"internalType": "uint256", "name": "feeGrowthInside0LastX128", "type": "uint256"},
+            {"internalType": "uint256", "name": "feeGrowthInside1LastX128", "type": "uint256"},
+            {"internalType": "uint128", "name": "tokensOwed0", "type": "uint128"},
+            {"internalType": "uint128", "name": "tokensOwed1", "type": "uint128"},
+        ],
+        "stateMutability": "view",
+        "type": "function",
+    },
+    {
+        "type": "function",
+        "name": "multicall",
+        "stateMutability": "payable",
+        "inputs": [
+            {"internalType": "bytes[]", "name": "data", "type": "bytes[]"},
+        ],
+        "outputs": [
+            {"internalType": "bytes[]", "name": "results", "type": "bytes[]"},
+        ],
+    },
+    {
+        "type": "function",
+        "name": "refundETH",
+        "stateMutability": "payable",
+        "inputs": [],
+        "outputs": [],
+    }
+]
+
+POSITION_MANAGER = RawContract(
+    title="NonfungiblePositionManager",
+    address="0xF8a1D4FF0f9b9Af7CE58E1fc1833688F3BFd6115",
+    abi=POSITION_MANAGER_ABI,
+)
+
+
+class ZenithLiquidity(Zenith):
+    __module_name__ = "Zenith Liquidity"
+
+    def __init__(self, client: Client, wallet: Wallet):
+        self.client = client
+        self.wallet = wallet
+
+    async def _is_same_token(self, a: RawContract, b: RawContract) -> bool:
+        return a.address.upper() == b.address.upper()
+
+    @staticmethod
+    async  def _order_tokens(from_token: RawContract, to_token: RawContract, a_amt: TokenAmount, b_amt: TokenAmount = None):
+
+        if int(Web3.to_checksum_address(from_token.address), 16) <= int(Web3.to_checksum_address(to_token.address), 16):
+            return from_token, to_token, a_amt, b_amt, False
+        return to_token, from_token, b_amt, a_amt, True
+
+    @controller_log("Add Liquidity (v3)")
+    async def liquidity_controller(self):
+        settings = Settings()
+        percent_to_liq = randfloat(
+            from_=settings.liquidity_percent_min,
+            to_=settings.liquidity_percent_max,
+            step=0.001
+        ) / 100
+
+        tokens = [
+            Contracts.PHRS,
+            Contracts.USDT,
+            Contracts.USDC,
+        ]
+
+        fee = random.choice(list(FEE_MAP.keys()))
+
+        balance_map = {}
+        for token in tokens:
+            if token == Contracts.PHRS:
+                balance = await self.client.wallet.balance()
+                if balance.Ether == 0:
+                    return 'Failed | No balance, try to faucet first'
+            else:
+                balance = await self.client.wallet.balance(token.address)
+
+            balance_map[token.title] = balance.Ether
+
+        if all(float(value) == 0 for value in balance_map.values()):
+            return 'Failed | No balance in all tokens, try to faucet first'
+
+        from_token = random.choice(tokens)
+
+        while balance_map[from_token.title] == 0:
+            from_token = random.choice(tokens)
+
+        a_amt = TokenAmount(amount=float((balance_map[from_token.title])) * percent_to_liq, decimals = 18 if from_token.title == 'PHRS' else 6)
+
+        balance_map.pop(from_token.title)
+        tokens.remove(from_token)
+
+        to_token = random.choice(tokens)
+
+        return await self.prepare_position(
+            a_token = from_token,
+            b_token= to_token,
+            amount = a_amt,
+            fee=fee
+        )
+
+    async def process_back_swap_from_natve(self,
+                                token: RawContract,
+                                amount: TokenAmount,
+                                fee: int = 3000
+                                 ):
+
+        from_token = Contracts.WPHRS
+        to_token = token
+
+        price, token0, token1, _, _ = await self.get_price_pool(from_token=from_token, to_token=to_token, a_amt=amount, fee=fee)
+
+        if to_token == token0:
+            amount = TokenAmount(
+                amount=(float(amount.Ether) * 1.05) * price,
+            )
+
+        if from_token == token0:
+            amount = TokenAmount(
+                amount=(float(amount.Ether) * 1.05) / price,
+            )
+
+        logger.debug(
+            f"{self.wallet} | {self.__module_name__} | going to swap {amount} {from_token.title} to {to_token.title}")
+
+        return await self._swap(
+            amount=amount,
+            from_token=Contracts.PHRS,
+            to_token=token
+        )
+
+    async def prepare_position(self,
+                               a_token: RawContract,
+                               b_token: RawContract,
+                               amount: TokenAmount,
+                               fee: int = 500 ):
+
+
+        from_token_is_phrs = a_token.address.upper() == Contracts.PHRS.address.upper()
+        if from_token_is_phrs: a_token = Contracts.WPHRS
+
+        to_token_is_phrs = b_token.address.upper() == Contracts.PHRS.address.upper()
+        if to_token_is_phrs: b_token = Contracts.WPHRS
+
+        price, from_token, to_token, a_amt, b_amt = await self.get_price_pool(from_token=a_token, to_token=b_token, a_amt=amount, fee=fee)
+
+        if await self._is_same_token(a_token, from_token):
+            amt0 = TokenAmount(amount=float(amount.Ether),
+                               decimals=await self.client.transactions.get_decimals(contract=from_token.address))
+            amt1 = TokenAmount(amount=float(amt0.Ether) * float(price),
+                               decimals=await self.client.transactions.get_decimals(contract=to_token.address))
+        elif await self._is_same_token(a_token, to_token):
+
+            amt1 = TokenAmount(amount=float(amount.Ether),
+                               decimals=await self.client.transactions.get_decimals(contract=to_token.address))
+            amt0 = TokenAmount(amount=float(amt1.Ether) / float(price),
+                               decimals=await self.client.transactions.get_decimals(contract=from_token.address))
+        else:
+            raise RuntimeError()
+
+
+        swaps = False
+
+        logger.debug(
+            f"{self.wallet} | {self.__module_name__} | prepare LP {fee} | {amt0} {from_token.title} <-> {amt1} {to_token.title}")
+
+        from_token_is_phrs = from_token.address.upper() == Contracts.WPHRS.address.upper()
+        to_token_is_phrs = to_token.address.upper() == Contracts.WPHRS.address.upper()
+
+        if not from_token_is_phrs:
+            from_token_balance = await self.client.wallet.balance(token=from_token)
+            if float(from_token_balance.Ether) < float(amt0.Ether):
+                logger.warning(
+                    f"{self.wallet} | {self.__module_name__} | Not enought {amt0} {from_token.title} balance {from_token_balance}, trying to swap from native")
+
+                swap = await self.process_back_swap_from_natve(token=from_token, amount=amt0)
+                logger.success(f"{self.wallet} | {self.__module_name__} | Swap | {swap}")
+
+                swaps = True
+
+        if not to_token_is_phrs:
+            to_token_balance = await self.client.wallet.balance(token=to_token)
+            if float(to_token_balance.Ether) < float(amt1.Ether):
+                logger.warning(
+                    f"{self.wallet} | {self.__module_name__} | Not enought {amt1} {to_token.title} balance {to_token_balance}, trying to swap from native")
+                swap = await self.process_back_swap_from_natve(token=to_token, amount=amt1)
+                logger.info(swap)
+                swaps = True
+
+        if swaps:
+            return await self.prepare_position(a_token=a_token, b_token=b_token, amount=amount, fee=fee)
+
+        return await self.add_liquidity(
+            from_token=from_token,
+            to_token=to_token,
+            a_amt=amt0,
+            b_amt=amt1,
+            fee=fee
+        )
+
+    async def get_current_position(self):
+        c = await self.client.contracts.get(contract_address=POSITION_MANAGER)
+        num = await c.functions.balanceOf(self.client.account.address).call()
+
+        positions_map = {
+            500: [],
+            1000: [],
+            3000: [],
+        }
+
+        for i in range(num):
+            token_id = await c.functions.tokenOfOwnerByIndex(self.client.account.address, i).call()
+            positions = await c.functions.positions(token_id).call()
+            fee = positions[4]
+
+            positions_map.setdefault(fee, []).append({
+                "token_id": token_id,
+                "from_token": positions[2],
+                "to_token": positions[3],
+                "tickLower": positions[5],
+                "tickUpper": positions[6],
+            })
+
+        return positions_map
+
+    async def add_liquidity(
+        self,
+        from_token: RawContract,
+        to_token: RawContract,
+        a_amt: TokenAmount,
+        b_amt: TokenAmount,
+        fee: int = 3000,
+        slippage: int = 10,
+    ) -> str:
+
+        c = await self.client.contracts.get(contract_address=POSITION_MANAGER)
+
+        if slippage:
+            a_amt_min = TokenAmount(amount=float(a_amt.Ether) * (100 - slippage) / 100,
+                                     decimals=a_amt.decimals)
+            b_amt_min = TokenAmount(amount=float(b_amt.Ether) * (100 - slippage) / 100,
+                                     decimals=b_amt.decimals)
+        else:
+            a_amt_min = 0
+            b_amt_min = 0
+
+        logger.debug(f"{self.wallet} | {self.__module_name__} | add LP {fee} | {a_amt} {from_token.title}, min {a_amt_min} "
+                     f"-- {b_amt} {to_token.title}, min {b_amt_min}")
+
+        for token, amt in ((from_token, a_amt), (to_token, b_amt)):
+            if token != Contracts.WPHRS:
+                ok = await self.approve_interface(
+                    token_address=token.address,
+                    spender=c.address,
+                    amount=None
+                )
+                if not ok:
+                    return f"Failed | approve {token.title}"
+
+                await asyncio.sleep(1)
+
+
+        tickLower, tickUpper = FEE_MAP[fee]
+        deadline = int(time.time() + 20 * 60)
+
+        current_positions = await self.get_current_position()
+
+        current_position = current_positions[fee]
+
+        current_position = [cur for cur in current_position if cur.get('from_token') == from_token.address and cur.get('to_token') == to_token.address]
+
+        if current_position:
+            current_position = current_position[0]
+
+            params = TxArgs(
+                tokenId=int(current_position.get('token_id')),
+                amount0Desired=a_amt.Wei,
+                amount1Desired=b_amt.Wei,
+                amount0Min=a_amt_min.Wei,
+                amount1Min=b_amt_min.Wei,
+                deadline=deadline).tuple()
+            data = c.encode_abi("increaseLiquidity", args=[params])
+            msg = 'Increases LP'
+
+        else:
+            params = TxArgs(
+                token0=from_token.address,
+                token1=to_token.address,
+                fee=fee,
+                tickLower=tickLower,
+                tickUpper=tickUpper,
+                amount0Desired=a_amt.Wei,
+                amount1Desired=b_amt.Wei,
+                amount0Min=a_amt_min.Wei,
+                amount1Min=b_amt_min.Wei,
+                recipient=self.client.account.address,
+                deadline=deadline,
+            ).tuple()
+
+            data = c.encode_abi("mint", args=[params])
+            msg = 'Minted LP'
+
+        value = TokenAmount(amount=0)
+        if from_token == Contracts.WPHRS:
+            second_item = c.encode_abi('refundETH', args=[])
+            data = c.encode_abi('multicall', args=[[data, second_item]])
+            value = a_amt
+
+        elif to_token == Contracts.WPHRS:
+            second_item = c.encode_abi('refundETH', args=[])
+            data = c.encode_abi('multicall', args=[[data, second_item]])
+            value = b_amt
+
+
+        tx = await self.client.transactions.sign_and_send(TxParams(
+            to=c.address,
+            data=data,
+            value=value.Wei
+        ))
+
+        await asyncio.sleep(2)
+        rcpt = await tx.wait_for_receipt(client=self.client, timeout=300)
+
+        if rcpt:
+            return (f"Success | {msg} | {a_amt} {from_token.title} <-> {b_amt} {to_token.title} - fee {fee}")
+
+
+        return f"Failed | {msg}"

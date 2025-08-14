@@ -13,7 +13,7 @@ from modules.pharos_portal import PharosPortal
 from modules.pns import PNS
 from modules.primus import Primus
 from modules.rwafi import AquaFlux
-from modules.zenith import Zenith
+from modules.zenith import Zenith, ZenithLiquidity
 
 from utils.db_api.models import Wallet
 from utils.db_api.wallet_api import db
@@ -33,6 +33,7 @@ class Controller:
         self.pharos_portal = PharosPortal(client=client, wallet=wallet)
         self.twitter = TwitterClient(user=wallet)
         self.zenith = Zenith(client=client, wallet=wallet)
+        self.zenith_liq = ZenithLiquidity(client=client, wallet=wallet)
         self.primus = Primus(client=client, wallet=wallet)
         self.pns = PNS(client=client, wallet=wallet)
         self.autostaking = AutoStaking(client=client, wallet=wallet)
@@ -54,6 +55,15 @@ class Controller:
 
         return await swap
 
+    async def random_liquidity(self):
+        liq_protocols = [
+            self.zenith_liq.liquidity_controller(),
+        ]
+
+        liq = random.choice(liq_protocols)
+
+        return await liq
+
     @controller_log('Bind Twitter Task')
     async def twitter_bind(self):
 
@@ -73,17 +83,17 @@ class Controller:
 
             bind = await self.pharos_portal.bind_twitter(redirect_url=oauth2.callback_url)
 
-            logger.success(f'{self.wallet} | {bind}')
+            if 'Failed' not in bind:
+                logger.success(f'{self.wallet} | {bind}')
 
-            await asyncio.sleep(random.randint(5, 10))
+                await asyncio.sleep(random.randint(5, 10))
 
         status = await self.pharos_portal.faucet()
 
         if 'Failed' not in status:
             return status
 
-        raise Exception(status)
-
+        raise Exception(f"{self.wallet} | Error in Faucet Task")
 
 
     @controller_log('Twitter Tasks')
@@ -204,7 +214,10 @@ class Controller:
         swaps_count = random.randint(settings.swaps_count_min, settings.swaps_count_max)
         tips_count = random.randint(settings.tips_count_min, settings.tips_count_max)
         autostake_count = random.randint(settings.autostake_count_min, settings.autostake_count_max)
+
+        #todo check TX in brokex and zentih for liq
         lp_count = random.randint(settings.lp_count_min, settings.lp_count_max)
+        defi_lp_count = random.randint(settings.lp_count_min, settings.lp_count_max)
 
         wallet_balance = await self.client.wallet.balance()
 
@@ -214,6 +227,10 @@ class Controller:
 
             await asyncio.sleep(9, 12)
             wallet_balance = await self.client.wallet.balance()
+
+            if wallet_balance.Ether == 0:
+                raise Exception(f'{self.wallet} | Failed Faucet | Got 0 PHRS after registration task')
+
 
         if wallet_balance:
             faucet_status = await self.pharos_portal.get_faucet_status()
@@ -254,7 +271,9 @@ class Controller:
 
             brokex_lp = [lambda: self.brokex.deposit_liquidity() for _ in range(lp_count)]
 
-            all_actions = swaps + tips + autostake + build_array + brokex_lp
+            zenith_lp = [lambda: self.random_liquidity() for _ in range(defi_lp_count)]
+
+            all_actions = swaps + tips + autostake + build_array + brokex_lp + zenith_lp
 
             random.shuffle(all_actions)
 

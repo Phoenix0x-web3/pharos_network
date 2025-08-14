@@ -184,6 +184,9 @@ class PharosPortal(Base):
 
             return f"{r.json().get('msg')}: user_name: {data.get('username')}, id[{data.get('twitterID')}]"
 
+        if  r.json().get('code') == 1:
+            raise Exception(f"Failed | {r.json().get('msg')}")
+
         raise Exception(f"Failed: {r.get('msg')}")
 
     @action_log('Faucet')
