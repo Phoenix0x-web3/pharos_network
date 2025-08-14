@@ -20,7 +20,7 @@ shuffle_wallets: true
 hide_wallet_address_log: true
 
 # the log level for the application. Options: DEBUG, INFO, WARNING, ERROR
-log_level : INFO
+log_level : DEBUG
 
 # Delay before running the same wallet again after it has completed all actions (7 - 8 hrs default)
 random_pause_wallet_after_completion:
@@ -76,3 +76,4 @@ tg_bot_id: ""
 
 # You can find your chat ID by messaging @userinfobot or using https://web.telegram.org/. (example 1540239116)
 tg_user_id: ""
+
