@@ -73,16 +73,17 @@ class Controller:
 
             bind = await self.pharos_portal.bind_twitter(redirect_url=oauth2.callback_url)
 
-            logger.success(f'{self.wallet} | {bind}')
+            if 'Failed' not in bind:
+                logger.success(f'{self.wallet} | {bind}')
 
-            await asyncio.sleep(random.randint(5, 10))
+                await asyncio.sleep(random.randint(5, 10))
 
-        status = await self.pharos_portal.faucet()
+            status = await self.pharos_portal.faucet()
 
-        if 'Failed' not in status:
-            return status
+            if 'Failed' not in status:
+                return status
 
-        raise Exception(status)
+        raise Exception
 
 
 
@@ -214,6 +215,10 @@ class Controller:
 
             await asyncio.sleep(9, 12)
             wallet_balance = await self.client.wallet.balance()
+
+            if wallet_balance.Ether == 0:
+                raise Exception(f'{self.wallet} | Failed Faucet | Got 0 PHRS after registration task')
+
 
         if wallet_balance:
             faucet_status = await self.pharos_portal.get_faucet_status()
