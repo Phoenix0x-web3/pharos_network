@@ -19,6 +19,9 @@ from utils.retry import async_retry
 from utils.twitter.twitter_client import TwitterClient
 from utils.db_api.wallet_api import db
 from sqlalchemy import and_
+from datetime import datetime
+from zoneinfo import ZoneInfo
+
 
 class PharosPortal(Base):
 
@@ -84,6 +87,17 @@ class PharosPortal(Base):
         ), issued_at
 
 
+    @staticmethod
+    async def value_for_today(seq, tz="Europe/Moscow", week_start="mon"):
+
+        dt = datetime.now(ZoneInfo(tz))
+        idx = dt.weekday()
+
+        items = [int(x) for x in seq] if isinstance(seq, str) else list(seq)
+        if len(items) != 7:
+            raise ValueError("seq must have 7 items")
+        return items[idx]
+
     async def login(self, registration=False):
         settings = Settings()
         nonce = await self.client.wallet.nonce()
@@ -130,6 +144,15 @@ class PharosPortal(Base):
             self.cookies = r.cookies
             self.auth = True
             logger.debug(f"{self.wallet} | Success Login to PharosNetwork")
+
+        check_in_status = await self.get_checkin_status()
+
+        if check_in_status:
+            check_in = await self.check_in()
+            if 'Failed' not in str(check_in):
+                logger.success(check_in)
+
+        await asyncio.sleep(random.randint(2, 5))
 
         return r.json()
 
@@ -194,11 +217,7 @@ class PharosPortal(Base):
         if not self.auth:
             await self.login()
 
-        check_in = await self.check_in()
-        if 'Failed' not in str(check_in):
-            logger.success(check_in)
 
-        await asyncio.sleep(random.randint(2, 5))
 
         faucet_status = await self.get_faucet_status()
 
@@ -275,6 +294,39 @@ class PharosPortal(Base):
             data = r.json().get('data').get('user_info')
 
             return data
+
+    async def get_checkin_status(self) -> bool:
+        if not self.auth:
+            await self.login()
+
+        headers = {
+            **self.base_headers,
+            'authorization': f'Bearer {self.jwt}',
+        }
+
+        params = {
+            'address': self.client.account.address,
+        }
+
+        r = await self.session.get(
+            url = f"{self.BASE}/sign/status",
+            headers=headers,
+            # cookies=self.cookies,
+            params=params,
+            timeout=120,
+        )
+        #logger.success(f"User info | {r.json()}")
+
+        r.raise_for_status()
+
+        if r.json().get('msg') == 'ok':
+
+            status = r.json().get('data').get('status')
+
+            status = await self.value_for_today(seq=status)
+            if status == 2:
+                return True
+            return False
 
     @action_log('Twitter Bind')
     async def bind_twitter_task(self):
