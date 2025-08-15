@@ -88,7 +88,7 @@ class PharosPortal(Base):
 
 
     @staticmethod
-    async def value_for_today(seq, tz="Europe/Moscow", week_start="mon"):
+    async def value_for_today(seq, tz="Europe/Amsterdam", week_start="mon"):
 
         dt = datetime.now(ZoneInfo(tz))
         idx = dt.weekday()
