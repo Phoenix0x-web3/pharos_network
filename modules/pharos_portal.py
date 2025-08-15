@@ -20,7 +20,6 @@ from utils.twitter.twitter_client import TwitterClient
 from utils.db_api.wallet_api import db
 from sqlalchemy import and_
 from datetime import datetime
-from zoneinfo import ZoneInfo
 
 
 class PharosPortal(Base):
@@ -88,10 +87,9 @@ class PharosPortal(Base):
 
 
     @staticmethod
-    async def value_for_today(seq, tz="Europe/Amsterdam", week_start="mon"):
+    async def value_for_today(seq):
 
-        dt = datetime.now(ZoneInfo(tz))
-        idx = dt.weekday()
+        idx = datetime.today().weekday()
 
         items = [int(x) for x in seq] if isinstance(seq, str) else list(seq)
         if len(items) != 7:
@@ -322,7 +320,6 @@ class PharosPortal(Base):
         if r.json().get('msg') == 'ok':
 
             status = r.json().get('data').get('status')
-
             status = await self.value_for_today(seq=status)
             if status == 2:
                 return True
