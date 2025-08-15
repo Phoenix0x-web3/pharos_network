@@ -19,7 +19,7 @@ from utils.retry import async_retry
 from utils.twitter.twitter_client import TwitterClient
 from utils.db_api.wallet_api import db
 from sqlalchemy import and_
-from datetime import datetime
+from datetime import datetime, timezone
 
 
 class PharosPortal(Base):
@@ -89,7 +89,7 @@ class PharosPortal(Base):
     @staticmethod
     async def value_for_today(seq):
 
-        idx = datetime.today().weekday()
+        idx = datetime.now(timezone.utc).weekday()
 
         items = [int(x) for x in seq] if isinstance(seq, str) else list(seq)
         if len(items) != 7:
