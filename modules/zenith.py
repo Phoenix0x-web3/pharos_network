@@ -233,7 +233,7 @@ class Zenith(Base):
         data = TxArgs(
             tokenIn=from_token.address,
             tokenOut=to_token.address,
-            fee=random.choice([500, 3000]),
+            fee=500, #random.choice([500, 3000]),
             recepient=self.client.account.address if not to_token_is_phrs else '0x0000000000000000000000000000000000000002',
             amountIn=amount.Wei,
             amountOutMinimum=0 if from_token_is_phrs else amount_out_min.Wei,
