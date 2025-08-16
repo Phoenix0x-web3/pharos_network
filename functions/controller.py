@@ -232,7 +232,7 @@ class Controller:
         return await position_action()
 
     @staticmethod
-    def form_actions(have: int, factory, count: int):
+    async def form_actions(have: int, factory, count: int):
         limit = 91
 
         n = count if have < limit else random.randint(1, 3)
@@ -299,35 +299,16 @@ class Controller:
             if not brokex_faucet:
                 build_array.append(lambda: self.brokex_faucet())
 
-            max_task_tx = 91
             user_tasks = await self.user_tasks()
 
-            swaps = self.form_actions(user_tasks.get("101", 0), self.random_swap, swaps_count)
-            zenith_lp = self.form_actions(user_tasks.get("102", 0), self.random_liquidity, defi_lp_count)
+            swaps = await self.form_actions(user_tasks.get("101", 0), self.random_swap, swaps_count)
+            zenith_lp = await self.form_actions(user_tasks.get("102", 0), self.random_liquidity, defi_lp_count)
             #tips = self.form_actions(user_tasks.get("108", 0), self.primus.tip, tips_count)
             tips = []
-            autostake = self.form_actions(user_tasks.get("110", 0), self.autostaking_task, autostake_count)
-            brokex_lp = self.form_actions(user_tasks.get("111", 0), self.brokex.deposit_liquidity, lp_count // 2)
-            brokex_trade =  self.form_actions(user_tasks.get("111", 0), self.brokex_positions, brokex_count)
+            autostake = await self.form_actions(user_tasks.get("110", 0), self.autostaking_task, autostake_count)
+            brokex_lp = await self.form_actions(user_tasks.get("111", 0), self.brokex.deposit_liquidity, lp_count // 2)
+            brokex_trade = await self.form_actions(user_tasks.get("111", 0), self.brokex_positions, brokex_count)
 
-            # if user_tasks["102"] < max_task_tx:
-            #     swaps = [lambda: self.random_swap() for _ in range(swaps_count)]
-            #
-            # if user_tasks["102"] < max_task_tx:
-            #     zenith_lp = [lambda: self.random_liquidity() for _ in range(defi_lp_count)]
-            #
-            # if user_tasks["108"] < max_task_tx:
-            #     # tips = [lambda: self.primus.tip() for _ in range(tips_count)]
-            #     tips = []
-            #
-            # if user_tasks["110"] < max_task_tx:
-            #
-            #     autostake = [lambda: self.autostaking_task() for _ in range(autostake_count)]
-            #
-            # if user_tasks["111"] < max_task_tx:
-            #
-            #     brokex_lp = [lambda: self.brokex.deposit_liquidity() for _ in range(lp_count)]
-            #     brokex_trade = [lambda: self.brokex.open_position_controller() for _ in range(brokex_count)]
 
             all_actions = swaps + tips + autostake + build_array + brokex_lp + zenith_lp + brokex_trade
 
