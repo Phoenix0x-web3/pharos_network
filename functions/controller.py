@@ -266,7 +266,7 @@ class Controller:
             swaps = [lambda: self.random_swap() for _ in range(swaps_count)]
 
             # tips = [lambda: self.primus.tip() for _ in range(tips_count)]
-
+            tips = []
             autostake = [lambda: self.autostaking_task() for _ in range(autostake_count)]
 
             brokex_lp = [lambda: self.brokex.deposit_liquidity() for _ in range(lp_count)]
