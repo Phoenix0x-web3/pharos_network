@@ -552,7 +552,7 @@ class ZenithLiquidity(Zenith):
                     f"{self.wallet} | {self.__module_name__} | Not enought {amt0} {from_token.title} balance {from_token_balance}, trying to swap from native")
 
                 swap = await self.process_back_swap_from_natve(token=from_token, amount=amt0)
-                logger.success(f"{self.wallet} | {self.__module_name__} | Swap | {swap}")
+                logger.debug(swap)
 
                 swaps = True
 
@@ -562,10 +562,11 @@ class ZenithLiquidity(Zenith):
                 logger.warning(
                     f"{self.wallet} | {self.__module_name__} | Not enought {amt1} {to_token.title} balance {to_token_balance}, trying to swap from native")
                 swap = await self.process_back_swap_from_natve(token=to_token, amount=amt1)
-                logger.info(swap)
+                logger.debug(swap)
                 swaps = True
 
         if swaps:
+            await asyncio.sleep(random.randint(3, 7))
             return await self.prepare_position(a_token=a_token, b_token=b_token, amount=amount, fee=fee)
 
         return await self.add_liquidity(

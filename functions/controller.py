@@ -219,17 +219,17 @@ class Controller:
 
     async def brokex_positions(self):
         actions = [
-            self.brokex.open_position_controller()
+            self.brokex.open_position_controller
         ]
 
         positions = await self.brokex.get_user_open_ids()
 
         if len(positions) >= 1:
-            actions.append(self.brokex.close_position_controller())
+            actions.append(self.brokex.close_position_controller)
 
         position_action = random.choice(actions)
 
-        return await position_action
+        return await position_action()
 
     @staticmethod
     def form_actions(have: int, factory, count: int):

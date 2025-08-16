@@ -356,7 +356,7 @@ class Brokex(Base):
     @controller_log("Close Position")
     async def close_position_controller(self):
         open_ids = await self.get_user_open_ids()
-        if len(open_ids) > 1:
+        if len(open_ids) >= 1:
             open_id = random.choice(open_ids)
             pos = await self.get_open_by_id(open_id=open_id)
 
