@@ -307,7 +307,7 @@ class Controller:
             tips = self.form_actions(user_tasks.get("108", 0), self.primus.tip, tips_count)
             autostake = self.form_actions(user_tasks.get("110", 0), self.autostaking_task, autostake_count)
             brokex_lp = self.form_actions(user_tasks.get("111", 0), self.brokex.deposit_liquidity, lp_count // 2)
-            brokex_trade =  self.form_actions(user_tasks.get("111", 0), self.brokex_positions(), brokex_count)
+            brokex_trade =  self.form_actions(user_tasks.get("111", 0), self.brokex.open_position_controller(), brokex_count)
 
             # if user_tasks["102"] < max_task_tx:
             #     swaps = [lambda: self.random_swap() for _ in range(swaps_count)]
