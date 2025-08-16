@@ -1,8 +1,10 @@
 import asyncio
+import json
 import random
 
 from faker import Faker
 from loguru import logger
+from sqlalchemy.testing.suite.test_reflection import users
 
 from data.settings import Settings
 from modules.autostaking import AutoStaking
@@ -202,7 +204,41 @@ class Controller:
                     return mint
 
         return 'Failed'
-      
+
+    async def user_tasks(self) -> dict:
+        """
+        108 - tips
+        101 - swaps
+        102 - liq
+        110 - Autostacking
+        111 - Brokex
+        """
+        tasks = await self.pharos_portal.get_user_tasks(user=True)
+        result = {task.get("TaskId"): task.get("CompleteTimes") for task in tasks}
+        return result
+
+    async def brokex_positions(self):
+        actions = [
+            self.brokex.open_position_controller()
+        ]
+
+        positions = await self.brokex.get_user_open_ids()
+        if positions:
+            actions.append(self.brokex.close_position_controller())
+
+        position_action =  random.choice(actions)
+
+        return await position_action
+
+    @staticmethod
+    def form_actions(cond: bool, factory, count: int):
+        """
+        cond = True -> count
+        cond = False -> random (1,3)
+        """
+
+        return [factory for _ in range(count if cond else random.randint(1, 3))]
+
     async def build_actions(self):
 
         final_actions = []
@@ -214,6 +250,7 @@ class Controller:
         swaps_count = random.randint(settings.swaps_count_min, settings.swaps_count_max)
         tips_count = random.randint(settings.tips_count_min, settings.tips_count_max)
         autostake_count = random.randint(settings.autostake_count_min, settings.autostake_count_max)
+        brokex_count = random.randint(settings.brokex_count_min, settings.brokex_count_max)
 
         #todo check TX in brokex and zentih for liq
         lp_count = random.randint(settings.lp_count_min, settings.lp_count_max)
@@ -263,17 +300,36 @@ class Controller:
             if not brokex_faucet:
                 build_array.append(lambda: self.brokex_faucet())
 
-            swaps = [lambda: self.random_swap() for _ in range(swaps_count)]
+            max_task_tx = 91
+            user_tasks = await self.user_tasks()
 
-            # tips = [lambda: self.primus.tip() for _ in range(tips_count)]
-            tips = []
-            autostake = [lambda: self.autostaking_task() for _ in range(autostake_count)]
+            swaps = self.form_actions(user_tasks["101"] < max_task_tx, self.random_swap, swaps_count)
+            zenith_lp = self.form_actions(user_tasks["102"] < max_task_tx, self.random_liquidity, defi_lp_count)
+            tips = self.form_actions(user_tasks["108"] < max_task_tx, self.primus.tip, tips_count)
+            autostake = self.form_actions(user_tasks["110"] < max_task_tx, self.autostaking_task, autostake_count)
+            brokex_lp = self.form_actions(user_tasks["111"] < max_task_tx, self.brokex.deposit_liquidity, lp_count // 2)
+            brokex_trade = self.form_actions(user_tasks["111"] < max_task_tx, self.brokex_positions, brokex_count)
 
-            brokex_lp = [lambda: self.brokex.deposit_liquidity() for _ in range(lp_count)]
+            # if user_tasks["102"] < max_task_tx:
+            #     swaps = [lambda: self.random_swap() for _ in range(swaps_count)]
+            #
+            # if user_tasks["102"] < max_task_tx:
+            #     zenith_lp = [lambda: self.random_liquidity() for _ in range(defi_lp_count)]
+            #
+            # if user_tasks["108"] < max_task_tx:
+            #     # tips = [lambda: self.primus.tip() for _ in range(tips_count)]
+            #     tips = []
+            #
+            # if user_tasks["110"] < max_task_tx:
+            #
+            #     autostake = [lambda: self.autostaking_task() for _ in range(autostake_count)]
+            #
+            # if user_tasks["111"] < max_task_tx:
+            #
+            #     brokex_lp = [lambda: self.brokex.deposit_liquidity() for _ in range(lp_count)]
+            #     brokex_trade = [lambda: self.brokex.open_position_controller() for _ in range(brokex_count)]
 
-            zenith_lp = [lambda: self.random_liquidity() for _ in range(defi_lp_count)]
-
-            all_actions = swaps + tips + autostake + build_array + brokex_lp + zenith_lp
+            all_actions = swaps + tips + autostake + build_array + brokex_lp + zenith_lp + brokex_trade
 
             random.shuffle(all_actions)
 

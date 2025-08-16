@@ -47,6 +47,12 @@ liquidity_percent:
   min: 1
   max: 3
 
+#Brokex Futures percent of USDT
+
+brokex_percent:
+  min: 1
+  max: 2
+
 # Swaps action count
 swaps_count:
   min: 15
@@ -67,6 +73,10 @@ lp_count:
   min: 5
   max: 10
 
+#brokex position count
+brokex_count:
+  min: 5
+  max: 10
 
 # Invite Codes for pharos network, example [invite_code1, invite_code2]
 invite_codes: []

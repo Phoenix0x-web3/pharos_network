@@ -17,16 +17,10 @@ from utils.logs_decorator import action_log, controller_log
 from utils.retry import async_retry
 
 
-# =========================
-# CONSTANTS / CONTRACTS
-# =========================
-
-BASE_API = "https://proofcrypto-production.up.railway.app"
-
 PHRS = RawContract(
     title="PHRS_NATIVE",
     address="0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE",
-    abi=[],  # нативка
+    abi=[],
 )
 
 USDT = RawContract(
@@ -125,7 +119,7 @@ BROKEX_ABI = [
 
 TRADE_ROUTER = RawContract(
     title="BrokexTradeRouter",
-    address="0xDe897635870b3Dd2e097C09f1cd08841DBc3976a",
+    address="0x34f89ca5a1c6dc4eb67dfe0af5b621185df32854",
     abi=BROKEX_ABI,
 )
 
@@ -148,6 +142,7 @@ PAIRS: Dict[str, int] = {
     "SUI_USDT": 90,
 }
 
+BASE_API = "https://proof.brokex.trade"
 
 class Brokex(Base):
     __module_name__ = "Brokex"
@@ -240,3 +235,155 @@ class Brokex(Base):
         await asyncio.sleep(2)
         rcpt = await tx.wait_for_receipt(client=self.client, timeout=600)
         return f"Success | Withdraw LP {lp_amount}" if rcpt else "Failed | Withdraw LP"
+
+    @async_retry(retries=5, delay=3, to_raise=False)
+    async def _fetch_proof(self, pair_index: int) -> Optional[Dict[str, Any]]:
+
+        url = f"{BASE_API}/proof?pairs={pair_index}"
+
+        r = await self.session.get(url=url, headers=self.base_headers, timeout=60)
+        r.raise_for_status()
+        try:
+            return r.json()
+        except Exception:
+            return json.loads(r.text or "{}")
+
+    async def get_user_open_ids(self) -> List[int]:
+        try:
+            c = await self.client.contracts.get(contract_address=TRADE_ROUTER)
+            ids: List[int] = await c.functions.getUserOpenIds(self.client.account.address).call()
+            return list(ids or [])
+        except Exception as e:
+            logger.error(f"{self.wallet} | getUserOpenIds error: {e}")
+            return []
+
+    async def get_open_by_id(self, open_id: int) -> Optional[Dict[str, Any]]:
+        try:
+            c = await self.client.contracts.get(contract_address=TRADE_ROUTER)
+            t = await c.functions.getOpenById(int(open_id)).call()
+
+            return {
+                "trader": t[0], "id": int(t[1]), "assetIndex": int(t[2]),
+                "isLong": bool(t[3]), "leverage": int(t[4]), "openPrice": int(t[5]),
+                "sizeUsd": int(t[6]), "timestamp": int(t[7]),
+                "stopLossPrice": int(t[8]), "takeProfitPrice": int(t[9]),
+                "liquidationPrice": int(t[10]),
+            }
+        except Exception as e:
+            logger.error(f"{self.wallet} | getOpenById error: {e}")
+            return None
+
+    @controller_log("Open Position")
+    async def open_position_controller(self):
+
+        pair = random.choice(list(PAIRS))
+        direction = random.choice([True, False])
+        leverage = random.choice([i for i in range(15)])
+
+        settings = Settings()
+
+        usdt_balance = await self.client.wallet.balance(token=USDT)
+
+        if usdt_balance.Ether == 0:
+            await self.claim_faucet()
+            await asyncio.sleep(8, 10)
+            usdt_balance = await self.client.wallet.balance(token=USDT)
+
+        percent = random.randint(settings.brokex_percent_min, settings.brokex_percent_max) / 100
+        amount = TokenAmount(amount=float(usdt_balance.Ether) * percent, decimals=usdt_balance.decimals)
+
+        if float(amount.Ether) < 10:
+            amount = TokenAmount(amount=10, decimals=usdt_balance.decimals)
+
+        return await self.open_position(pair=pair, is_long=direction, amount=amount, lev=leverage)
+
+    async def open_position(
+            self,
+            pair: str,
+            is_long: bool,
+            amount: TokenAmount = None,
+            lev: int = 1,
+            sl: int = 0,
+            tp: int = 0,
+    ) -> str:
+
+        if pair not in PAIRS:
+            return f"Failed | Unknown pair {pair}"
+
+        if await self.approve_interface(
+                token_address=USDT.address,
+                spender=POOL_ROUTER.address,
+                amount=None
+        ):
+            await asyncio.sleep(2)
+        else:
+            return f' can not approve'
+
+        if await self.approve_interface(
+                token_address=USDT.address,
+                spender=TRADE_ROUTER.address,
+                amount=None
+        ):
+            await asyncio.sleep(2)
+        else:
+            return f' can not approve'
+
+        proof = await self._fetch_proof(PAIRS[pair])
+
+        if not proof or not proof.get("proof"):
+            return "Failed | Fetch proof"
+
+        proof_bytes = Web3.to_bytes(hexstr=proof["proof"])
+        idx = int(PAIRS[pair])
+
+        c = await self.client.contracts.get(contract_address=TRADE_ROUTER)
+        data = c.encode_abi(
+            "openPosition",
+            args=[idx, proof_bytes, bool(is_long), int(lev), int(amount.Wei), int(sl), int(tp)]
+        )
+
+        tx = await self.client.transactions.sign_and_send(TxParams(
+            to=c.address,
+            data=data,
+            value=0
+        ))
+        await asyncio.sleep(2)
+        rcpt = await tx.wait_for_receipt(client=self.client, timeout=300)
+
+        return f"Success | Open {pair} {'Long' if is_long else 'Short'} {amount} USDT" if rcpt else "Failed | Open position"
+
+
+    @controller_log("Close Position")
+    async def close_position_controller(self):
+        open_ids = await self.get_user_open_ids()
+        if len(open_ids) > 1:
+            open_id = random.choice(open_ids)
+            pos = await self.get_open_by_id(open_id=open_id)
+
+            return await self.close_position(open_id=pos['id'], pair=pos['assetIndex'])
+
+        return 'Nothing to close'
+
+
+    async def close_position(self, *, open_id: int, pair: int) -> str:
+        proof = await self._fetch_proof(pair)
+        if not proof or not proof.get("proof"):
+            return "Failed | Fetch proof"
+
+        proof_bytes = Web3.to_bytes(hexstr=proof["proof"])
+
+        try:
+            c = await self.client.contracts.get(contract_address=TRADE_ROUTER)
+            data = c.encode_abi("closePosition", args=[int(open_id), proof_bytes])
+
+            tx = await self.client.transactions.sign_and_send(TxParams(
+                to=c.address,
+                data=data,
+                value=0
+            ))
+            await asyncio.sleep(2)
+            rcpt = await tx.wait_for_receipt(client=self.client, timeout=600)
+            return f"Success | Close position #{open_id}" if rcpt else "Failed | Close position"
+        except Exception as e:
+            logger.error(f"{self.wallet} | closePosition error: {e}")
+            return "Failed | Close position"
