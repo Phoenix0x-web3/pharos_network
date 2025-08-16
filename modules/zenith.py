@@ -211,7 +211,6 @@ class Zenith(Base):
         price, token0, token1, a_amt, b_amt = await self.get_price_pool(from_token, to_token, amount)
 
 
-
         if token0 == from_token:
             amount_out_min = TokenAmount(
                 amount=float(amount.Ether) * price * (100 - slippage) / 100
@@ -233,7 +232,7 @@ class Zenith(Base):
         data = TxArgs(
             tokenIn=from_token.address,
             tokenOut=to_token.address,
-            fee=500, #random.choice([500, 3000]),
+            fee=3000, #random.choice([500, 3000]),
             recepient=self.client.account.address if not to_token_is_phrs else '0x0000000000000000000000000000000000000002',
             amountIn=amount.Wei,
             amountOutMinimum=0 if from_token_is_phrs else amount_out_min.Wei,
