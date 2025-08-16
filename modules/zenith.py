@@ -96,7 +96,7 @@ class Zenith(Base):
             return 'Failed | No balance in all tokens, try to faucet first'
 
         from_token = random.choice(tokens)
-        while balance_map[from_token.title] == 0:
+        while balance_map[from_token.title] >= 0.01:
             from_token = random.choice(tokens)
 
         to_token = random.choice(tokens)
