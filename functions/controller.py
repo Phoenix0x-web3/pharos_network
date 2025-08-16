@@ -214,7 +214,7 @@ class Controller:
         111 - Brokex
         """
         tasks = await self.pharos_portal.get_user_tasks(user=True)
-        result = {task.get("TaskId"): task.get("CompleteTimes") for task in tasks}
+        result = {str(task.get("TaskId")): task.get("CompleteTimes") for task in tasks}
         return result
 
     async def brokex_positions(self):
