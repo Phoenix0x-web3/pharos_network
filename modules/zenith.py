@@ -109,6 +109,7 @@ class Zenith(Base):
         else:
             amount = float((balance_map[from_token.title])) * percent_to_swap
 
+        fee = random.choice([500, 3000])
         return await self._swap(
             from_token=from_token,
             to_token=to_token,
@@ -116,7 +117,8 @@ class Zenith(Base):
                 amount=amount,
                 decimals= 18 if from_token.title == 'PHRS' \
                     else await self.client.transactions.get_decimals(contract=from_token.address)
-            )
+            ),
+            fee=fee
         )
 
     async def correct_tokens_position(self,
@@ -198,7 +200,8 @@ class Zenith(Base):
                     amount: TokenAmount,
                     from_token: RawContract,
                     to_token: RawContract,
-                    slippage: float = 3.0):
+                    slippage: float = 3.0,
+                    fee: int = 500):
 
         contract = await self.client.contracts.get(contract_address=ZENITH_SWAP_ROUTER)
 
@@ -208,7 +211,7 @@ class Zenith(Base):
         to_token_is_phrs = to_token.address.upper() == Contracts.PHRS.address.upper()
         if to_token_is_phrs: to_token = Contracts.WPHRS
 
-        price, token0, token1, a_amt, b_amt = await self.get_price_pool(from_token, to_token, amount)
+        price, token0, token1, a_amt, b_amt = await self.get_price_pool(from_token, to_token, amount, fee=fee)
 
 
         if token0 == from_token:
@@ -232,7 +235,7 @@ class Zenith(Base):
         data = TxArgs(
             tokenIn=from_token.address,
             tokenOut=to_token.address,
-            fee=3000, #random.choice([500, 3000]),
+            fee=int(fee), #random.choice([500, 3000]),
             recepient=self.client.account.address if not to_token_is_phrs else '0x0000000000000000000000000000000000000002',
             amountIn=amount.Wei,
             amountOutMinimum=0 if from_token_is_phrs else amount_out_min.Wei,
@@ -490,12 +493,12 @@ class ZenithLiquidity(Zenith):
 
         if to_token == token0:
             amount = TokenAmount(
-                amount=(float(amount.Ether) * 1.05) * price,
+                amount=(float(amount.Ether) * 1.10) * price,
             )
 
         if from_token == token0:
             amount = TokenAmount(
-                amount=(float(amount.Ether) * 1.05) / price,
+                amount=(float(amount.Ether) * 1.10) / price,
             )
 
         logger.debug(
@@ -504,7 +507,8 @@ class ZenithLiquidity(Zenith):
         return await self._swap(
             amount=amount,
             from_token=Contracts.PHRS,
-            to_token=token
+            to_token=token,
+            fee=fee
         )
 
     async def prepare_position(self,
@@ -551,7 +555,7 @@ class ZenithLiquidity(Zenith):
                 logger.warning(
                     f"{self.wallet} | {self.__module_name__} | Not enought {amt0} {from_token.title} balance {from_token_balance}, trying to swap from native")
 
-                swap = await self.process_back_swap_from_natve(token=from_token, amount=amt0)
+                swap = await self.process_back_swap_from_natve(token=from_token, amount=amt0, fee=fee)
                 logger.debug(swap)
 
                 swaps = True
@@ -561,7 +565,7 @@ class ZenithLiquidity(Zenith):
             if float(to_token_balance.Ether) < float(amt1.Ether):
                 logger.warning(
                     f"{self.wallet} | {self.__module_name__} | Not enought {amt1} {to_token.title} balance {to_token_balance}, trying to swap from native")
-                swap = await self.process_back_swap_from_natve(token=to_token, amount=amt1)
+                swap = await self.process_back_swap_from_natve(token=to_token, amount=amt1, fee=fee)
                 logger.debug(swap)
                 swaps = True
 
