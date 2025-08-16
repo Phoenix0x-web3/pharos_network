@@ -223,21 +223,20 @@ class Controller:
         ]
 
         positions = await self.brokex.get_user_open_ids()
-        if positions:
+
+        if len(positions) >= 1:
             actions.append(self.brokex.close_position_controller())
 
-        position_action =  random.choice(actions)
+        position_action = random.choice(actions)
 
-        return await position_action
+        return await self.brokex.open_position_controller()
 
     @staticmethod
-    def form_actions(cond: bool, factory, count: int):
-        """
-        cond = True -> count
-        cond = False -> random (1,3)
-        """
+    async def form_actions(have: int, factory, count: int):
+        limit = 91
 
-        return [factory for _ in range(count if cond else random.randint(1, 3))]
+        n = count if have < limit else random.randint(1, 3)
+        return [factory for _ in range(n)]
 
     async def build_actions(self):
 
@@ -303,12 +302,12 @@ class Controller:
             max_task_tx = 91
             user_tasks = await self.user_tasks()
 
-            swaps = self.form_actions(user_tasks["101"] < max_task_tx, self.random_swap, swaps_count)
-            zenith_lp = self.form_actions(user_tasks["102"] < max_task_tx, self.random_liquidity, defi_lp_count)
-            tips = self.form_actions(user_tasks["108"] < max_task_tx, self.primus.tip, tips_count)
-            autostake = self.form_actions(user_tasks["110"] < max_task_tx, self.autostaking_task, autostake_count)
-            brokex_lp = self.form_actions(user_tasks["111"] < max_task_tx, self.brokex.deposit_liquidity, lp_count // 2)
-            brokex_trade = self.form_actions(user_tasks["111"] < max_task_tx, self.brokex_positions, brokex_count)
+            swaps = await self.form_actions(user_tasks.get("101", 0), self.random_swap, swaps_count)
+            zenith_lp = await self.form_actions(user_tasks.get("102", 0), self.random_liquidity, defi_lp_count)
+            tips = await self.form_actions(user_tasks.get("108", 0), self.primus.tip, tips_count)
+            autostake = await self.form_actions(user_tasks.get("110", 0), self.autostaking_task, autostake_count)
+            brokex_lp = await self.form_actions(user_tasks.get("111", 0), self.brokex.deposit_liquidity, lp_count // 2)
+            brokex_trade = await  self.form_actions(user_tasks.get("111", 0), self.brokex_positions(), brokex_count)
 
             # if user_tasks["102"] < max_task_tx:
             #     swaps = [lambda: self.random_swap() for _ in range(swaps_count)]
