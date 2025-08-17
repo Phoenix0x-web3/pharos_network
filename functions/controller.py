@@ -11,6 +11,7 @@ from modules.autostaking import AutoStaking
 from libs.eth_async.client import Client
 from libs.base import Base
 from modules.brokex import Brokex
+from modules.nft_badges import NFTS
 from modules.pharos_portal import PharosPortal
 from modules.pns import PNS
 from modules.primus import Primus
@@ -41,6 +42,7 @@ class Controller:
         self.autostaking = AutoStaking(client=client, wallet=wallet)
         self.brokex = Brokex(client=client, wallet=wallet)
         self.aquaflux = AquaFlux(client=client, wallet=wallet)
+        self.nfts = NFTS(client=client, wallet=wallet)
 
     @controller_log('CheckIn')
     async def check_in_task(self):
@@ -293,6 +295,12 @@ class Controller:
 
                 if len(domains) == 0:
                     final_actions.append(lambda: self.pns.mint())
+
+            if wallet_balance.Ether > 1:
+                nft_badges = await self.nfts.check_badges()
+
+                if len(nft_badges) >= 0:
+                    final_actions.append(lambda: self.nfts.nfts_controller(not_minted=nft_badges))
 
             if not aquaflux_nft:
                 build_array.append(lambda: self.aquaflux_flow())
