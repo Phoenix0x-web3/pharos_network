@@ -299,7 +299,7 @@ class Controller:
             if wallet_balance.Ether > 1:
                 nft_badges = await self.nfts.check_badges()
 
-                if len(nft_badges) >= 0:
+                if len(nft_badges) > 0:
                     final_actions.append(lambda: self.nfts.nfts_controller(not_minted=nft_badges))
 
             if not aquaflux_nft:
@@ -311,8 +311,7 @@ class Controller:
 
             swaps = await self.form_actions(user_tasks.get("101", 0), self.random_swap, swaps_count)
             zenith_lp = await self.form_actions(user_tasks.get("102", 0), self.random_liquidity, defi_lp_count)
-            #tips = self.form_actions(user_tasks.get("108", 0), self.primus.tip, tips_count)
-            tips = []
+            tips = await self.form_actions(user_tasks.get("108", 0), self.primus.tip, tips_count)
             autostake = await self.form_actions(user_tasks.get("110", 0), self.autostaking_task, autostake_count)
             brokex_lp = await self.form_actions(user_tasks.get("111", 0), self.brokex.deposit_liquidity, lp_count // 2)
             brokex_trade = await self.form_actions(user_tasks.get("111", 0), self.brokex_positions, brokex_count)
