@@ -115,7 +115,7 @@ async def activity(action: int):
         wallets = all_wallets
 
     if action == 1:
-        await execute(wallets, random_activity_task, random.randint(Settings().random_pause_between_wallets_min, Settings().random_pause_between_wallets_max))
+        await execute(wallets, random_activity_task, random.randint(Settings().random_pause_wallet_after_completion_min, Settings().random_pause_wallet_after_completion_max))
 
     if action == 2:
         await execute(wallets, twitter_tasks, Settings().sleep_after_each_cycle_hours)
