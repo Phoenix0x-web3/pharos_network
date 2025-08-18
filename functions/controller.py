@@ -311,16 +311,21 @@ class Controller:
             if not brokex_faucet:
                 build_array.append(lambda: self.brokex_faucet())
 
+
             user_tasks = await self.user_tasks()
 
             build_array += await self.form_actions(user_tasks.get("101", 0), self.zenith.swaps_controller, swaps_count)
             build_array += await self.form_actions(user_tasks.get("107", 0), self.faroswap.swap_controller, swaps_faroswap)
             build_array += await self.form_actions(user_tasks.get("102", 0), self.random_liquidity, defi_lp_count)
-            #build_array += await self.form_actions(user_tasks.get("102", 0), self.zenith_liq.remove_liquidity, defi_lp_count // 2)
             build_array += await self.form_actions(user_tasks.get("108", 0), self.primus.tip, tips_count)
             build_array += await self.form_actions(user_tasks.get("110", 0), self.autostaking_task, autostake_count)
             build_array += await self.form_actions(user_tasks.get("111", 0), self.brokex.deposit_liquidity, lp_count // 2)
             build_array += await self.form_actions(user_tasks.get("111", 0), self.brokex_positions, brokex_count)
+
+            zenith_current_lp = await self.zenith_liq.check_any_positions()
+
+            if zenith_current_lp:
+                build_array += [self.zenith_liq.remove_liquidity for _ in range(random.randint(2, 5))]
 
             random.shuffle(build_array)
 

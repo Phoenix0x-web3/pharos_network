@@ -758,7 +758,15 @@ class ZenithLiquidity(Zenith):
 
         return f"Failed | {msg}"
 
-    @action_log('Remove Liquidity')
+    async def check_any_positions(self):
+        current_positions = await self.get_current_position()
+        res = []
+        for key, positions in current_positions.items():
+            if positions:
+                res.extend([pos for pos in positions if pos.get('liquidity') > 0])
+        return res
+
+    @controller_log('Remove Liquidity')
     async def remove_liquidity(self):
         current_positions = await self.get_current_position()
 
