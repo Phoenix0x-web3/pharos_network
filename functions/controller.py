@@ -326,7 +326,7 @@ class Controller:
 
             random.shuffle(all_actions)
 
-            final_actions += brokex_trade
+            final_actions += all_actions
 
         return final_actions
 
