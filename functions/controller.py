@@ -316,7 +316,7 @@ class Controller:
             build_array += await self.form_actions(user_tasks.get("101", 0), self.zenith.swaps_controller, swaps_count)
             build_array += await self.form_actions(user_tasks.get("107", 0), self.faroswap.swap_controller, swaps_faroswap)
             build_array += await self.form_actions(user_tasks.get("102", 0), self.random_liquidity, defi_lp_count)
-            build_array += await self.form_actions(user_tasks.get("102", 0), self.zenith_liq.remove_liquidity, defi_lp_count // 2)
+            #build_array += await self.form_actions(user_tasks.get("102", 0), self.zenith_liq.remove_liquidity, defi_lp_count // 2)
             build_array += await self.form_actions(user_tasks.get("108", 0), self.primus.tip, tips_count)
             build_array += await self.form_actions(user_tasks.get("110", 0), self.autostaking_task, autostake_count)
             build_array += await self.form_actions(user_tasks.get("111", 0), self.brokex.deposit_liquidity, lp_count // 2)
