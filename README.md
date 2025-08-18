@@ -12,6 +12,9 @@ Pharos Network is a Layer 1 blockchain focused on Real World Assets (RWA), enabl
 - Swaps
 - Liquidity
 - Stake
+- CFD Trading
+- Send Token To Friends
+- Refferals
 - Social tasks (twitter)
 
 ## Requirements
@@ -107,20 +110,26 @@ tg_user_id: ''
 
 **Swap / Liquidity**:
 ```yaml
-#swap percent of coin balance
+# Swap percent of coin balance
 swap_percent:
   min: 5
   max: 30
 
-#liquidity percent of native coin balance
-liquidity_percent:
-  min: 5
-  max: 30
-
-#swaps action count
+# Swap action count
 swaps_count:
   min: 15
   max: 30
+
+# Liquidity percent of native coin balance
+liquidity_percent:
+  min: 1
+  max: 3
+
+# Liquidity action count
+lp_count:
+  min: 5
+  max: 10  
+
 ```
 **Send Token To Friends**:
 ```yaml
@@ -137,6 +146,24 @@ autostake_count:
   min: 1
   max: 4
 #Be careful not write a big number, because for one iteraction will be done 3-5 transactions  
+
+# Autostake percent of coin balance
+stake_percent:
+  min: 5
+  max: 10  
+```
+
+**CFD Trading**:
+```yaml
+# CFD Trading Brokex futures percent of USDT
+brokex_percent:
+  min: 1
+  max: 2
+
+# CFD Trading Brokex position count
+brokex_count:
+  min: 5
+  max: 10   
 ```
 **Refferals**:
 ```yaml
