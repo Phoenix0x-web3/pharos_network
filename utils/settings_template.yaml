@@ -22,16 +22,21 @@ hide_wallet_address_log: true
 # the log level for the application. Options: DEBUG, INFO, WARNING, ERROR
 log_level : INFO
 
-# Delay before running the same wallet again after it has completed all actions (7 - 8 hrs default)
+# Delay before running the same wallet again after it has completed all actions (1 - 2 hrs default)
 random_pause_wallet_after_completion:
-  min: 26000
-  max: 30000
+  min: 3600
+  max: 7200
 
 # Random pause between actions in seconds
 random_pause_between_actions:
   min: 20
   max: 30
-  
+
+# Random pause between actions in seconds
+random_pause_start_wallet:
+  min: 0
+  max: 60
+
 # Liquidity percent of coin balance
 swap_percent:
   min: 5
@@ -48,7 +53,6 @@ liquidity_percent:
   max: 3
 
 #Brokex Futures percent of USDT
-
 brokex_percent:
   min: 1
   max: 2

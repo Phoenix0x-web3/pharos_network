@@ -602,6 +602,8 @@ class ZenithLiquidity(Zenith):
                 "to_token": positions[3],
                 "tickLower": positions[5],
                 "tickUpper": positions[6],
+                "from_token_amount": positions[10],
+                "to_token_amount": positions[11],
             })
 
         return positions_map
@@ -709,3 +711,7 @@ class ZenithLiquidity(Zenith):
 
 
         return f"Failed | {msg}"
+
+    async def remove_liquidity(self):
+        positions = await self.get_current_position()
+        print(positions)
