@@ -11,6 +11,7 @@ from modules.autostaking import AutoStaking
 from libs.eth_async.client import Client
 from libs.base import Base
 from modules.brokex import Brokex
+from modules.faroswap import Faroswap
 from modules.nft_badges import NFTS
 from modules.pharos_portal import PharosPortal
 from modules.pns import PNS
@@ -43,6 +44,7 @@ class Controller:
         self.brokex = Brokex(client=client, wallet=wallet)
         self.aquaflux = AquaFlux(client=client, wallet=wallet)
         self.nfts = NFTS(client=client, wallet=wallet)
+        self.faroswap = Faroswap(client=client, wallet=wallet)
 
     @controller_log('CheckIn')
     async def check_in_task(self):
@@ -60,6 +62,7 @@ class Controller:
         return await swap
 
     async def random_liquidity(self):
+
         liq_protocols = [
             self.zenith_liq.liquidity_controller(),
         ]
@@ -249,6 +252,7 @@ class Controller:
         build_array = []
 
         swaps_count = random.randint(settings.swaps_count_min, settings.swaps_count_max)
+        swaps_faroswap = random.randint(settings.swaps_count_min, settings.swaps_count_max)
         tips_count = random.randint(settings.tips_count_min, settings.tips_count_max)
         autostake_count = random.randint(settings.autostake_count_min, settings.autostake_count_max)
         brokex_count = random.randint(settings.brokex_count_min, settings.brokex_count_max)
@@ -309,7 +313,8 @@ class Controller:
 
             user_tasks = await self.user_tasks()
 
-            swaps = await self.form_actions(user_tasks.get("101", 0), self.random_swap, swaps_count)
+            swaps = await self.form_actions(user_tasks.get("101", 0), self.zenith.swaps_controller, swaps_count)
+            swaps_faroswap = await self.form_actions(user_tasks.get("107", 0), self.faroswap.swap_controller, swaps_faroswap)
             zenith_lp = await self.form_actions(user_tasks.get("102", 0), self.random_liquidity, defi_lp_count)
             tips = await self.form_actions(user_tasks.get("108", 0), self.primus.tip, tips_count)
             autostake = await self.form_actions(user_tasks.get("110", 0), self.autostaking_task, autostake_count)
@@ -317,7 +322,7 @@ class Controller:
             brokex_trade = await self.form_actions(user_tasks.get("111", 0), self.brokex_positions, brokex_count)
 
 
-            all_actions = swaps + tips + autostake + build_array + brokex_lp + zenith_lp + brokex_trade
+            all_actions = swaps + swaps_faroswap + tips + autostake + build_array + brokex_lp + zenith_lp + brokex_trade
 
             random.shuffle(all_actions)
 
