@@ -224,7 +224,7 @@ class Controller:
 
     async def brokex_positions(self):
         actions = [
-            self.brokex.open_position_controller,
+            self.brokex.open_position_controller
         ]
 
         positions = await self.brokex.get_user_open_ids()
