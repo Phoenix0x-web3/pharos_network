@@ -40,7 +40,7 @@ class Zenith(Base):
 
     #todo Zenith Faucet
 
-    @action_log('Swap')
+    @controller_log('Swap')
     async def swaps_controller(self, to_native=False):
 
         settings = Settings()
