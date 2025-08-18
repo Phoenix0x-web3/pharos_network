@@ -47,7 +47,6 @@ class Faroswap(Base):
         self.wallet = wallet
         self.session = BaseAsyncSession(proxy=self.wallet.proxy)
 
-        # Заголовки под браузер, со своим user-agent из сессии
         self.base_headers = {
             "accept": "application/json, text/plain, */*",
             "accept-language": "en-US,en;q=0.9",
