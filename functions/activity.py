@@ -68,7 +68,7 @@ async def random_activity_task(wallet):
         raise e
 
 
-async def execute(wallets : Wallet, task_func, timeout_hours : int = 0):
+async def execute(wallets : Wallet, task_func, random_pause_wallet_after_completion : int = 0):
     
     while True:
         
@@ -87,11 +87,15 @@ async def execute(wallets : Wallet, task_func, timeout_hours : int = 0):
         tasks = [asyncio.create_task(sem_task(wallet)) for wallet in wallets]
         await asyncio.gather(*tasks, return_exceptions=True)
 
-        if timeout_hours == 0:
+        if random_pause_wallet_after_completion == 0:
             break
-        
-        logger.info(f"Sleeping for {timeout_hours} hours before the next iteration")
-        await asyncio.sleep(timeout_hours * 60 * 60)
+ 
+        next_run = datetime.now() + timedelta(seconds=random_pause_wallet_after_completion)
+        logger.info(
+            f"Sleeping {random_pause_wallet_after_completion} seconds. "
+            f"Next run at: {next_run.strftime('%Y-%m-%d %H:%M:%S')}"
+        )
+        await asyncio.sleep(random_pause_wallet_after_completion)
         
 
 async def activity(action: int):
