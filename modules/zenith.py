@@ -325,6 +325,28 @@ POSITION_MANAGER_ABI = [
         "type": "function",
     },
     {
+      "inputs": [
+        {
+          "components": [
+            { "internalType": "uint256", "name": "tokenId", "type": "uint256" },
+            { "internalType": "address", "name": "recipient", "type": "address" },
+            { "internalType": "uint128", "name": "amount0Requested", "type": "uint128" },
+            { "internalType": "uint128", "name": "amount1Requested", "type": "uint128" }
+          ],
+          "internalType": "struct INonfungiblePositionManager.CollectParams",
+          "name": "params",
+          "type": "tuple"
+        }
+      ],
+      "name": "collect",
+      "outputs": [
+        { "internalType": "uint256", "name": "amount0", "type": "uint256" },
+        { "internalType": "uint256", "name": "amount1", "type": "uint256" }
+      ],
+      "stateMutability": "payable",
+      "type": "function"
+    },
+    {
         "inputs": [
             {
                 "components": [
@@ -347,6 +369,29 @@ POSITION_MANAGER_ABI = [
             {"internalType": "uint256", "name": "amount1", "type": "uint256"},
         ],
         "stateMutability": "payable",
+        "type": "function",
+    },
+    {
+        "inputs": [
+            {
+                "components": [
+                    {"internalType": "uint256", "name": "tokenId",   "type": "uint256"},
+                    {"internalType": "uint128", "name": "liquidity", "type": "uint128"},
+                    {"internalType": "uint256", "name": "amount0Min","type": "uint256"},
+                    {"internalType": "uint256", "name": "amount1Min","type": "uint256"},
+                    {"internalType": "uint256", "name": "deadline",  "type": "uint256"},
+                ],
+                "internalType": "tuple",
+                "name": "",
+                "type": "tuple",
+            }
+        ],
+        "name": "decreaseLiquidity",
+        "outputs": [
+            {"internalType": "uint256", "name": "amount0", "type": "uint256"},
+            {"internalType": "uint256", "name": "amount1", "type": "uint256"},
+        ],
+        "stateMutability": "nonpayable",
         "type": "function",
     },
     {
@@ -602,6 +647,9 @@ class ZenithLiquidity(Zenith):
                 "to_token": positions[3],
                 "tickLower": positions[5],
                 "tickUpper": positions[6],
+                "liquidity": positions[7],
+                "from_token_amount": positions[10],
+                "to_token_amount": positions[11],
             })
 
         return positions_map
@@ -707,5 +755,79 @@ class ZenithLiquidity(Zenith):
         if rcpt:
             return (f"Success | {msg} | {a_amt} {from_token.title} <-> {b_amt} {to_token.title} - fee {fee}")
 
+
+        return f"Failed | {msg}"
+
+    async def check_any_positions(self):
+        current_positions = await self.get_current_position()
+        res = []
+        for key, positions in current_positions.items():
+            if positions:
+                res.extend([pos for pos in positions if pos.get('liquidity') > 0])
+        return res
+
+    @controller_log('Remove Liquidity')
+    async def remove_liquidity(self):
+        current_positions = await self.get_current_position()
+
+        for key, positions in current_positions.items():
+            if positions:
+                positions = [pos for pos in positions if pos.get('liquidity') > 0]
+
+                if positions:
+                    pos = random.choice(positions)
+
+                    return await self.descrease_liquidity(pos=pos)
+
+        return 'Nothing to close | All positions are closed'
+
+
+    async def descrease_liquidity(self, pos, slippage = 3):
+        c = await self.client.contracts.get(contract_address=POSITION_MANAGER)
+
+        deadline = int(time.time() + 20 * 60)
+
+        token_id = int(pos.get('token_id'))
+        liquidity = int(pos.get('liquidity'))
+
+        amount0Min = int(pos.get('from_token_amount')) * (100 - slippage) // 100
+        amount1Min = int(pos.get('to_token_amount')) * (100 - slippage) // 100
+
+        msg = f'Decreased LP | TokenId {token_id}'
+
+        descrease = TxArgs(
+            tokenId=token_id,
+            liquidity=liquidity,
+            amount0Min=amount0Min,
+            amount1Min=amount1Min,
+            deadline=deadline
+        ).tuple()
+
+        descrease = c.encode_abi("decreaseLiquidity", args=[descrease])
+
+        max_uint128 = 2 ** 128 - 1
+
+        collect = TxArgs(
+            tokenId = token_id,
+            recipient= self.client.account.address,
+            amount0Requested= max_uint128,
+            amount1Requested= max_uint128
+        ).tuple()
+
+        collect = c.encode_abi("collect", args=[collect])
+
+        data = c.encode_abi("multicall", args=[[descrease, collect]])
+
+        tx = await self.client.transactions.sign_and_send(TxParams(
+            to=c.address,
+            data=data,
+            value=0
+        ))
+
+        rcpt = await tx.wait_for_receipt(client=self.client, timeout=300)
+
+        if rcpt:
+            return (
+                f"Success | {msg}")
 
         return f"Failed | {msg}"
