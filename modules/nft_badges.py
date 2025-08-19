@@ -89,16 +89,13 @@ ASTB = RawContract(
     address="0x0d00314d006e70ca08ac37c3469b4bf958a7580b",
     abi=NFT_ABI,
 )
+PNS = RawContract(
+    title="PNS",
+    address="0x4af366c7269DC9a0335Bd055Af979729c20e0F5F",
+    abi=NFT_ABI,
+)
 
-"""
 
-0x2a469a4073480596b9deb19f52aa89891ccff5ce - pharo2
-0xb2ac4f09735007562c513ebbe152a8d7fa682bef - gotchipus
-0x96381ed3fcfb385cbacfe6908159f0905b19767a - spout
-0xe71188df7be6321ffd5aaa6e52e6c96375e62793 - zentra
-0x1Da9f40036beE3Fda37ddd9Bff624E1125d8991D - ptb
-0x0d00314d006e70ca08ac37c3469b4bf958a7580b - astb
-"""
 class NFTS(Base):
     __module_name__ = "Mint NFTs"
 
@@ -156,7 +153,8 @@ class NFTS(Base):
             ASTB,
             ZENTRA,
             SPOUT,
-            GOTCHIPUS
+            GOTCHIPUS,
+            PNS
         ]
 
         not_minted = []

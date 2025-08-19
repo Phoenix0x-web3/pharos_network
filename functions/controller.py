@@ -258,8 +258,8 @@ class Controller:
         brokex_count = random.randint(settings.brokex_count_min, settings.brokex_count_max)
 
         #todo check TX in brokex and zentih for liq
-        lp_count = random.randint(settings.lp_count_min, settings.lp_count_max)
-        defi_lp_count = random.randint(settings.lp_count_min, settings.lp_count_max)
+        lp_count = random.randint(settings.liquidity_count_min, settings.liquidity_count_max)
+        defi_lp_count = random.randint(settings.liquidity_count_min, settings.liquidity_count_max)
 
         wallet_balance = await self.client.wallet.balance()
 
@@ -311,22 +311,25 @@ class Controller:
             if not brokex_faucet:
                 build_array.append(lambda: self.brokex_faucet())
 
+
             user_tasks = await self.user_tasks()
 
-            swaps = await self.form_actions(user_tasks.get("101", 0), self.zenith.swaps_controller, swaps_count)
-            swaps_faroswap = await self.form_actions(user_tasks.get("107", 0), self.faroswap.swap_controller, swaps_faroswap)
-            zenith_lp = await self.form_actions(user_tasks.get("102", 0), self.random_liquidity, defi_lp_count)
-            tips = await self.form_actions(user_tasks.get("108", 0), self.primus.tip, tips_count)
-            autostake = await self.form_actions(user_tasks.get("110", 0), self.autostaking_task, autostake_count)
-            brokex_lp = await self.form_actions(user_tasks.get("111", 0), self.brokex.deposit_liquidity, lp_count // 2)
-            brokex_trade = await self.form_actions(user_tasks.get("111", 0), self.brokex_positions, brokex_count)
+            build_array += await self.form_actions(user_tasks.get("101", 0), self.zenith.swaps_controller, swaps_count)
+            build_array += await self.form_actions(user_tasks.get("107", 0), self.faroswap.swap_controller, swaps_faroswap)
+            build_array += await self.form_actions(user_tasks.get("102", 0), self.random_liquidity, defi_lp_count)
+            build_array += await self.form_actions(user_tasks.get("108", 0), self.primus.tip, tips_count)
+            build_array += await self.form_actions(user_tasks.get("110", 0), self.autostaking_task, autostake_count)
+            build_array += await self.form_actions(user_tasks.get("111", 0), self.brokex.deposit_liquidity, lp_count // 2)
+            build_array += await self.form_actions(user_tasks.get("111", 0), self.brokex_positions, brokex_count)
 
+            zenith_current_lp = await self.zenith_liq.check_any_positions()
 
-            all_actions = swaps + swaps_faroswap + tips + autostake + build_array + brokex_lp + zenith_lp + brokex_trade
+            if zenith_current_lp:
+                build_array += [self.zenith_liq.remove_liquidity for _ in range(random.randint(2, 5))]
 
-            random.shuffle(all_actions)
+            random.shuffle(build_array)
 
-            final_actions += all_actions
+            final_actions += build_array
 
         return final_actions
 

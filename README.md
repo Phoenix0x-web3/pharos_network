@@ -150,7 +150,7 @@ autostake_count:
 #Be careful not write a big number, because for one iteraction will be done 3-5 transactions  
 
 # Autostake percent of coin balance
-stake_percent:
+autostake_percent:
   min: 5
   max: 10  
 ```
