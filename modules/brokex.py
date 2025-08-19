@@ -192,7 +192,7 @@ class Brokex(Base):
     async def deposit_liquidity(self, amount_usdt: float = None) -> str:
         settings = Settings()
         usdt_balance = await self.client.wallet.balance(token=USDT)
-        percent = random.randint(settings.stake_percent_min, settings.stake_percent_max) / 100
+        percent = random.randint(settings.autostake_percent_min, settings.autostake_percent_max) / 100
         amount = TokenAmount(amount=float(usdt_balance.Ether) * percent / 100, decimals=usdt_balance.decimals)
 
         if await self.approve_interface(
@@ -219,7 +219,7 @@ class Brokex(Base):
     @controller_log("Withdraw LP")
     async def withdraw_liquidity(self) -> str:
         settings = Settings()
-        percent = random.randint(settings.stake_percent_min, settings.stake_percent_max) / 100
+        percent = random.randint(settings.autostake_percent_min, settings.autostake_percent_max) / 100
 
         c = await self.client.contracts.get(contract_address=POOL_ROUTER)
         amount = await c.functions.balanceOf(self.client.account.address).call()

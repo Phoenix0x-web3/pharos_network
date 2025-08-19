@@ -258,8 +258,8 @@ class Controller:
         brokex_count = random.randint(settings.brokex_count_min, settings.brokex_count_max)
 
         #todo check TX in brokex and zentih for liq
-        lp_count = random.randint(settings.lp_count_min, settings.lp_count_max)
-        defi_lp_count = random.randint(settings.lp_count_min, settings.lp_count_max)
+        lp_count = random.randint(settings.liquidity_count_min, settings.liquidity_count_max)
+        defi_lp_count = random.randint(settings.liquidity_count_min, settings.liquidity_count_max)
 
         wallet_balance = await self.client.wallet.balance()
 

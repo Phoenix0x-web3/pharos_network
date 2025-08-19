@@ -37,47 +37,47 @@ random_pause_start_wallet:
   min: 0
   max: 60
 
-# Liquidity percent of coin balance
+# Swap percent of coin balance
 swap_percent:
   min: 5
   max: 30
 
-# Stake percent of coin balance
-stake_percent:
-  min: 5
-  max: 10
+# Swap action count
+swaps_count:
+  min: 15
+  max: 30
 
 # Liquidity percent of native coin balance
 liquidity_percent:
   min: 1
   max: 3
 
-#Brokex Futures percent of USDT
-brokex_percent:
-  min: 1
-  max: 2
+# Liquidity action count
+liquidity_count:
+  min: 5
+  max: 10  
 
-# Swaps action count
-swaps_count:
-  min: 15
-  max: 30
-
-# Tips action count
+# Send tokens to friends action count
 tips_count:
   min: 15
-  max: 30
+  max: 30  
 
 # Autostake action count
 autostake_count:
   min: 1
   max: 4
 
-# LP action count
-lp_count:
+# Autostake percent of coin balance
+autostake_percent:
   min: 5
   max: 10
 
-#brokex position count
+# CFD Trading Brokex futures percent of USDT
+brokex_percent:
+  min: 1
+  max: 2
+
+# CFD Trading Brokex position count
 brokex_count:
   min: 5
   max: 10
