@@ -1,6 +1,8 @@
 # Phoenix Dev
 
-More info : https://t.me/phoenix_w3
+More info:  
+[Telegram Channel](https://t.me/phoenix_w3)  
+[Telegram Chat](https://t.me/phoenix_w3_space)
 
 ## Pharos Network
 
