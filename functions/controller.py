@@ -11,7 +11,7 @@ from modules.autostaking import AutoStaking
 from libs.eth_async.client import Client
 from libs.base import Base
 from modules.brokex import Brokex
-from modules.faroswap import Faroswap
+from modules.faroswap import Faroswap, FaroswapLiquidity
 from modules.nft_badges import NFTS
 from modules.pharos_portal import PharosPortal
 from modules.pns import PNS
@@ -45,6 +45,7 @@ class Controller:
         self.aquaflux = AquaFlux(client=client, wallet=wallet)
         self.nfts = NFTS(client=client, wallet=wallet)
         self.faroswap = Faroswap(client=client, wallet=wallet)
+        self.faroswap_liqudity = FaroswapLiquidity(client=client, wallet=wallet)
 
     @controller_log('CheckIn')
     async def check_in_task(self):
@@ -260,6 +261,7 @@ class Controller:
         #todo check TX in brokex and zentih for liq
         lp_count = random.randint(settings.liquidity_count_min, settings.liquidity_count_max)
         defi_lp_count = random.randint(settings.liquidity_count_min, settings.liquidity_count_max)
+        faro_lp_count = random.randint(settings.liquidity_count_min, settings.liquidity_count_max)
 
         wallet_balance = await self.client.wallet.balance()
 
@@ -321,6 +323,7 @@ class Controller:
             build_array += await self.form_actions(user_tasks.get("110", 0), self.autostaking_task, autostake_count)
             build_array += await self.form_actions(user_tasks.get("111", 0), self.brokex.deposit_liquidity, lp_count // 2)
             build_array += await self.form_actions(user_tasks.get("111", 0), self.brokex_positions, brokex_count)
+            build_array += await self.form_actions(user_tasks.get("106", 0), self.faroswap_liqudity.liquidity_controller, faro_lp_count)
 
             zenith_current_lp = await self.zenith_liq.check_any_positions()
 
