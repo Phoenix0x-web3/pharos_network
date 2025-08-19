@@ -128,7 +128,7 @@ liquidity_percent:
   max: 3
 
 # Liquidity action count
-lp_count:
+liquidity:
   min: 5
   max: 10  
 
