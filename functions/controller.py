@@ -403,6 +403,8 @@ class Controller:
                     if 'Failed' not in bind_discord:
                         logger.success(f"{self.wallet} | {bind_discord}")
                     else:
+                        self.wallet.discord_status = DiscordStatus.duplicate
+                        db.commit()
                         return bind_discord
 
                     await asyncio.sleep(random.randint(4, 7))
