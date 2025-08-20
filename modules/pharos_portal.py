@@ -15,6 +15,7 @@ from urllib.parse import urlparse, parse_qs, unquote
 
 from utils.db_api.models import Wallet
 from utils.logs_decorator import controller_log, action_log
+from utils.query_json import query_to_json
 from utils.retry import async_retry
 from utils.twitter.twitter_client import TwitterClient
 from utils.db_api.wallet_api import db
@@ -451,5 +452,49 @@ class PharosPortal(Base):
 
         raise Exception(f"Task {task['name']} Failed: {r.text}")
 
+    async def get_discord_oauth_code(self):
+        if not self.auth:
+            await self.login()
 
-    #todo discord bind
+        headers = {
+            **self.base_headers,
+            'authorization': f'Bearer {self.jwt}',
+        }
+
+        r = await self.session.get(
+            url=f"{self.BASE}/auth/discord",
+            headers=headers,
+            allow_redirects=False
+        )
+        r.raise_for_status()
+
+        return r.headers.get('location')
+
+    @action_log('Bind Discord')
+    async def bind_discord(self, url, state):
+        if not self.auth:
+            await self.login()
+
+        headers = {
+            **self.base_headers,
+            'authorization': f'Bearer {self.jwt}',
+        }
+        code = query_to_json(url)
+
+        payload = {
+            "state": state,
+            "code": code['code'],
+            'address': self.client.account.address,
+        }
+
+        r = await self.session.post(
+            url=f"{self.BASE}/auth/bind/discord",
+            headers=headers,
+            json=payload
+        )
+        r.raise_for_status()
+
+        if r.json().get('code') == 0:
+            return f"Success | {r.json().get('msg')} username: {r.json().get('data').get('username')}"
+
+        return f'Failed to Bind | {r.text}'

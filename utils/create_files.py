@@ -10,6 +10,7 @@ REQUIRED_FILES = [
     "proxy.txt",
     "twitter_tokens.txt",
     "discord_tokens.txt",
+    "discord_proxy.txt",
 ]
 
 def create_files() -> None:

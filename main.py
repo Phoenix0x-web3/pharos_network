@@ -19,6 +19,7 @@ PROJECT_ACTIONS =   [
                     "1. Run All Tasks In Random Order",
                     "2. Twitter Tasks",
                     "3. Swaps",
+                    "4. Join and Bind Discord",
                     "Back"
                     ]
 
@@ -85,7 +86,7 @@ async def choose_action():
     elif '3' in action:
         await activity(action=3)
 
-    elif action == "Start Testing Twitter":
+    elif '4' in action:
         await activity(action=4)
 
     elif action == "Exit":
