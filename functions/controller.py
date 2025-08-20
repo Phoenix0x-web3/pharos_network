@@ -369,7 +369,7 @@ class Controller:
             return 'Failed | Bad Discord Token'
 
         if self.wallet.discord_status == DiscordStatus.duplicate:
-            return 'Failed | Bad Discord Token | Duplicated, please change discrod token'
+            return 'Failed | Bad Discord Token | Duplicated, please change discord token'
 
         user_data = await self.pharos_portal.get_user_info()
 
