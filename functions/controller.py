@@ -396,6 +396,8 @@ class Controller:
                     bind_discord = await self.pharos_portal.bind_discord(url=oauth_url, state=state)
                     if 'Failed' not in bind_discord:
                         logger.success(f"{self.wallet} | {bind_discord}")
+                    else:
+                        return bind_discord
 
                     await asyncio.sleep(random.randint(4, 7))
 
