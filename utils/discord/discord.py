@@ -120,7 +120,6 @@ class DiscordInviter:
             self,
             wallet,
             *,
-            proxy: Optional[str] = None,
             fingerprint: dict = FINGERPRINT_MAC136,
             invite_code: str = "pharos",
             channel_id: Optional[str] = None,
@@ -132,7 +131,8 @@ class DiscordInviter:
             ] = None,
     ):
         self.wallet: Wallet = wallet
-        self.proxy = proxy or wallet.proxy
+        self.proxy = self.wallet.discord_proxy if self.wallet.discord_proxy else wallet.proxy
+
         if self.proxy and not self.proxy.startswith("http"):
             self.proxy = f"http://{self.proxy}"
 
@@ -737,6 +737,7 @@ class DiscordOAuth:
             self,
             wallet,
             *,
+            proxy: Optional[str] = None,
             timezone: str = "Europe/Warsaw",
             locale: str = "en-US",
             cookies: Optional[Dict[str, str]] = None,
@@ -744,11 +745,11 @@ class DiscordOAuth:
             guild_id: str
     ):
         self.wallet = wallet
-
+        self.proxy = self.wallet.discord_proxy if self.wallet.discord_proxy else wallet.proxy
         if session is not None:
             self.async_session = session
         else:
-            self.async_session = BaseAsyncSession(proxy=self.wallet.proxy, fingerprint=FINGERPRINT_MAC136)
+            self.async_session = BaseAsyncSession(proxy=self.proxy, fingerprint=FINGERPRINT_MAC136)
         self.timezone = timezone
         self.locale = locale
         self.guild_id = guild_id

@@ -379,7 +379,10 @@ class Controller:
 
             try:
                 if not self.wallet.discord_status:
-                    discord_inviter = DiscordInviter(wallet=self.wallet, invite_code='pharos', channel_id=guild_id)
+                    discord_inviter = DiscordInviter(
+                        wallet=self.wallet,
+                        invite_code='pharos',
+                        channel_id=guild_id)
 
                     join_to_channel = await discord_inviter.start_accept_discord_invite()
 

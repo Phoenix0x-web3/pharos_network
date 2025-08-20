@@ -148,7 +148,7 @@ async def activity(action: int):
             n_proxies = len(discord_proxies)
 
             for i, w in enumerate(wallets):
-                w.proxy = discord_proxies[i % n_proxies]
+                w.discord_proxy = discord_proxies[i % n_proxies]
 
         await execute(wallets, join_discord, 0)
 
