@@ -150,7 +150,7 @@ async def activity(action: int):
             for i, w in enumerate(wallets):
                 w.proxy = discord_proxies[i % n_proxies]
 
-        await execute(wallets, join_discord, Settings().sleep_after_each_cycle_hours)
+        await execute(wallets, join_discord, 0)
 
     if action == 4:
         await execute(wallets, random_swaps, Settings().sleep_after_each_cycle_hours)

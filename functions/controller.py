@@ -381,6 +381,8 @@ class Controller:
 
                         self.wallet.discord_status = DiscordStatus.ok
                         db.commit()
+                    else:
+                        return f'Join Failed | {join_to_channel}'
 
                 if self.wallet.discord_status == DiscordStatus.ok:
                     discord = DiscordOAuth(wallet=self.wallet, guild_id=guild_id)
@@ -413,3 +415,5 @@ class Controller:
                 return await self.discord_tasks(tasks=discord_tasks)
 
             return f"Already verified discord Task"
+
+        return f'Failed | Something Wrong {user_data}'
