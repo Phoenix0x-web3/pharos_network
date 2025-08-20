@@ -4,6 +4,8 @@ More info:
 [Telegram Channel](https://t.me/phoenix_w3)  
 [Telegram Chat](https://t.me/phoenix_w3_space)
 
+[Инструкция на руском](https://phoenix-14.gitbook.io/phoenix/proekty/pharos-network)
+
 ## Pharos Network
 
 Pharos Network is a Layer 1 blockchain focused on Real World Assets (RWA), enabling secure, transparent, and on-chain asset tokenization.
