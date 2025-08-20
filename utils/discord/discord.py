@@ -26,6 +26,7 @@ DISCORD_SITE_KEY = "a9b5fb07-92ff-493f-86fe-352a2803b3df"
 class DiscordStatus:
     ok = "OK"
     bad_token = "BAD"
+    duplicate = "DUPLICATE"
     
 class BaseAsyncSession(requests.AsyncSession):
     def __init__(

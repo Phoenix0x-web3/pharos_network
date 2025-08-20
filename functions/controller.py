@@ -365,6 +365,12 @@ class Controller:
     @controller_log('Bind Discord')
     async def bind_discord_flow(self):
 
+        if self.wallet.discord_status == DiscordStatus.bad_token:
+            return 'Failed | Bad Discord Token'
+
+        if self.wallet.discord_status == DiscordStatus.duplicate:
+            return 'Failed | Bad Discord Token | Duplicated, please change discrod token'
+
         user_data = await self.pharos_portal.get_user_info()
 
         if user_data.get('DiscordId') == "":
@@ -402,9 +408,6 @@ class Controller:
                     await asyncio.sleep(random.randint(4, 7))
 
                     user_data = await self.pharos_portal.get_user_info()
-
-                if self.wallet.discord_status == DiscordStatus.bad_token:
-                    return 'Failed | Bad Discord Token'
 
             except Exception as e:
                 return f"Failed | {e}"
