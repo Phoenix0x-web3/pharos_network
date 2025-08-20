@@ -4,7 +4,7 @@ More info:
 [Telegram Channel](https://t.me/phoenix_w3)  
 [Telegram Chat](https://t.me/phoenix_w3_space)
 
-[Инструкция на руском](https://phoenix-14.gitbook.io/phoenix/proekty/pharos-network)
+[Инструкция на русcком](https://phoenix-14.gitbook.io/phoenix/proekty/pharos-network)
 
 ## Pharos Network
 
