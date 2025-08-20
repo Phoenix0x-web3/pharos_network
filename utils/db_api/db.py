@@ -142,3 +142,51 @@ class DB:
         except DatabaseError as e:
             logger.error(f"Error adding column '{column_name}' to table '{table_name}': {e}")
 
+    def ensure_model_columns(self, model) -> None:
+        """
+        Добавляет в SQLite недостающие колонки по ORM-модели.
+        Работает БЕЗ миграций: ALTER TABLE ... ADD COLUMN.
+        """
+        table_name = getattr(model, "__tablename__", None)
+        if not table_name:
+            logger.error("ensure_model_columns: model has no __tablename__")
+            return
+
+        inspector = inspect(self.engine)
+        if not inspector.has_table(table_name):
+            logger.info(f"[schema] table '{table_name}' отсутствует — create_all создаст её")
+            self.Base.metadata.create_all(self.engine)
+            inspector = inspect(self.engine)
+
+        existing_cols = {col['name'] for col in inspector.get_columns(table_name)}
+        table = model.__table__
+
+        for col in table.columns:
+            if col.name in existing_cols:
+                continue
+
+            col_type_sql = col.type.compile(dialect=self.engine.dialect)
+
+            default_val = None
+            if col.server_default is not None and getattr(col.server_default, "arg", None) is not None:
+                default_val = col.server_default.arg
+            elif col.default is not None:
+                arg = getattr(col.default, "arg", col.default)
+                if not callable(arg):
+                    default_val = arg
+
+            if isinstance(default_val, bool):
+                default_val = 1 if default_val else 0
+
+            if (col.nullable is False) and (default_val is None):
+                logger.warning(
+                    f"[schema] '{table_name}.{col.name}' NOT NULL без DEFAULT → добавим как NULLABLE (ограничение SQLite)"
+                )
+
+            self.add_column_to_table(
+                table_name=table_name,
+                column_name=col.name,
+                column_type=col_type_sql,
+                default_value=default_val
+            )
+

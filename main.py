@@ -7,6 +7,8 @@ from inquirer.themes import Default
 from rich.console import Console
 from utils.create_files import create_files
 from functions.activity import activity
+from utils.db_api.models import Wallet
+from utils.db_api.wallet_api import db
 from utils.db_import_export_sync import Import, Export, Sync
 from utils.encryption import check_encrypt_param
 from utils.output import show_channel_info
@@ -97,6 +99,7 @@ async def choose_action():
 
 async def main():
     create_files()
+    db.ensure_model_columns(Wallet)
     await choose_action()
 
 if __name__ == '__main__':
