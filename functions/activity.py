@@ -126,11 +126,8 @@ async def activity(action: int):
 
     if action == 2:
         await execute(wallets, twitter_tasks, Settings().sleep_after_each_cycle_hours)
-        
-    if action == 3:
-        await execute(wallets, random_swaps, Settings().sleep_after_each_cycle_hours)
 
-    if action == 4:
+    if action == 3:
         wallets = [wallet for wallet in wallets if wallet.discord_token is not None and wallet.discord_status != DiscordStatus.bad_token]
 
         if len(wallets) == 0:
@@ -154,6 +151,10 @@ async def activity(action: int):
                 w.proxy = discord_proxies[i % n_proxies]
 
         await execute(wallets, join_discord, Settings().sleep_after_each_cycle_hours)
+
+    if action == 4:
+        await execute(wallets, random_swaps, Settings().sleep_after_each_cycle_hours)
+
 
 async def join_discord(wallet):
     client = Client(private_key=wallet.private_key, proxy=wallet.proxy, network=Networks.PharosTestnet)

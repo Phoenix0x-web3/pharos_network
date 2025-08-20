@@ -18,8 +18,8 @@ PROJECT = 'Pharos Network'
 PROJECT_ACTIONS =   [
                     "1. Run All Tasks In Random Order",
                     "2. Twitter Tasks",
-                    "3. Swaps",
-                    "4. Join and Bind Discord",
+                    "3. Join and Bind Discord",
+                    "4. Swaps",
                     "Back"
                     ]
 
