@@ -155,9 +155,6 @@ async def activity(action: int):
 
         await execute(wallets, join_discord, 0)
 
-    if action == 4:
-        await execute(wallets, random_swaps, Settings().sleep_after_each_cycle_hours)
-
 
 async def join_discord(wallet):
     client = Client(private_key=wallet.private_key, proxy=wallet.proxy, network=Networks.PharosTestnet)

@@ -21,7 +21,6 @@ PROJECT_ACTIONS =   [
                     "1. Run All Tasks In Random Order",
                     "2. Twitter Tasks",
                     "3. Join and Bind Discord",
-                    "4. Swaps",
                     "Back"
                     ]
 
@@ -87,9 +86,6 @@ async def choose_action():
 
     elif '3' in action:
         await activity(action=3)
-
-    elif '4' in action:
-        await activity(action=4)
 
     elif action == "Exit":
         console.print(f"[bold red]Exiting {PROJECT}...[/bold red]")
