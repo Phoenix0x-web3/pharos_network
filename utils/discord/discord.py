@@ -27,6 +27,8 @@ class DiscordStatus:
     ok = "OK"
     bad_token = "BAD"
     duplicate = "DUPLICATE"
+    captcha = "CAPTCHA"
+    verify = "NEED VERIFY"
     
 class BaseAsyncSession(requests.AsyncSession):
     def __init__(
@@ -437,6 +439,8 @@ class DiscordInviter:
         if ("You need to update your app to join this server." in (r.text or "")) or (
                 "captcha_rqdata" in (r.text or "")):
             need_captcha = True
+            self.wallet.discord_status = DiscordStatus.captcha
+            db.commit()
             #todo captcha flow
             return False, f'{self.wallet} | {self.__module_name__} | {r.text}'
 
@@ -444,6 +448,8 @@ class DiscordInviter:
             if "Unauthorized" in (r.text or ""):
                 return False, f'{self.wallet} | {self.__module_name__} | Incorrect discord token or your account is blocked.'
             if "You need to verify your account in order to" in (r.text or ""):
+                self.wallet.discord_status = DiscordStatus.verify
+                db.commit()
                 return False, f'{self.wallet} | {self.__module_name__} | Account needs verification (Email code etc).'
             return False, f'{self.wallet} | {self.__module_name__} | Unknown error: {r.text}'
 
@@ -661,8 +667,9 @@ class DiscordInviter:
             try:
                 logger.info(f'{self.wallet} | {self.__module_name__} | Starting to join {self.invite_code} channel | attemp {num}/{NUMBER_OF_ATTEMPTS}')
 
-                await self.connect()  # WS поднят и крутится параллельно
-                await asyncio.sleep(random.randint(120, 160))  # важная пауза
+                await self.connect()
+                #important pause
+                await asyncio.sleep(random.randint(120, 160))
 
                 status, location_guild_id, location_channel_id = await self.get_guild_id()
                 logger.debug(f'Location recieved {location_guild_id}, {location_channel_id}')
