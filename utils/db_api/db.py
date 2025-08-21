@@ -144,8 +144,8 @@ class DB:
 
     def ensure_model_columns(self, model) -> None:
         """
-        Добавляет в SQLite недостающие колонки по ORM-модели.
-        Работает БЕЗ миграций: ALTER TABLE ... ADD COLUMN.
+        Adding to SQLite missed columns based on ORM-model.
+        ALTER TABLE ... ADD COLUMN.
         """
         table_name = getattr(model, "__tablename__", None)
         if not table_name:
@@ -154,7 +154,7 @@ class DB:
 
         inspector = inspect(self.engine)
         if not inspector.has_table(table_name):
-            logger.info(f"[schema] table '{table_name}' отсутствует — create_all создаст её")
+            logger.info(f"[schema] table '{table_name}' missed — creating")
             self.Base.metadata.create_all(self.engine)
             inspector = inspect(self.engine)
 
@@ -180,7 +180,7 @@ class DB:
 
             if (col.nullable is False) and (default_val is None):
                 logger.warning(
-                    f"[schema] '{table_name}.{col.name}' NOT NULL без DEFAULT → добавим как NULLABLE (ограничение SQLite)"
+                    f"[schema] '{table_name}.{col.name}' NOT NULL without DEFAULT → adding as NULLABLE"
                 )
 
             self.add_column_to_table(
