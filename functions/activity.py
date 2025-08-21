@@ -128,7 +128,10 @@ async def activity(action: int):
         await execute(wallets, twitter_tasks, Settings().sleep_after_each_cycle_hours)
 
     if action == 3:
-        wallets = [wallet for wallet in wallets if wallet.discord_token is not None and wallet.discord_status != DiscordStatus.bad_token]
+        wallets = [
+            wallet for wallet in wallets
+            if wallet.discord_token is not None and wallet.discord_status in [None, DiscordStatus.ok]
+        ]
 
         if len(wallets) == 0:
             logger.warning(
