@@ -1,12 +1,17 @@
 
-from data.config import logger
+from loguru import logger
 #from libs.twitter.base import BaseAsyncSession
 
-from settings import HCAPTCHA_SERVICE_TO_USE, API_KEY_24_CAPTCHA, API_KEY_BESTCAPTCHA
+#from data.settings import HCAPTCHA_SERVICE_TO_USE, API_KEY_24_CAPTCHA, API_KEY_BESTCAPTCHA
+
+from libs.baseAsyncSession import BaseAsyncSession
 from utils.captcha.capthca24 import create_24captch_task, get_24captcha_task_result
 
 from utils.captcha.bestcapthca import create_bestcaptcha_task, get_bestcaptcha_task_result
 
+HCAPTCHA_SERVICE_TO_USE = False
+API_KEY_24_CAPTCHA = False
+API_KEY_BESTCAPTCHA = False
 
 async def get_hcaptcha_solution(proxy, session: BaseAsyncSession, site_key, page_url, rq_data=False, enterprise=False):
     PROXY = proxy.replace('http://', '')

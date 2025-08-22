@@ -8,6 +8,18 @@ FINGERPRINT_DEFAULT = {
     "accept-language" : "en-US,en;q=0.9",
 }
 
+FINGERPRINT_MAC136 = {
+    "impersonate": "chrome136",
+    "user-agent": (
+        "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) "
+        "AppleWebKit/537.36 (KHTML, like Gecko) "
+        "Chrome/136.0.0.0 Safari/537.36"
+    ),
+    "sec-ch-ua-platform": "macOS",
+    "sec-ch-ua": '"Google Chrome";v="136", "Chromium";v="136", "Not_A Brand";v="24"',
+    "accept-language": "en-US,en;q=0.9",
+}
+
 class BaseAsyncSession(requests.AsyncSession):
     def __init__(
             self,

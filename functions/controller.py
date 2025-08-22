@@ -11,7 +11,7 @@ from modules.autostaking import AutoStaking
 from libs.eth_async.client import Client
 from libs.base import Base
 from modules.brokex import Brokex
-from modules.faroswap import Faroswap
+from modules.faroswap import Faroswap, FaroswapLiquidity
 from modules.nft_badges import NFTS
 from modules.pharos_portal import PharosPortal
 from modules.pns import PNS
@@ -21,6 +21,7 @@ from modules.zenith import Zenith, ZenithLiquidity
 
 from utils.db_api.models import Wallet
 from utils.db_api.wallet_api import db
+from utils.discord.discord import DiscordOAuth, DiscordInviter, DiscordStatus
 from utils.logs_decorator import controller_log
 from utils.query_json import query_to_json
 from utils.twitter.twitter_client import TwitterClient
@@ -45,6 +46,8 @@ class Controller:
         self.aquaflux = AquaFlux(client=client, wallet=wallet)
         self.nfts = NFTS(client=client, wallet=wallet)
         self.faroswap = Faroswap(client=client, wallet=wallet)
+        self.faroswap_liqudity = FaroswapLiquidity(client=client, wallet=wallet)
+
 
     @controller_log('CheckIn')
     async def check_in_task(self):
@@ -147,6 +150,7 @@ class Controller:
                             task_status = await self.pharos_portal.verify_task(task=task)
                             results.append(task_status)
 
+
             return results
 
         except Exception as e:
@@ -155,6 +159,18 @@ class Controller:
 
         finally:
             await self.twitter.close()
+
+    async def discord_tasks(self, tasks: list):
+        try:
+            for task in tasks:
+                if task['task_type'] == 'discord':
+                    name = task['name']
+                    task_status = await self.pharos_portal.verify_task(task=task)
+                    return f'Success | Verify {name} {task_status}'
+
+        except Exception as e:
+            logger.error(e)
+            return f'Failed | {e}'
 
     @controller_log('AutoStaking')
     async def autostaking_task(self):
@@ -260,6 +276,7 @@ class Controller:
         #todo check TX in brokex and zentih for liq
         lp_count = random.randint(settings.liquidity_count_min, settings.liquidity_count_max)
         defi_lp_count = random.randint(settings.liquidity_count_min, settings.liquidity_count_max)
+        faro_lp_count = random.randint(settings.liquidity_count_min, settings.liquidity_count_max)
 
         wallet_balance = await self.client.wallet.balance()
 
@@ -321,6 +338,7 @@ class Controller:
             build_array += await self.form_actions(user_tasks.get("110", 0), self.autostaking_task, autostake_count)
             build_array += await self.form_actions(user_tasks.get("111", 0), self.brokex.deposit_liquidity, lp_count // 2)
             build_array += await self.form_actions(user_tasks.get("111", 0), self.brokex_positions, brokex_count)
+            build_array += await self.form_actions(user_tasks.get("106", 0), self.faroswap_liqudity.liquidity_controller, faro_lp_count)
 
             zenith_current_lp = await self.zenith_liq.check_any_positions()
 
@@ -343,4 +361,69 @@ class Controller:
         invite_code = user_data.get('InviteCode')
         
         await update_points_invites(self.wallet.private_key, total_points, invite_code)
-        
+
+    @controller_log('Bind Discord')
+    async def bind_discord_flow(self):
+
+        if self.wallet.discord_status == DiscordStatus.bad_token:
+            return 'Failed | Bad Discord Token'
+
+        if self.wallet.discord_status == DiscordStatus.duplicate:
+            return 'Failed | Bad Discord Token | Duplicated, please change discord token'
+
+        user_data = await self.pharos_portal.get_user_info()
+
+        if user_data.get('DiscordId') == "":
+
+            guild_id = '1270276651636232282'
+
+            try:
+                if not self.wallet.discord_status:
+                    discord_inviter = DiscordInviter(
+                        wallet=self.wallet,
+                        invite_code='pharos',
+                        channel_id=guild_id)
+
+                    join_to_channel = await discord_inviter.start_accept_discord_invite()
+
+                    if 'Failed' not in join_to_channel:
+
+                        self.wallet.discord_status = DiscordStatus.ok
+                        db.commit()
+                    else:
+                        return f'Join Failed | {join_to_channel}'
+
+                if self.wallet.discord_status == DiscordStatus.ok:
+                    discord = DiscordOAuth(wallet=self.wallet, guild_id=guild_id)
+
+                    discord_oauth = await self.pharos_portal.get_discord_oauth_code()
+                    await asyncio.sleep(random.randint(1, 3))
+
+                    oauth_url, state = await discord.start_oauth2(oauth_url=discord_oauth)
+                    await asyncio.sleep(random.randint(1, 3))
+
+                    bind_discord = await self.pharos_portal.bind_discord(url=oauth_url, state=state)
+                    if 'Failed' not in bind_discord:
+                        logger.success(f"{self.wallet} | {bind_discord}")
+                    else:
+                        self.wallet.discord_status = DiscordStatus.duplicate
+                        db.commit()
+                        return bind_discord
+
+                    await asyncio.sleep(random.randint(4, 7))
+
+                    user_data = await self.pharos_portal.get_user_info()
+
+            except Exception as e:
+                return f"Failed | {e}"
+
+        if not user_data.get('DiscordId') == "":
+            user_tasks = await self.user_tasks()
+            if not user_tasks.get('204'):
+                _, discord_tasks = await self.pharos_portal.tasks_flow()
+
+                return await self.discord_tasks(tasks=discord_tasks)
+
+            return f"Already verified discord Task"
+
+        return f'Failed | Something Wrong {user_data}'

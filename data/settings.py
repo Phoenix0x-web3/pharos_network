@@ -46,6 +46,7 @@ class Settings(Singleton):
         self.brokex_count_min = json_data.get("brokex_count", {}).get('min')
         self.brokex_count_max = json_data.get("brokex_count", {}).get('max')
         self.retry = json_data.get("retry", {})
+        self.discord_proxy = json_data.get("discord_proxy", {})
 
 # Configure the logger based on the settings
 settings = Settings()

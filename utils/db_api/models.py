@@ -21,6 +21,8 @@ class Wallet(Base):
     points: Mapped[int] = mapped_column(default=0)
     invite_code: Mapped[str] = mapped_column(default="")
     wallet_type: Mapped[str] = mapped_column(default='')
+    discord_proxy: Mapped[str] = mapped_column(default=None, nullable=True)
+    discord_status: Mapped[str] = mapped_column(default=None, nullable=True)
     completed: Mapped[bool] = mapped_column(default=False)
 
 

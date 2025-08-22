@@ -1,4 +1,5 @@
 import asyncio
+import os
 import random
 from datetime import datetime, timedelta
 from typing import List
@@ -6,6 +7,7 @@ from typing import List
 from curl_cffi import AsyncSession
 from loguru import logger
 
+from data.config import FILES_DIR
 from functions.controller import Controller
 from functions.select_random_action import select_random_action
 from libs.eth_async.client import Client
@@ -13,6 +15,7 @@ from libs.eth_async.data.models import Networks
 from utils.db_api.models import Wallet
 from utils.db_api.wallet_api import db
 from data.settings import Settings
+from utils.discord.discord import DiscordStatus
 from utils.encryption import check_encrypt_param
 from utils.db_update import update_next_action_time, update_expired
 
@@ -68,7 +71,7 @@ async def random_activity_task(wallet):
         raise e
 
 
-async def execute(wallets : Wallet, task_func, random_pause_wallet_after_completion : int = 0):
+async def execute(wallets : List[Wallet], task_func, random_pause_wallet_after_completion : int = 0):
     
     while True:
         
@@ -123,10 +126,53 @@ async def activity(action: int):
 
     if action == 2:
         await execute(wallets, twitter_tasks, Settings().sleep_after_each_cycle_hours)
-        
-    if action == 3:
-        await execute(wallets, random_swaps, Settings().sleep_after_each_cycle_hours)
 
+    if action == 3:
+        wallets = [
+            wallet for wallet in wallets
+            if wallet.discord_token is not None and wallet.discord_status in [None, DiscordStatus.ok]
+        ]
+
+        if len(wallets) == 0:
+            logger.warning(
+                f'Core | Founded {len(wallets)} wallets with discord tokens, import some tokens in DB. Exiting...')
+            return
+
+        if Settings().discord_proxy:
+            file_path = os.path.join(FILES_DIR, 'discord_proxy.txt')
+
+            with open(file_path, 'r', encoding='utf-8') as f:
+                discord_proxies = f.read().splitlines()
+
+            if len(discord_proxies) == 0:
+                logger.warning('Core | No discord proxies provided, add some proxies in files/discord_proxy.txt. Exiting...' )
+                return
+
+            n_proxies = len(discord_proxies)
+
+            for i, w in enumerate(wallets):
+                w.discord_proxy = discord_proxies[i % n_proxies]
+
+        await execute(wallets, join_discord, 0)
+
+
+async def join_discord(wallet):
+    client = Client(private_key=wallet.private_key, proxy=wallet.proxy, network=Networks.PharosTestnet)
+
+    controller = Controller(client=client, wallet=wallet)
+
+    try:
+        result = await controller.bind_discord_flow()
+
+        if 'Failed' not in result:
+            logger.success(result)
+
+            return result
+
+        logger.error(result)
+
+    except Exception as e:
+        logger.error(e)
 
 async def random_swaps(wallet):
     client = Client(private_key=wallet.private_key, proxy=wallet.proxy, network=Networks.PharosTestnet)

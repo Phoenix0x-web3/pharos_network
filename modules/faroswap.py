@@ -8,13 +8,16 @@ from loguru import logger
 from web3 import Web3, AsyncWeb3
 from web3.types import TxParams
 
+from data.config import ABIS_DIR
 from data.models import Contracts
 from data.settings import Settings
 from libs.base import Base
 from libs.eth_async.client import Client
-from libs.eth_async.data.models import RawContract, TokenAmount
+from libs.eth_async.data.models import RawContract, TokenAmount, TxArgs
+from libs.eth_async.utils.files import read_json
 from libs.eth_async.utils.utils import randfloat
 from libs.twitter.base import BaseAsyncSession
+from modules.zenith import Zenith
 from utils.db_api.models import Wallet
 from utils.logs_decorator import action_log, controller_log
 from utils.retry import async_retry
@@ -283,3 +286,350 @@ class Faroswap(Base):
 
 
         return f'Failed to swap {amount.Ether:.5f} {from_token.title} to {to_token_amount.Ether:.5f} {to_token.title}'
+
+
+ZENITH_SWAP_ROUTER = RawContract(
+    title='FaroSwap Router',
+    address='0x3541423f25a1ca5c98fdbcf478405d3f0aad1164',
+    abi=read_json(path=(ABIS_DIR, 'zenith_router.json'))
+)
+
+ZENITH_FACTORY = RawContract(
+    title='Zebith_factory',
+    address='0x4b177aded3b8bd1d5d747f91b9e853513838cd49',
+    abi=read_json(path=(ABIS_DIR, 'zenith_factory_v3.json'))
+)
+
+POSITION_MANAGER_ABI = [
+    {
+        "inputs": [
+            {
+                "internalType": "address",
+                "name": "dvmAddress",
+                "type": "address"
+            },
+            {
+                "internalType": "uint256",
+                "name": "baseInAmount",
+                "type": "uint256"
+            },
+            {
+                "internalType": "uint256",
+                "name": "quoteInAmount",
+                "type": "uint256"
+            },
+            {
+                "internalType": "uint256",
+                "name": "baseMinAmount",
+                "type": "uint256"
+            },
+            {
+                "internalType": "uint256",
+                "name": "quoteMinAmount",
+                "type": "uint256"
+            },
+            {
+                "internalType": "uint8",
+                "name": "flag",
+                "type": "uint8"
+            },
+            {
+                "internalType": "uint256",
+                "name": "deadLine",
+                "type": "uint256"
+            }
+        ],
+        "name": "addDVMLiquidity",
+        "outputs": [],
+        "stateMutability": "nonpayable",
+        "type": "function"
+    },
+    {
+        "inputs": [
+            {"internalType": "address", "name": "tokenA", "type": "address"},
+            {"internalType": "address", "name": "tokenB", "type": "address"},
+            {"internalType": "address", "name": "fee", "type": "uint256"},
+            {"internalType": "uint256", "name": "amountADesired", "type": "uint256"},
+            {"internalType": "uint256", "name": "amountBDesired", "type": "uint256"},
+            {"internalType": "uint256", "name": "amountAMin", "type": "uint256"},
+            {"internalType": "uint256", "name": "amountBMin", "type": "uint256"},
+            {"internalType": "address", "name": "to", "type": "address"},
+            {"internalType": "uint256", "name": "deadline", "type": "uint256"},
+        ],
+        "name": "addLiquidity",
+        "outputs": [
+            {"internalType": "uint256", "name": "amountA", "type": "uint256"},
+            {"internalType": "uint256", "name": "amountB", "type": "uint256"},
+            {"internalType": "uint256", "name": "liquidity", "type": "uint256"}
+        ],
+        "stateMutability": "nonpayable",
+        "type": "function"
+    }
+]
+
+POSITION_MANAGER = RawContract(
+    title="NonfungiblePositionManager",
+    address="0x4b177aded3b8bd1d5d747f91b9e853513838cd49",
+    abi=POSITION_MANAGER_ABI,
+)
+
+POSITION_MANAGER_V2 = RawContract(
+    title="NonfungiblePositionManager",
+    address="0xf05af5e9dc3b1dd3ad0c087bd80d7391283775e0",
+    abi=POSITION_MANAGER_ABI,
+)
+
+GET_RESERVES_ABI = [{
+      "name":"getReserves","type":"function","stateMutability":"view",
+      "inputs":[],
+      "outputs":[
+            {"name":"reserve0","type":"uint112"},
+            {"name":"reserve1","type":"uint112"},
+            {"name":"blockTimestampLast","type":"uint32"}
+      ]
+    },
+]
+
+POOL = RawContract(
+    title="POOL",
+    address="0x3b6253ce8dac4b87cf43e02de3a2a9b02dce1be1",
+    abi=GET_RESERVES_ABI,
+)
+
+
+class FaroswapLiquidity(Faroswap):
+    __module_name__ = "Faroswap Liquidity"
+
+    def __init__(self, client: Client, wallet: Wallet):
+        self.client = client
+        self.wallet = wallet
+        self.session = BaseAsyncSession(proxy=self.wallet.proxy)
+
+        self.base_headers = {
+            "accept": "application/json, text/plain, */*",
+            "accept-language": "en-US,en;q=0.9",
+            "sec-gpc": "1",
+            "referer": "https://faroswap.xyz/",
+        }
+    @async_retry(retries=3, delay=2)
+    async def fetch_liquidity_list(
+        self,
+        *,
+        chain_ids: list[int] | tuple[int, ...] = (688688,),
+        page_size: int = 8,
+        current_page: int = 1,
+        filter_types: list[str] | tuple[str, ...] = ("CLASSICAL","DVM","DSP","GSP","AMMV2","AMMV3"),
+        timeout: int = 20,
+    ) -> dict:
+        url = "https://api.dodoex.io/frontend-graphql?opname=FetchLiquidityList"
+
+        headers = {
+            **self.base_headers,
+            "content-type": "application/json",
+            "origin": "https://faroswap.xyz",
+        }
+
+        payload = {
+            "query": """
+            query FetchLiquidityList($where: Liquiditylist_filter) {
+              liquidity_list(where: $where) {
+                currentPage
+                pageSize
+                totalCount
+                lqList {
+                  id
+                  pair {
+                    id
+                    chainId
+                    type
+                    lpFeeRate
+                    mtFeeRate
+                    creator
+                    baseLpToken { id decimals }
+                    quoteLpToken { id decimals }
+                    baseToken { id symbol name decimals logoImg }
+                    quoteToken { id symbol name decimals logoImg }
+                    tvl
+                    apy {
+                      miningBaseApy
+                      miningQuoteApy
+                      transactionBaseApy
+                      transactionQuoteApy
+                      metromMiningApy
+                    }
+                    miningAddress
+                    volume24H
+                  }
+                }
+              }
+            }
+            """,
+            "variables": {
+                "where": {
+                    "chainIds": list(chain_ids),
+                    "pageSize": page_size,
+                    "filterState": {
+                        "viewOnlyOwn": False,
+                        "filterTypes": list(filter_types),
+                    },
+                    "currentPage": current_page,
+                }
+            },
+            "operationName": "FetchLiquidityList",
+        }
+
+        r = await self.session.post(url, json=payload, headers=headers, timeout=timeout)
+        r.raise_for_status()
+        return r.json().get('data').get('liquidity_list').get('lqList')
+
+    @controller_log('Add Liquidity (v2)')
+    async def liquidity_controller(self):
+        settings = Settings()
+        percent_to_liq = randfloat(
+            from_=settings.liquidity_percent_min,
+            to_=settings.liquidity_percent_max,
+            step=0.001
+        ) / 100
+
+        tokens = [
+            #Contracts.USDT,
+            Contracts.USDC,
+        ]
+
+        to_tokens = [
+            Contracts.USDT,
+            #Contracts.USDC,
+        ]
+
+        balance_map = {}
+        for token in tokens:
+            if token == Contracts.PHRS:
+                balance = await self.client.wallet.balance()
+                if balance.Ether == 0:
+                    return 'Failed | No balance, try to faucet first'
+            else:
+                balance = await self.client.wallet.balance(token.address)
+
+            balance_map[token.title] = balance.Ether
+
+        if all(float(value) == 0 for value in balance_map.values()):
+            return 'Failed | No balance in all tokens, try to faucet first'
+
+        from_token = random.choice(tokens)
+
+        while balance_map[from_token.title] == 0:
+            from_token = random.choice(tokens)
+
+        a_amt = TokenAmount(amount=float((balance_map[from_token.title])) * percent_to_liq, decimals = 18 if from_token.title == 'PHRS' else 6)
+
+        balance_map.pop(from_token.title)
+        tokens.remove(from_token)
+
+        to_token = random.choice(to_tokens)
+
+        return await self.add_liquidity_v2(
+            from_token = from_token,
+            to_token= to_token,
+            amount = a_amt,
+        )
+
+
+    async def add_liquidity_v2(self,
+                               from_token: RawContract,
+                               to_token: RawContract,
+                               amount: TokenAmount):
+        pools = await self.fetch_liquidity_list(filter_types=['AMMV2'])
+
+
+        pool = [
+            p for p in pools
+            if p["pair"]["baseToken"]["id"].lower() == from_token.address.lower()
+            and p["pair"]["quoteToken"]["id"].lower() == to_token.address.lower()
+        ][0]
+
+        POOL = RawContract(
+            title="POOL",
+            address=pool["id"],
+            abi=GET_RESERVES_ABI,
+        )
+
+        c = await self.client.contracts.get(contract_address=POOL)
+        a = await c.functions.getReserves().call()
+
+        reserve0, reserve1, _ = a
+
+        if reserve0 == 0 or reserve1 == 0:
+            return None
+
+        from_token_decimals = int(pool['pair']['baseToken']['decimals'])
+        to_token_decimals = int(pool['pair']['quoteToken']['decimals'])
+
+        price0_in_1 = (reserve1 / 10 ** to_token_decimals) / (reserve0 / 10 ** from_token_decimals)
+        price1_in_0 = (reserve0 / 10 ** from_token_decimals) / (reserve1 / 10 ** to_token_decimals)
+
+        price_a = TokenAmount(amount=price0_in_1, decimals=6)
+        price_b = TokenAmount(amount=price1_in_0, decimals=6)
+
+        c = await self.client.contracts.get(contract_address=POSITION_MANAGER_V2)
+        to_token_amount = TokenAmount(
+            amount=float(amount.Ether) * price0_in_1,
+            decimals=to_token_decimals
+        )
+        deadline = int(time.time() + 20 * 60)
+        to_token_balance = await self.client.wallet.balance(token=to_token)
+
+        if to_token_balance.Ether < to_token_amount.Ether:
+
+            swap = await self._swap(from_token=from_token, to_token=to_token, amount=TokenAmount(
+                amount=float(amount.Ether) * 1.3, decimals=from_token_decimals
+            ))
+            #logger.debug(swap)
+
+            await asyncio.sleep(5)
+
+        params = TxArgs(
+            tokenA=from_token.address,
+            tokenB=to_token.address,
+            fee=30,
+            amountADesired=amount.Wei,
+            amountBDesired=to_token_amount.Wei,
+            amountAMin=0,
+            amountBMin=0,
+            to=self.client.account.address,
+            deadline=deadline
+        ).tuple()
+
+        data = c.encode_abi("addLiquidity", args=params)
+        msg = 'Added LP '
+
+        if await self.approve_interface(
+                token_address=from_token.address,
+                spender=c.address,
+                amount=None
+        ):
+            await asyncio.sleep(random.randint(2, 5))
+        else:
+            return f' can not approve'
+
+        if await self.approve_interface(
+                token_address=to_token.address,
+                spender=c.address,
+                amount=None
+        ):
+            await asyncio.sleep(random.randint(2, 5))
+        else:
+            return f' can not approve'
+
+        tx = await self.client.transactions.sign_and_send(TxParams(
+            to=c.address,
+            data=data,
+            value=0
+        ))
+
+        await asyncio.sleep(2)
+        rcpt = await tx.wait_for_receipt(client=self.client, timeout=300)
+
+        if rcpt:
+            return f"Success | {msg} | {amount} {from_token.title} <-> {to_token_amount} {to_token.title}"
+
+        return f"Failed | {msg} | {amount} {from_token.title} <-> {to_token_amount} {to_token.title}"
