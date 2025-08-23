@@ -12,13 +12,13 @@ from hexbytes import HexBytes
 
 from data.config import ABIS_DIR
 from libs.base import Base
-from libs.baseAsyncSession import BaseAsyncSession
+ 
 from libs.eth_async.client import Client
 from libs.eth_async.data.models import RawContract, TokenAmount, TxArgs
 from libs.eth_async.utils.files import read_json
 from utils.db_api.models import Wallet
 from utils.logs_decorator import action_log, controller_log
-
+from utils.browser import Browser
 
 NFT_ABI = [
     {
@@ -102,7 +102,7 @@ class NFTS(Base):
     def __init__(self, client: Client, wallet: Wallet):
         self.client = client
         self.wallet = wallet
-        self.session = BaseAsyncSession(proxy=self.wallet.proxy)
+        self.session = Browser(wallet=wallet)
         self.headers = {
             "Accept": "application/json, text/plain, */*",
         }

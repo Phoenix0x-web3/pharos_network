@@ -21,7 +21,7 @@ from utils.twitter.twitter_client import TwitterClient
 from utils.db_api.wallet_api import db
 from sqlalchemy import and_
 from datetime import datetime, timezone
-
+from utils.browser import Browser
 
 class PharosPortal(Base):
 
@@ -38,14 +38,9 @@ class PharosPortal(Base):
         self.jwt = None
         self.auth = False
         self.wallet = wallet
-        self.session = BaseAsyncSession(proxy=self.proxy)
+        self.session = Browser(wallet=wallet)
         self.twitter = TwitterClient(user=self.wallet)
-        # self.twitter = Twitter(
-        #     auth_token=twitter_token,
-        #     address=self.client.account.address,
-        #     version='136',
-        #     session=self.session
-        # )
+ 
 
         self.base_headers = {
             'accept': 'application/json, text/plain, */*',
@@ -130,7 +125,7 @@ class PharosPortal(Base):
                 payload["invite_code"] = invite_code
 
         r = await self.session.post(
-            f"{self.BASE}/user/login",
+            url=f"{self.BASE}/user/login",
             headers=self.base_headers,
             json=payload,
             timeout=120,
@@ -162,7 +157,7 @@ class PharosPortal(Base):
         }
 
         r = await self.session.get(
-            f"{self.BASE}/auth/twitter",
+            url=f"{self.BASE}/auth/twitter",
             headers=headers,
             allow_redirects=False,
             timeout=120,
@@ -193,7 +188,7 @@ class PharosPortal(Base):
         }
 
         r = await self.session.post(
-            f"{self.BASE}/auth/bind/twitter",
+            url=f"{self.BASE}/auth/bind/twitter",
             headers=headers,
             json=payload,
             timeout=120,
@@ -231,7 +226,7 @@ class PharosPortal(Base):
             }
 
             r = await self.session.post(
-                f"{self.BASE}/faucet/daily",
+                url=f"{self.BASE}/faucet/daily",
                 headers=headers,
                 # cookies=self.cookies,
                 json=payload,

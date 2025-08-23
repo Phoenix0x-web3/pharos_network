@@ -18,10 +18,10 @@ from libs.base import Base
 from libs.eth_async.client import Client
 from libs.eth_async.data.models import TokenAmount, TxArgs, RawContract, DefaultABIs
 from libs.eth_async.utils.files import read_json
-from libs.twitter.base import BaseAsyncSession
 from utils.db_api.models import Wallet
 from utils.logs_decorator import action_log, controller_log
 from utils.retry import async_retry
+from utils.browser import Browser
 
 PUBLIC_KEY_PEM = """
 -----BEGIN PUBLIC KEY-----
@@ -164,7 +164,7 @@ class AutoStaking(Base):
         self.client = client
         self.wallet = wallet
         self.proxy = proxy
-        self.session = BaseAsyncSession(proxy=self.wallet.proxy)
+        self.session = Browser(wallet=wallet)
         self.auth_token = None
         self.base_headers = {
             "Accept": "application/json, text/plain, */*",

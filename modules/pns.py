@@ -12,7 +12,7 @@ from hexbytes import HexBytes
 
 from data.config import ABIS_DIR
 from libs.base import Base
-from libs.baseAsyncSession import BaseAsyncSession
+from utils.browser import Browser
 from libs.eth_async.client import Client
 from libs.eth_async.data.models import RawContract, TokenAmount, TxArgs
 from libs.eth_async.utils.files import read_json
@@ -41,7 +41,7 @@ class PNS(Base):
     def __init__(self, client: Client, wallet: Wallet):
         self.client = client
         self.wallet = wallet
-        self.session = BaseAsyncSession(proxy=self.wallet.proxy)
+        self.session = Browser(wallet=wallet)
 
 
     @staticmethod

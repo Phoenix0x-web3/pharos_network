@@ -20,7 +20,7 @@ async def create_24captch_task(async_session: BaseAsyncSession, api_key, site_ke
     if enterprise:
         payload['enterprise'] = enterprise
 
-    response = await async_session.post(url, json=payload)
+    response = await async_session.post(url=url, json=payload)
     if response.status_code == 200:
         data = response.json()
         if data.get("status") == 1:
@@ -41,7 +41,7 @@ async def get_24captcha_task_result(async_session: BaseAsyncSession, api_key, ta
     }
     
     while True:
-        response = await async_session.post(url, json=payload)
+        response = await async_session.post(url=url, json=payload)
         if response.status_code == 200:
             data = response.json()
             if data.get("status") == 1:

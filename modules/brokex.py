@@ -15,7 +15,7 @@ from libs.twitter.base import BaseAsyncSession
 from utils.db_api.models import Wallet
 from utils.logs_decorator import action_log, controller_log
 from utils.retry import async_retry
-
+from utils.browser import Browser
 
 PHRS = RawContract(
     title="PHRS_NATIVE",
@@ -150,7 +150,7 @@ class Brokex(Base):
     def __init__(self, client: Client, wallet: Wallet):
         self.client = client
         self.wallet = wallet
-        self.session = BaseAsyncSession(proxy=self.wallet.proxy)
+        self.session = Browser(wallet=wallet)
 
         self.base_headers = {
             "Accept": "*/*",

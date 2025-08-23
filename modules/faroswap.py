@@ -16,12 +16,11 @@ from libs.eth_async.client import Client
 from libs.eth_async.data.models import RawContract, TokenAmount, TxArgs
 from libs.eth_async.utils.files import read_json
 from libs.eth_async.utils.utils import randfloat
-from libs.twitter.base import BaseAsyncSession
 from modules.zenith import Zenith
 from utils.db_api.models import Wallet
 from utils.logs_decorator import action_log, controller_log
 from utils.retry import async_retry
-
+from utils.browser import Browser
 
 DODO_ROUTER = RawContract(
     title="DodoRouter",
@@ -48,7 +47,7 @@ class Faroswap(Base):
     def __init__(self, client: Client, wallet: Wallet):
         self.client = client
         self.wallet = wallet
-        self.session = BaseAsyncSession(proxy=self.wallet.proxy)
+        self.session = Browser(wallet=wallet)
 
         self.base_headers = {
             "accept": "application/json, text/plain, */*",
@@ -403,7 +402,7 @@ class FaroswapLiquidity(Faroswap):
     def __init__(self, client: Client, wallet: Wallet):
         self.client = client
         self.wallet = wallet
-        self.session = BaseAsyncSession(proxy=self.wallet.proxy)
+        self.session = Browser(wallet=wallet)
 
         self.base_headers = {
             "accept": "application/json, text/plain, */*",
@@ -478,7 +477,7 @@ class FaroswapLiquidity(Faroswap):
             "operationName": "FetchLiquidityList",
         }
 
-        r = await self.session.post(url, json=payload, headers=headers, timeout=timeout)
+        r = await self.session.post(url=url, json=payload, headers=headers, timeout=timeout)
         r.raise_for_status()
         return r.json().get('data').get('liquidity_list').get('lqList')
 

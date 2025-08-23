@@ -22,7 +22,7 @@ async def create_bestcaptcha_task(async_session: BaseAsyncSession, access_token,
         request_payload["domain"] = domain
 
     # Отправляем запрос на создание задачи
-    response = await async_session.post(url, json=request_payload, timeout=60)
+    response = await async_session.post(url=url, json=request_payload, timeout=60)
     if response.status_code == 200:
         data = response.json()
         if data.get("status") == "submitted":
