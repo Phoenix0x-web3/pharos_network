@@ -69,7 +69,7 @@ class Capmonster:
                 "taskId": task_id
             }
 
-            response = await self.async_session.post('https://api.capmonster.cloud/getTaskResult', json=json_data)
+            response = await self.async_session.post(url='https://api.capmonster.cloud/getTaskResult', json=json_data)
 
             answer = response.json()
             try:

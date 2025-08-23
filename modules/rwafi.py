@@ -14,6 +14,7 @@ from utils.db_api.models import Wallet
 from utils.logs_decorator import action_log, controller_log
 from utils.query_json import query_to_json
 from utils.retry import async_retry
+from utils.browser import Browser
 
 AQUAFLUX = RawContract(
     title="AquafluxNFT",
@@ -48,7 +49,7 @@ class AquaFlux(Base):
         self.client = client
         self.wallet = wallet
         self.proxy = proxy
-        self.session = BaseAsyncSession(proxy=self.wallet.proxy)
+        self.session = Browser(wallet=wallet)
         self.auth_token: Optional[str] = None
         self.base_headers = {
             "Accept": "application/json, text/plain, */*",
