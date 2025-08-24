@@ -124,10 +124,10 @@ async def activity(action: int):
     if action == 1:
         await execute(wallets, random_activity_task, random.randint(Settings().random_pause_wallet_after_completion_min, Settings().random_pause_wallet_after_completion_max))
 
-    if action == 2:
+    elif action == 2:
         await execute(wallets, twitter_tasks, Settings().sleep_after_each_cycle_hours)
 
-    if action == 3:
+    elif action == 3:
         wallets = [
             wallet for wallet in wallets
             if wallet.discord_token is not None and wallet.discord_status in [None, DiscordStatus.ok]
@@ -155,6 +155,8 @@ async def activity(action: int):
 
         await execute(wallets, join_discord, 0)
 
+    elif action == 4:
+        await execute(wallets, update_points)
 
 async def join_discord(wallet):
     client = Client(private_key=wallet.private_key, proxy=wallet.proxy, network=Networks.PharosTestnet)
@@ -212,3 +214,10 @@ async def twitter_tasks(wallet):
     except Exception as e:
         logger.error(e)
                 
+async def update_points(wallet):
+    
+    client = Client(private_key=wallet.private_key, proxy=wallet.proxy, network=Networks.PharosTestnet, check_proxy=False)
+
+    controller = Controller(client=client, wallet=wallet)
+    
+    await controller.update_db_by_user_info()

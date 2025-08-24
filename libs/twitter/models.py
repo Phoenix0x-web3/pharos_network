@@ -54,14 +54,15 @@ class User(BaseModel):
 
     @classmethod
     def from_raw_data(cls, data: dict):
-        legacy = data["legacy"]
-        keys = ("name", "description", "location", "followers_count", "friends_count")
-        values = {key: legacy[key] for key in keys}
+        legacy = data.get("legacy") or {}  
+        keys = ("description", "followers_count", "friends_count")
+
+        values = {key: legacy.get(key) for key in keys}
         values.update(
             {
-                "id": int(data["rest_id"]),
-                "username": legacy["screen_name"],
-                "created_at": to_datetime(legacy["created_at"]),
+                "id": int(data.get("rest_id", 0)),
+                "username": legacy.get("screen_name", ""),
+                # "created_at": to_datetime(legacy.get("created_at")),
                 "raw_data": data,
             }
         )
@@ -120,44 +121,51 @@ class Tweet(BaseModel):
 
     @classmethod
     def from_raw_data(cls, data: dict):
-        legacy_data = data["legacy"]
+        legacy_data = data.get("legacy") or {}
+        if not legacy_data:
+            # No legacy data — you can either return None or raise an exception
+            return None
 
-        user_data = data["core"]["user_results"]["result"]
-        user = User.from_raw_data(user_data)
+        user_data = (
+            data.get("core", {})
+            .get("user_results", {})
+            .get("result", {})
+        )
+        user = User.from_raw_data(user_data) if user_data else None
 
-        id = int(legacy_data["id_str"])
-        url = tweet_url(user.username, id)
+        id = int(legacy_data.get("id_str", 0))
+        url = tweet_url(user.username if user else None, id)
 
         retweeted_tweet = None
         if "retweeted_status_result" in legacy_data:
-            retweeted_tweet_data = legacy_data["retweeted_status_result"]["result"]
-            retweeted_tweet = cls.from_raw_data(retweeted_tweet_data)
+            retweeted_tweet_data = legacy_data["retweeted_status_result"].get("result")
+            if retweeted_tweet_data:
+                retweeted_tweet = cls.from_raw_data(retweeted_tweet_data)
 
         quoted_tweet = None
         if "quoted_status_result" in data:
-            quoted_tweet_data = data["quoted_status_result"]["result"]
-            quoted_tweet = cls.from_raw_data(quoted_tweet_data)
+            quoted_tweet_data = data["quoted_status_result"].get("result")
+            if quoted_tweet_data:
+                quoted_tweet = cls.from_raw_data(quoted_tweet_data)
 
         values = {
             "id": id,
-            "text": legacy_data["full_text"],
-            "language": legacy_data["lang"],
-            "created_at": to_datetime(legacy_data["created_at"]),
-            "conversation_id": int(legacy_data["conversation_id_str"]),
-            "quoted": legacy_data["is_quote_status"],
-            "retweeted": legacy_data["retweeted"],
-            "bookmarked": legacy_data["bookmarked"],
-            "favorited": legacy_data["favorited"],
-            "quote_count": legacy_data["quote_count"],
-            "retweet_count": legacy_data["retweet_count"],
-            "bookmark_count": legacy_data["bookmark_count"],
-            "favorite_count": legacy_data["favorite_count"],
-            "reply_count": legacy_data["reply_count"],
-            "user": user.model_dump(),
+            "text": legacy_data.get("full_text"),
+            "language": legacy_data.get("lang"),
+            "created_at": to_datetime(legacy_data.get("created_at")) if legacy_data.get("created_at") else None,
+            "conversation_id": int(legacy_data.get("conversation_id_str", 0)),
+            "quoted": legacy_data.get("is_quote_status", False),
+            "retweeted": legacy_data.get("retweeted", False),
+            "bookmarked": legacy_data.get("bookmarked", False),
+            "favorited": legacy_data.get("favorited", False),
+            "quote_count": legacy_data.get("quote_count", 0),
+            "retweet_count": legacy_data.get("retweet_count", 0),
+            "bookmark_count": legacy_data.get("bookmark_count", 0),
+            "favorite_count": legacy_data.get("favorite_count", 0),
+            "reply_count": legacy_data.get("reply_count", 0),
+            "user": user.model_dump() if user else None,
             "quoted_tweet": quoted_tweet.model_dump() if quoted_tweet else None,
-            "retweeted_tweet": (
-                retweeted_tweet.model_dump() if retweeted_tweet else None
-            ),
+            "retweeted_tweet": retweeted_tweet.model_dump() if retweeted_tweet else None,
             "url": url,
             "raw_data": data,
         }
