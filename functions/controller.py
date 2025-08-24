@@ -26,6 +26,7 @@ from utils.logs_decorator import controller_log
 from utils.query_json import query_to_json
 from utils.twitter.twitter_client import TwitterClient
 from utils.db_update import update_points_invites
+from utils.retry import async_retry
 
 class Controller:
     __controller__ = 'Controller'
@@ -351,16 +352,20 @@ class Controller:
 
         return final_actions
 
-
+    @controller_log('Update Points')
+    @async_retry(retries=Settings().retry, delay=3, to_raise=False)
     async def update_db_by_user_info(self):
+
         await self.pharos_portal.login()
 
         user_data = await self.pharos_portal.get_user_info()
         
         total_points = user_data.get('TotalPoints')
         invite_code = user_data.get('InviteCode')
-        
-        await update_points_invites(self.wallet.private_key, total_points, invite_code)
+        logger.info(f"{self.wallet} | Total Points: [{total_points}] | Invite Code: [{invite_code}]")
+        return await update_points_invites(self.wallet.private_key, total_points, invite_code)
+ 
+ 
 
     @controller_log('Bind Discord')
     async def bind_discord_flow(self):
