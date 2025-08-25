@@ -375,16 +375,19 @@ class Controller:
             if zenith_current_lp:
                 build_array += [self.zenith_liq.remove_liquidity for _ in range(random.randint(2, 5))]
 
-            random.shuffle(build_array)
 
-            build_array.append(lambda: self.zenith_faucet())
 
-            final_actions += build_array
+
 
             if self.wallet.points >= 10000:
                 rand = random.randint(3, 6)
-                final_actions = final_actions[:rand]
 
+                build_array = build_array[:rand]
+
+            build_array.append(lambda: self.zenith_faucet())
+            random.shuffle(build_array)
+
+            final_actions += build_array
 
         return final_actions
 
