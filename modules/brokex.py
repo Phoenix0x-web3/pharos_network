@@ -133,7 +133,7 @@ PAIRS: Dict[str, int] = {
     "BTC_USDT": 0,
     "ETH_USDT": 1,
     "LINK_USDT": 2,
-    "DOGE_USDT": 3,
+    #"DOGE_USDT": 3,
     "AVAX_USDT": 5,
     "SOL_USDT": 10,
     "XRP_USDT": 14,

@@ -429,6 +429,12 @@ class AutoStaking(Base):
         deposit_tasks = 0
 
         withdraw = [task for task in changes if task.get('type') == 'withdraw']
+        balance = await self.client.wallet.balance()
+
+        if float(balance.Ether) <= 0.0001:
+
+            return f'Failed | Low {balance} PHRS balance | waiting for faucet'
+
         if withdraw:
             result = await self.process_transactions(tx_list=withdraw)
             withdraw_tasks += result

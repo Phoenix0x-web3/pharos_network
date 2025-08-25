@@ -241,7 +241,9 @@ class Controller:
 
     async def brokex_positions(self):
         actions = [
-            self.brokex.open_position_controller
+            self.brokex.open_position_controller,
+            self.brokex.open_position_controller,
+            self.brokex.open_position_controller,
         ]
 
         positions = await self.brokex.get_user_open_ids()
@@ -350,6 +352,11 @@ class Controller:
 
             final_actions += build_array
 
+            if self.wallet.points >= 10000:
+                rand = random.randint(3, 6)
+                final_actions = final_actions[:rand]
+
+
         return final_actions
 
     @controller_log('Update Points')
@@ -408,8 +415,10 @@ class Controller:
                     await asyncio.sleep(random.randint(1, 3))
 
                     bind_discord = await self.pharos_portal.bind_discord(url=oauth_url, state=state)
+
                     if 'Failed' not in bind_discord:
                         logger.success(f"{self.wallet} | {bind_discord}")
+
                     else:
                         self.wallet.discord_status = DiscordStatus.duplicate
                         db.commit()
