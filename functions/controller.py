@@ -18,7 +18,6 @@ from modules.pns import PNS
 from modules.primus import Primus
 from modules.rwafi import AquaFlux
 from modules.zenith import Zenith, ZenithLiquidity
-from test_func_builder_2 import faucet
 
 from utils.db_api.models import Wallet
 from utils.db_api.wallet_api import db
