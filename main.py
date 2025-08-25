@@ -75,7 +75,7 @@ async def choose_action():
         await Sync.sync_wallets_with_tokens_and_proxies()
         
     elif action == "Export wallets to TXT":
-        console.print(f"[bold blue]Starting Import Wallets to DB[/bold blue]")
+        console.print(f"  [bold blue]Starting Import Wallets to DB[/bold blue]")
         check_encrypt_param()
         await Export.wallets_to_txt()
 
