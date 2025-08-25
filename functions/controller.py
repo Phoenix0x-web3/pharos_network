@@ -331,7 +331,7 @@ class Controller:
 
                     return f"{self.wallet} | Not enought balance for actions | Awaiting for next faucet"
 
-            final_actions.append(lambda: self.zenith_faucet())
+
 
             twitter_tasks, discord_tasks = await self.pharos_portal.tasks_flow()
 
@@ -376,6 +376,8 @@ class Controller:
                 build_array += [self.zenith_liq.remove_liquidity for _ in range(random.randint(2, 5))]
 
             random.shuffle(build_array)
+
+            build_array.append(lambda: self.zenith_faucet())
 
             final_actions += build_array
 
