@@ -93,6 +93,11 @@ PNS = RawContract(
     title="PNS",
     address="0x4af366c7269DC9a0335Bd055Af979729c20e0F5F",
     abi=NFT_ABI,
+)  
+GRANDLINE = RawContract(
+    title="GRANDLINE",
+    address="0x9979b7fedf761c2989642f63ba6ed580dbdfc46f",
+    abi=NFT_ABI,
 )
 
 
@@ -154,7 +159,8 @@ class NFTS(Base):
             ZENTRA,
             SPOUT,
             GOTCHIPUS,
-            PNS
+            PNS,
+            GRANDLINE
         ]
 
         not_minted = []
