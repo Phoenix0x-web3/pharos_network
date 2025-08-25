@@ -16,6 +16,8 @@ from libs.eth_async.utils.utils import randfloat
 
 import time
 
+from utils.browser import Browser
+from utils.captcha.captcha_handler import CloudflareHandler
 from utils.db_api.models import Wallet
 from utils.logs_decorator import controller_log, action_log
 
@@ -37,6 +39,14 @@ class Zenith(Base):
     def __init__(self, client: Client, wallet: Wallet):
         self.client = client
         self.wallet = wallet
+        self.headers = {
+            'accept': '*/*',
+            'accept-language': 'ru-RU,ru;q=0.9,en-US;q=0.8,en;q=0.7',
+            'content-type': 'application/json',
+            'origin': 'https://testnet.zenithswap.xyz',
+            'referer': 'https://testnet.zenithswap.xyz/',
+        }
+        self.session = Browser(wallet=wallet)
 
     #todo Zenith Faucet
 
@@ -285,6 +295,69 @@ class Zenith(Base):
 
 
         return f'Failed to swap {amount.Ether:.5f} {from_token.title} to {amount_out_min.Ether:.5f} {to_token.title}'
+
+    async def zenith_faucet_get_twitter(self):
+        params = {
+            'wallet': self.client.account.address
+        }
+
+        r = await self.session.get(
+            url='https://testnet-router.zenithswap.xyz/api/v1/oauth2/twitter_url',
+            params=params
+        )
+
+        try:
+            data = r.json().get('data')
+            return data
+        except Exception as e:
+            return f'Failed | {r.text} | {e}'
+
+    async def zenith_faucet(self):
+        site_key = '0x4AAAAAABesmP1SWw2G_ear'
+        web_site = 'https://testnet.zenithswap.xyz'
+        settings = Settings()
+
+        if settings.capmonster_api_key == '':
+            return 'Failed | You need to provide Capmonster Api key'
+
+        assets = [Contracts.USDT, Contracts.USDC]
+
+        asset: RawContract = random.choice(assets)
+        cdata = f"{self.client.account.address}_{asset.address}"
+
+        capmoster = CloudflareHandler(wallet=self.wallet)
+
+        captcha_task = await capmoster.get_recaptcha_task_turnstile(
+            websiteKey=site_key,
+            websiteURL=web_site,
+            cdata=cdata
+        )
+
+        turnstile_token = await capmoster.get_recaptcha_token(task_id=captcha_task)
+
+        faucet_payload = {'CFTurnstileResponse': turnstile_token}
+
+        r = await self.session.post(
+            url='https://testnet-router.zenithswap.xyz/api/v1/faucet',
+            json=faucet_payload,
+            headers=self.headers
+
+        )
+
+        try:
+            data = r.json()
+
+            if data.get('status') == 200:
+
+                return f'Success faucet {asset.title}'
+
+            if data.get('status') == 400:
+                return f'Failed | IP already fauceted today'
+
+            return f'Failed'
+
+        except Exception as e:
+            return f'Failed | {e}'
 
 
 FEE_MAP = {

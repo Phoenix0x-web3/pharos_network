@@ -18,6 +18,7 @@ from modules.pns import PNS
 from modules.primus import Primus
 from modules.rwafi import AquaFlux
 from modules.zenith import Zenith, ZenithLiquidity
+from test_func_builder_2 import faucet
 
 from utils.db_api.models import Wallet
 from utils.db_api.wallet_api import db
@@ -105,6 +106,32 @@ class Controller:
             return status
 
         raise Exception(f"{self.wallet} | Error in Faucet Task")
+
+
+    @controller_log('Zenith Faucet')
+    async def zenith_faucet(self):
+        twitter_link = await self.zenith.zenith_faucet_get_twitter()
+
+        if 'Failed' not in twitter_link:
+
+            if twitter_link.get('state') == 0:
+
+                await self.twitter.initialize()
+                bind_url = await self.twitter.connect_twitter_to_site_oauth2(twitter_auth_url=twitter_link.get('url'))
+                await asyncio.sleep(random.randint(2,7))
+                twitter_link = await self.zenith.zenith_faucet_get_twitter()
+
+            if twitter_link.get('state') == 1:
+                faucet = await self.zenith.zenith_faucet()
+
+                if 'Failed' not in faucet:
+                    return faucet
+                if 'IP' in faucet:
+                    logger.warning(f"{self.wallet} | Zenith Faucet | IP already fauceted today")
+
+                return f'Failed | {faucet}'
+
+        return 'Failed | Twitter Bind'
 
 
     @controller_log('Twitter Tasks')
@@ -305,6 +332,8 @@ class Controller:
 
                     return f"{self.wallet} | Not enought balance for actions | Awaiting for next faucet"
 
+            final_actions.append(lambda: self.zenith_faucet())
+
             twitter_tasks, discord_tasks = await self.pharos_portal.tasks_flow()
 
             aquaflux_nft = await self.aquaflux.already_minted(premium=True)
@@ -330,7 +359,6 @@ class Controller:
                 build_array.append(lambda: self.aquaflux_flow())
             if not brokex_faucet:
                 build_array.append(lambda: self.brokex_faucet())
-
 
             user_tasks = await self.user_tasks()
 
@@ -371,7 +399,6 @@ class Controller:
         invite_code = user_data.get('InviteCode')
         logger.info(f"{self.wallet} | Total Points: [{total_points}] | Invite Code: [{invite_code}]")
         return await update_points_invites(self.wallet.private_key, total_points, invite_code)
- 
  
 
     @controller_log('Bind Discord')
