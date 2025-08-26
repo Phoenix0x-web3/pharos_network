@@ -4,6 +4,7 @@ import os
 from ruamel.yaml import YAML
 from ruamel.yaml.comments import CommentedMap
 from copy import deepcopy
+import shutil
 
 REQUIRED_FILES = [
     "private_keys.txt",
@@ -79,4 +80,8 @@ def merge_settings(current: CommentedMap, template: CommentedMap) -> CommentedMa
 
     return result
 
+def reset_folder():
+    shutil.rmtree(FILES_DIR)
+    create_files()
+    
 create_files()
