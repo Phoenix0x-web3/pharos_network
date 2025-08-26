@@ -4,7 +4,8 @@ More info:
 [Telegram Channel](https://t.me/phoenix_w3)  
 [Telegram Chat](https://t.me/phoenix_w3_space)
 
-[Инструкция на русcком](https://phoenix-14.gitbook.io/phoenix/proekty/pharos-network)
+[Инструкция на русcком](https://phoenix-14.gitbook.io/phoenix/proekty/pharos-network)</br>
+[Instruction English version](https://phoenix-14.gitbook.io/phoenix/en/projects/pharos-network)
 
 ## Pharos Network
 
@@ -19,13 +20,16 @@ Pharos Network is a Layer 1 blockchain focused on Real World Assets (RWA), enabl
 - CFD Trading
 - Send Token To Friends
 - Refferals
-- Social tasks (twitter)
+- Collect NFTs
+- Social tasks (twitter, discord)
 
 ## Requirements
-- Python version 3.11 - 3.12 
+- Python version 3.10 - 3.12 
 - Private keys for EVM wallets
 - Proxy (optional)
 - Twitter auth tokens (optional) 
+- Discord auth tokens (optional) 
+- Discord proxy (optional) 
 - Telegram token for logs (optional) 
 
 ## Installation
@@ -40,9 +44,15 @@ cd pharos_network
 python install.py
 ```
 
-3. Activate virtual environment:
+3. Activate virtual environment: </br>
+
+`For Windows`
 ```
 venv\Scripts\activate
+```
+`For Linux/Mac`
+```
+source venv/bin/activate
 ```
 
 4. Run script
@@ -56,6 +66,7 @@ pharos_network/
 ├── data/                   #Web3 intarface
 ├── files/
 |   ├── discord_tokens.txt  # Discord auth token (optional)
+|   ├── discord_proxy.txt   # Discord proxy (optional)
 |   ├── twitter_tokens.txt  # Twitter auth token (optional)
 │   ├── private_keys.txt    # EVM wallet private keys
 |   ├── proxy.txt           # Proxy addresses (optional)
@@ -71,6 +82,7 @@ pharos_network/
 - `proxy.txt`: One proxy per line (format: `http://user:pass@ip:port`)
 - `twitter_tokens.txt`: One token per line 
 - `discord_tokens.txt`: One token per line 
+- `discord_proxy.txt`: One proxy per line (format: `http://user:pass@ip:port`). If you want to use different proxy for discord task
 
 ### 2. Main configurations
 ```yaml
@@ -92,6 +104,12 @@ shuffle_wallets: true
 
 # Hide wallet address in logs
 hide_wallet_address_log: true
+
+# the log level for the application. Options: DEBUG, INFO, WARNING, ERROR
+log_level : INFO
+
+# Discord: Use different proxies to join discord server
+discord_proxy: false
 
 # Delay before running the same wallet again after it has completed all actions (7 - 8 hrs default)
 random_pause_wallet_after_completion:
@@ -192,9 +210,9 @@ If encryption is enabled, you will be prompted to enter and confirm a password. 
 
 <img src="https://imgur.com/2J87b4E.png" alt="Preview" width="600"/>
 
-Once the database is created, you can start the project by selecting `Pharos Network → Randomize Activity or Swaps`.
+Once the database is created, you can start the project by selecting `Pharos Network → Run All Tasks In Random Order or other options`.
 
-<img src="https://imgur.com/fSXnGE6.png" alt="Preview" width="600"/>
+<img src="https://imgur.com/6PH4Igc.png" alt="Preview" width="600"/>
 
 Run All Tasks In Random Order
 
