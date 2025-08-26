@@ -9,7 +9,13 @@ threads: 1
 # Number of retries for failed action
 retry: 3
 
-# BY DEFAULT: [] - all wallets
+# BY DEFAULT: [0,0] - all wallets
+# Example: [2, 6] will run wallets 2,3,4,5,6
+# [4,4] will run only wallet 4
+range_wallets_to_run: [0,0]
+
+# Working only if range_wallet_to_run = [0,0] 
+# BY DEFAULT: [] - all wallets 
 # Example: [1, 3, 8] - will run only 1, 3 and 8 wallets
 exact_wallets_to_run: []
 

@@ -113,13 +113,22 @@ async def activity(action: int):
         return
 
 
-    all_wallets = db.all(Wallet)
+    wallets = db.all(Wallet)
+   
 
-    # Filter wallets if EXACT_WALLETS_TO_USE is defined
-    if Settings().exact_wallets_to_run:
-        wallets = [wallet for i, wallet in enumerate(all_wallets, start=1) if i in Settings().exact_wallets_to_run]
+    range_wallets = Settings().range_wallets_to_run
+    if range_wallets != [0, 0]: 
+        start, end = range_wallets
+        wallets = [
+            wallet for i, wallet in enumerate(wallets, start=1)
+            if start <= i <= end
+        ]
     else:
-        wallets = all_wallets
+        if Settings().exact_wallets_to_run:
+            wallets = [
+                wallet for i, wallet in enumerate(wallets, start=1)
+                if i in Settings().exact_wallets_to_run
+            ]
 
     if action == 1:
         await execute(wallets, random_activity_task, random.randint(Settings().random_pause_wallet_after_completion_min, Settings().random_pause_wallet_after_completion_max))

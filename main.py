@@ -100,7 +100,7 @@ async def choose_action():
 
 async def main():
     create_files()
-    await check_for_updates(repo_name=PROJECT, repo_private=True)
+    await check_for_updates(repo_name=PROJECT, repo_private=False)
     db.ensure_model_columns(Wallet)
     await choose_action()
 
