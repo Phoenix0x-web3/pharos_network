@@ -107,6 +107,32 @@ class Controller:
         raise Exception(f"{self.wallet} | Error in Faucet Task")
 
 
+    @controller_log('Zenith Faucet')
+    async def zenith_faucet(self):
+        twitter_link = await self.zenith.zenith_faucet_get_twitter()
+
+        if 'Failed' not in twitter_link:
+
+            if twitter_link.get('state') == 0:
+
+                await self.twitter.initialize()
+                bind_url = await self.twitter.connect_twitter_to_site_oauth2(twitter_auth_url=twitter_link.get('url'))
+                await asyncio.sleep(random.randint(2,7))
+                twitter_link = await self.zenith.zenith_faucet_get_twitter()
+
+            if twitter_link.get('state') == 1:
+                faucet = await self.zenith.zenith_faucet()
+
+                if 'Failed' not in faucet:
+                    return faucet
+                if 'IP' in faucet:
+                    logger.warning(f"{self.wallet} | Zenith Faucet | IP already fauceted today")
+
+                return f'Failed | {faucet}'
+
+        return 'Failed | Twitter Bind'
+
+
     @controller_log('Twitter Tasks')
     async def twitter_tasks(self, twitter_tasks: list):
 
@@ -305,6 +331,8 @@ class Controller:
 
                     return f"{self.wallet} | Not enought balance for actions | Awaiting for next faucet"
 
+
+
             twitter_tasks, discord_tasks = await self.pharos_portal.tasks_flow()
 
             aquaflux_nft = await self.aquaflux.already_minted(premium=True)
@@ -331,7 +359,6 @@ class Controller:
             if not brokex_faucet:
                 build_array.append(lambda: self.brokex_faucet())
 
-
             user_tasks = await self.user_tasks()
 
             build_array += await self.form_actions(user_tasks.get("101", 0), self.zenith.swaps_controller, swaps_count)
@@ -348,14 +375,18 @@ class Controller:
             if zenith_current_lp:
                 build_array += [self.zenith_liq.remove_liquidity for _ in range(random.randint(2, 5))]
 
+            if self.wallet.points >= 10000:
+                rand = random.randint(3, 6)
+                build_array = build_array[:rand]
+
+            if settings.capmonster_api_key != '':
+
+                if random.randint(1, 5) == 1:
+                    build_array.append(lambda: self.zenith_faucet())
+
             random.shuffle(build_array)
 
             final_actions += build_array
-
-            if self.wallet.points >= 10000:
-                rand = random.randint(3, 6)
-                final_actions = final_actions[:rand]
-
 
         return final_actions
 
@@ -371,7 +402,6 @@ class Controller:
         invite_code = user_data.get('InviteCode')
         logger.info(f"{self.wallet} | Total Points: [{total_points}] | Invite Code: [{invite_code}]")
         return await update_points_invites(self.wallet.private_key, total_points, invite_code)
- 
  
 
     @controller_log('Bind Discord')
