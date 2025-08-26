@@ -607,6 +607,13 @@ class ZenithLiquidity(Zenith):
         from_token = Contracts.WPHRS
         to_token = token
 
+        balance = await self.client.wallet.balance()
+
+        if float(balance.Ether) <= 0.0001:
+
+            raise Exception(f'Failed | Low {balance} PHRS balance | waiting for faucet')
+
+
         price, token0, token1, _, _ = await self.get_price_pool(from_token=from_token, to_token=to_token, a_amt=amount, fee=fee)
 
         if to_token == token0:
