@@ -2,6 +2,7 @@ import git
 import os
 import json
 import sys
+import platform
 from datetime import datetime, timezone
 from typing import Optional, Tuple
 from loguru import logger
@@ -162,6 +163,10 @@ def restart_program():
     """
     Restarts the current program with the same arguments.
     """
+    is_windows = platform.system() == "Windows"
+    if is_windows:
+        exit("Please restart the program on Windows after GitHub updates.")
+    
     logger.info("Restarting program after update")
     python = sys.executable
     os.execv(python, [python] + sys.argv)
@@ -245,7 +250,7 @@ async def check_for_updates(
     if local_version_hash == latest_hash:
         latest_dt = datetime.fromisoformat(latest_date.replace("Z", "+00:00"))
         formatted_date = latest_dt.strftime("%d.%m.%Y %H:%M UTC")
-        logger.debug(f"You are using the latest version (commit from {formatted_date})")
+        logger.info(f"You are using the latest version (commit from {formatted_date})")
         return
 
     # Update available
