@@ -25,6 +25,9 @@ log_level : INFO
 # Discord: Use different proxies to join discord server
 discord_proxy: false
 
+#Check for git updates
+check_git_updates: true
+
 # Api Key from https://dash.capmonster.cloud/
 capmonster_api_key: ''
 

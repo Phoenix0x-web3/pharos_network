@@ -12,6 +12,7 @@ from utils.db_api.wallet_api import db
 from utils.db_import_export_sync import Import, Export, Sync
 from utils.encryption import check_encrypt_param
 from utils.output import show_channel_info
+from utils.git_version import check_for_updates
 
 console = Console()
 
@@ -99,6 +100,7 @@ async def choose_action():
 
 async def main():
     create_files()
+    await check_for_updates(repo_name=PROJECT, repo_private=True)
     db.ensure_model_columns(Wallet)
     await choose_action()
 

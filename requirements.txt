@@ -24,3 +24,4 @@ yarl==1.18.3
 ruamel.yaml==0.18.14
 pyaml==25.7.0
 lxml==6.0.0
+GitPython==3.1.45

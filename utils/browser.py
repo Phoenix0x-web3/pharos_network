@@ -6,13 +6,14 @@ from libs.baseAsyncSession import BaseAsyncSession
 class Browser:
     __module__ = 'Browser'
 
-    def __init__(self, wallet: Wallet):
-        self.wallet: Wallet = wallet
+    def __init__(self, wallet: Optional[Wallet] = None):
+        self.wallet: Optional[Wallet] = wallet
         self.async_session: Optional[BaseAsyncSession] = None
 
     async def _ensure_session(self):
         if self.async_session is None:
-            self.async_session = BaseAsyncSession(proxy=self.wallet.proxy)
+            proxy = self.wallet.proxy if self.wallet else None
+            self.async_session = BaseAsyncSession(proxy=proxy)
 
     async def _close_session(self):
         if self.async_session:
