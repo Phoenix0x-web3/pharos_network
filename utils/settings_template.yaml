@@ -25,7 +25,7 @@ log_level : INFO
 # Discord: Use different proxies to join discord server
 discord_proxy: false
 
-#capmoster api_key
+# Api Key from https://dash.capmonster.cloud/
 capmonster_api_key: ''
 
 # Delay before running the same wallet again after it has completed all actions (1 - 2 hrs default)
