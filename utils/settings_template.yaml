@@ -12,7 +12,7 @@ retry: 3
 # BY DEFAULT: [0,0] - all wallets
 # Example: [2, 6] will run wallets 2,3,4,5,6
 # [4,4] will run only wallet 4
-range_wallets_to_run: [0,0]
+range_wallets_to_run:  [0,0]
 
 # Working only if range_wallet_to_run = [0,0] 
 # BY DEFAULT: [] - all wallets 
