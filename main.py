@@ -10,7 +10,6 @@ from functions.activity import activity
 from utils.db_api.models import Wallet
 from utils.db_api.wallet_api import db
 from utils.db_import_export_sync import Import, Export, Sync
-from utils.encryption import check_encrypt_param
 from utils.output import show_channel_info
 from utils.git_version import check_for_updates
 
@@ -68,16 +67,12 @@ async def choose_action():
 
     if action == "Import wallets to Database":
         console.print(f"[bold blue]Starting Import Wallets to DB[/bold blue]")
-        check_encrypt_param(confirm=True)
         await Import.wallets()
     elif action == "Sync wallets with tokens and proxies":
         console.print(f"[bold blue]Starting sync data in DB[/bold blue]")
-        check_encrypt_param()
         await Sync.sync_wallets_with_tokens_and_proxies()
-        
     elif action == "Export wallets to TXT":
         console.print(f"[bold blue]Starting Import Wallets to DB[/bold blue]")
-        check_encrypt_param()
         await Export.wallets_to_txt()
 
     elif '1' in action:

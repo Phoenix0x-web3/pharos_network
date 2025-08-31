@@ -18,7 +18,8 @@ import hashlib
 from cryptography.fernet import Fernet
 
 from data.config import SALT_PATH
-
+from utils.db_api.models import Wallet
+from utils.db_api.wallet_api import db
 
 def _derive_fernet_key(password: bytes, salt=None) -> bytes:
 
@@ -81,26 +82,40 @@ def prk_encrypt(value: str) -> str:
     return value
 
 def check_encrypt_param(confirm: bool = False, attempts: int = 3):
-    if Settings().private_key_encryption:
+    if not Settings().private_key_encryption:
+        return True
 
-        for try_num in range(1, attempts + 1):
-            pwd1 = getpass.getpass(
-                "[DECRYPTOR] Enter password (input hidden): "
+    for try_num in range(1, attempts + 1):
+        pwd1 = getpass.getpass(
+            "[DECRYPTOR] Enter password (input hidden): "
+        ).strip().encode()
+
+        if confirm:
+            pwd2 = getpass.getpass(
+                "[DECRYPTOR] Repeat password: "
             ).strip().encode()
 
-            if confirm:
-                pwd2 = getpass.getpass(
-                    "[DECRYPTOR] Repeat password: "
-                ).strip().encode()
-
-                if pwd1 != pwd2:
-                    print(f"Passwords do not match (attempt {try_num}/{attempts})\n")
-                    continue
-
-            if not pwd1:
-                print("Password cannot be empty.\n")
+            if pwd1 != pwd2:
+                print(f"Passwords do not match (attempt {try_num}/{attempts})\n")
                 continue
 
-            return set_cipher_suite(pwd1)
+        if not pwd1:
+            print("Password cannot be empty.\n")
+            continue
+        
+        set_cipher_suite(pwd1)
+        check_password_wallet = db.one(Wallet, Wallet.id == 1)
+        if check_password_wallet:
+            try:
+                # Should raise a specific error on wrong key
+                get_private_key(check_password_wallet.private_key)
+                return True 
+            except Exception:
+                print(f"Invalid password (attempt {try_num}/{attempts})\n")
+                continue
+        else:
+            return True
 
-        raise RuntimeError("Password confirmation failed – too many attempts.")
+
+
+    raise RuntimeError("Password confirmation failed – too many attempts.")

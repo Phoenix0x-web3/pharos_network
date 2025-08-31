@@ -25,7 +25,7 @@ class Client:
             private_key: str | None = None,
             network: Network = Networks.Sepolia,
             proxy: str | None = None,
-            check_proxy: bool = True
+            check_proxy: bool = False
     ) -> None:
         self.network = network
         self.headers = {
