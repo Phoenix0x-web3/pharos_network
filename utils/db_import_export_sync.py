@@ -19,6 +19,7 @@ from utils.db_api.wallet_api import db, get_wallet_by_address
 from utils.db_api.models import Wallet
 from utils.encryption import get_private_key, prk_encrypt
 from data.settings import Settings
+from utils.encryption import check_encrypt_param
 
 def remove_line_from_file(value: str, filename: str) -> bool:
     file_path = os.path.join(FILES_DIR, filename)
@@ -87,8 +88,12 @@ class Import:
 
     @staticmethod
     async def wallets():
+        check_encrypt_param(confirm=True)
+                
         raw_wallets = Import.parse_wallet_from_txt()
 
+        logger.success("Wallet import to the database is in progress…")
+        
         wallets = [SimpleNamespace(**w) for w in raw_wallets]
 
         imported: list[Wallet] = []
@@ -200,13 +205,15 @@ class Sync:
 
     @staticmethod
     async def sync_wallets_with_tokens_and_proxies():
-       
+        if not check_encrypt_param():
+            logger.error(f"Decryption Failed | Wrong Password")
+            return
+               
         wallet_auxiliary_data_raw  = Sync.parse_tokens_and_proxies_from_txt()
 
         wallet_auxiliary_data = [SimpleNamespace(**w) for w in wallet_auxiliary_data_raw]
           
         wallets = db.all(Wallet)
-
  
         if len(wallet_auxiliary_data) != len(wallets):
             logger.warning("Mismatch between wallet data and tokens/proxies data. Exiting sync.")
@@ -272,7 +279,11 @@ class Export:
 
     @staticmethod
     async def wallets_to_txt() -> None:
-
+        
+        if not check_encrypt_param():
+            logger.error(f"Decryption Failed | Wrong Password")
+            return
+        
         wallets: List[Wallet] = db.all(Wallet)
 
         if not wallets:
