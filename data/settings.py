@@ -41,6 +41,8 @@ class Settings(Singleton):
         self.autostake_count_max = json_data.get("autostake_count", {}).get('max')
         self.liquidity_count_min = json_data.get("liquidity_count", {}).get('min')
         self.liquidity_count_max = json_data.get("liquidity_count", {}).get('max')
+        self.lending_count_min = json_data.get("lending_count", {}).get('min')
+        self.lending_count_max = json_data.get("lending_count", {}).get('max')
         self.liquidity_percent_min = json_data.get("liquidity_percent", {}).get('min')
         self.liquidity_percent_max = json_data.get("liquidity_percent", {}).get('max')
         self.brokex_percent_min = json_data.get("brokex_percent", {}).get('min')

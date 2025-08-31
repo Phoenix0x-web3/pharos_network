@@ -13,6 +13,7 @@ from libs.base import Base
 from modules.brokex import Brokex
 from modules.faroswap import Faroswap, FaroswapLiquidity
 from modules.nft_badges import NFTS
+from modules.openfi import OpenFi
 from modules.pharos_portal import PharosPortal
 from modules.pns import PNS
 from modules.primus import Primus
@@ -48,6 +49,7 @@ class Controller:
         self.nfts = NFTS(client=client, wallet=wallet)
         self.faroswap = Faroswap(client=client, wallet=wallet)
         self.faroswap_liqudity = FaroswapLiquidity(client=client, wallet=wallet)
+        self.openfi = OpenFi(client=client, wallet=wallet)
 
 
     @controller_log('CheckIn')
@@ -306,6 +308,7 @@ class Controller:
         lp_count = random.randint(settings.liquidity_count_min, settings.liquidity_count_max)
         defi_lp_count = random.randint(settings.liquidity_count_min, settings.liquidity_count_max)
         faro_lp_count = random.randint(settings.liquidity_count_min, settings.liquidity_count_max)
+        lendind_count = random.randint(settings.lending_count_min, settings.lending_count_max)
 
         wallet_balance = await self.client.wallet.balance()
 
@@ -369,6 +372,7 @@ class Controller:
             build_array += await self.form_actions(user_tasks.get("111", 0), self.brokex.deposit_liquidity, lp_count // 2)
             build_array += await self.form_actions(user_tasks.get("111", 0), self.brokex_positions, brokex_count)
             build_array += await self.form_actions(user_tasks.get("106", 0), self.faroswap_liqudity.liquidity_controller, faro_lp_count)
+            build_array += await self.form_actions(user_tasks.get("106", 0), self.openfi.lending_controller, faro_lp_count)
 
             zenith_current_lp = await self.zenith_liq.check_any_positions()
 
