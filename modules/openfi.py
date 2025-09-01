@@ -215,6 +215,21 @@ class OpenFi(Base):
         #     "sec-gpc": "1",
         #     "referer": "https://faroswap.xyz/",
         # }
+
+    async def balance_map(self, tokens: list):
+        balance_map = {}
+        for token in tokens:
+            if token == Contracts.PHRS:
+                balance = await self.client.wallet.balance()
+                if balance.Ether == 0:
+                    return 'Failed | No balance, try to faucet first'
+            else:
+                balance = await self.client.wallet.balance(token.address)
+
+            balance_map[token.title] = balance.Ether
+
+        return balance_map
+
     async def lending_controller(self):
         settings = Settings()
 
@@ -230,19 +245,19 @@ class OpenFi(Base):
             Contracts.USDC,
         ]
 
-        balance_map = {}
-        for token in tokens:
-            if token == Contracts.PHRS:
-                balance = await self.client.wallet.balance()
-                if balance.Ether == 0:
-                    return 'Failed | No balance, try to faucet first'
-            else:
-                balance = await self.client.wallet.balance(token.address)
+        o_tokens = [
+            oUSDC,
+            oUSDT,
+            oWPRH
+        ]
 
-            balance_map[token.title] = balance.Ether
-
+        balance_map = await self.balance_map(tokens=tokens)
+        #print(balance_map)
         if all(float(value) == 0 for value in balance_map.values()):
             return 'Failed | No balance in all tokens, try to faucet first'
+
+        o_balance_map = await self.balance_map(tokens=o_tokens)
+        #print(o_balance_map)
 
         from_token = random.choice(tokens)
         while balance_map[from_token.title] == 0:
@@ -272,7 +287,7 @@ class OpenFi(Base):
         contract = await self.client.contracts.get(contract_address=contract)
 
         from_token_is_phrs = token.address.upper() == Contracts.PHRS.address.upper()
-
+        logger.debug(f"{self.wallet} | {self.__module_name__} | Trying to Supply {amount} {token.title}")
         if from_token_is_phrs:
 
             data = TxArgs(
@@ -282,6 +297,60 @@ class OpenFi(Base):
             ).tuple()
 
             encode = contract.encode_abi("depositETH", args=data)
+
+        else:
+            data = TxArgs(
+                address=token.address,
+                amount=amount.Wei,
+                onBehalfOf=self.client.account.address,
+                referralCode=0,
+            ).tuple()
+
+            encode = contract.encode_abi("supply", args=data)
+
+        if not from_token_is_phrs:
+            if await self.approve_interface(
+                    token_address=token.address,
+                    spender=contract.address,
+                    amount=None
+            ):
+                await asyncio.sleep(2)
+            else:
+                return f' can not approve'
+
+        tx_params = TxParams(
+            to=contract.address,
+            data=encode,
+            value=amount.Wei if from_token_is_phrs else 0
+        )
+
+        tx = await self.client.transactions.sign_and_send(tx_params=tx_params)
+        await asyncio.sleep(random.randint(2, 4))
+        receipt = await tx.wait_for_receipt(client=self.client, timeout=300)
+        if receipt:
+            return f'Success supplied {amount.Ether:.5f} {token.title}'
+
+        return f'Failed to supply {amount.Ether:.5f} {token.title}'
+
+    @controller_log('Supply')
+    async def borrow(self, token: RawContract, amount: TokenAmount):
+
+        contract = await self._prepare_contract(SUPPLY_MAP[token])
+        contract = await self.client.contracts.get(contract_address=contract)
+
+        from_token_is_phrs = token.address.upper() == Contracts.PHRS.address.upper()
+
+        logger.debug(f"{self.wallet} | {self.__module_name__} | Trying to Borrow {amount} {token.title}")
+
+        if from_token_is_phrs:
+
+            data = TxArgs(
+                address=token.address,
+                onBehalfOf=self.client.account.address,
+                referralCode=0,
+            ).tuple()
+
+            encode = contract.encode_abi("borrow", args=data)
 
         else:
             data = TxArgs(
