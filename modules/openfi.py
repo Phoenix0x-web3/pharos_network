@@ -44,57 +44,156 @@ oUSDT = RawContract(
 )
 
 LENDING_ABI = [
-    {
-        "inputs": [
-            {"internalType": "address", "name": "asset", "type": "address"},
-            {"internalType": "uint256", "name": "amount", "type": "uint256"},
-            {"internalType": "address", "name": "onBehalfOf", "type": "address"},
-            {"internalType": "uint16", "name": "referralCode", "type": "uint16"}
-        ],
-        "name": "supply",
-        "outputs": [],
-        "stateMutability": "nonpayable",
-        "type": "function"
-    },
-    {
-        "inputs": [
-            {"internalType": "address", "name": "address", "type": "address"},
-            {"internalType": "address", "name": "onBehalfOf", "type": "address"},
-            {"internalType": "uint16", "name": "referralCode", "type": "uint16"}
-        ],
-        "name": "depositETH",
-        "outputs": [],
-        "stateMutability": "payable",
-        "type": "function"
-    },
-    {
-        "inputs": [
-            {"internalType": "address", "name": "asset", "type": "address"},
-            {"internalType": "uint256", "name": "amount", "type": "uint256"},
-            {"internalType": "uint256", "name": "interestRateMode", "type": "uint256"},
-            {"internalType": "uint16", "name": "referralCode", "type": "uint16"},
-            {"internalType": "address", "name": "onBehalfOf", "type": "address"}
-        ],
-        "name": "borrow",
-        "outputs": [],
-        "stateMutability": "nonpayable",
-        "type": "function"
-    },
-    {
-        "name": "repay",
-        "type": "function",
-        "stateMutability": "nonpayable",
-        "inputs": [
-            {"name": "asset", "type": "address"},
-            {"name": "amount", "type": "uint256"},
-            {"name": "interestRateMode", "type": "uint256"},
-            {"name": "onBehalfOf", "type": "address"},
-        ],
-        "outputs": [
-            {"name": "", "type": "uint256"}
-        ],
-    },
-]
+        {
+            "type": "function",
+            "name": "isMintable",
+            "stateMutability": "view",
+            "inputs": [
+                {"internalType": "address", "name": "asset", "type": "address"}
+            ],
+            "outputs": [
+                {"internalType": "bool", "name": "", "type": "bool"}
+            ]
+        },
+        {
+            "type": "function",
+            "name": "getUserReserveData",
+            "stateMutability": "view",
+            "inputs": [
+                {"internalType": "address", "name": "asset", "type": "address"},
+                {"internalType": "address", "name": "user", "type": "address"}
+            ],
+            "outputs": [
+                {"internalType": "uint256", "name": "currentBTokenBalance", "type": "uint256"},
+                {"internalType": "uint256", "name": "currentStableDebt", "type": "uint256"},
+                {"internalType": "uint256", "name": "currentVariableDebt", "type": "uint256"},
+                {"internalType": "uint256", "name": "principalStableDebt", "type": "uint256"},
+                {"internalType": "uint256", "name": "scaledVariableDebt", "type": "uint256"},
+                {"internalType": "uint256", "name": "stableBorrowRate", "type": "uint256"},
+                {"internalType": "uint256", "name": "liquidityRate", "type": "uint256"},
+                {"internalType": "uint40", "name": "stableRateLastUpdated", "type": "uint40"},
+                {"internalType": "bool", "name": "usageAsCollateralEnabled", "type": "bool"}
+            ]
+        },
+        {
+            "type": "function",
+            "name": "getReserveConfigurationData",
+            "stateMutability": "view",
+            "inputs": [
+                {"internalType": "address", "name": "asset", "type": "address"}
+            ],
+            "outputs": [
+                {"internalType": "uint256", "name": "decimals", "type": "uint256"},
+                {"internalType": "uint256", "name": "ltv", "type": "uint256"},
+                {"internalType": "uint256", "name": "liquidationThreshold", "type": "uint256"},
+                {"internalType": "uint256", "name": "liquidationBonus", "type": "uint256"},
+                {"internalType": "uint256", "name": "reserveFactor", "type": "uint256"},
+                {"internalType": "bool", "name": "usageAsCollateralEnabled", "type": "bool"},
+                {"internalType": "bool", "name": "borrowingEnabled", "type": "bool"},
+                {"internalType": "bool", "name": "stableBorrowRateEnabled", "type": "bool"},
+                {"internalType": "bool", "name": "isActive", "type": "bool"},
+                {"internalType": "bool", "name": "isFrozen", "type": "bool"}
+            ]
+        },
+        {
+            "type": "function",
+            "name": "getReserveData",
+            "stateMutability": "view",
+            "inputs": [
+                {"internalType": "address", "name": "asset", "type": "address"}
+            ],
+            "outputs": [
+                {"internalType": "uint256", "name": "unbacked", "type": "uint256"},
+                {"internalType": "uint256", "name": "accruedToTreasuryScaled", "type": "uint256"},
+                {"internalType": "uint256", "name": "totalBToken", "type": "uint256"},
+                {"internalType": "uint256", "name": "totalStableDebt", "type": "uint256"},
+                {"internalType": "uint256", "name": "totalVariableDebt", "type": "uint256"},
+                {"internalType": "uint256", "name": "liquidityRate", "type": "uint256"},
+                {"internalType": "uint256", "name": "variableBorrowRate", "type": "uint256"},
+                {"internalType": "uint256", "name": "stableBorrowRate", "type": "uint256"},
+                {"internalType": "uint256", "name": "averageStableBorrowRate", "type": "uint256"},
+                {"internalType": "uint256", "name": "liquidityIndex", "type": "uint256"},
+                {"internalType": "uint256", "name": "variableBorrowIndex", "type": "uint256"},
+                {"internalType": "uint40", "name": "lastUpdateTimestamp", "type": "uint40"}
+            ]
+        },
+        {
+            "type": "function",
+            "name": "mint",
+            "stateMutability": "nonpayable",
+            "inputs": [
+                {"internalType": "address", "name": "token", "type": "address"},
+                {"internalType": "address", "name": "to", "type": "address"},
+                {"internalType": "uint256", "name": "amount", "type": "uint256"}
+            ],
+            "outputs": [
+                {"internalType": "uint256", "name": "", "type": "uint256"}
+            ]
+        },
+        {
+            "type": "function",
+            "name": "depositETH",
+            "stateMutability": "payable",
+            "inputs": [
+                {"internalType": "address", "name": "", "type": "address"},
+                {"internalType": "address", "name": "onBehalfOf", "type": "address"},
+                {"internalType": "uint16", "name": "referralCode", "type": "uint16"}
+            ],
+            "outputs": []
+        },
+        {
+            "type": "function",
+            "name": "supply",
+            "stateMutability": "nonpayable",
+            "inputs": [
+                {"internalType": "address", "name": "asset", "type": "address"},
+                {"internalType": "uint256", "name": "amount", "type": "uint256"},
+                {"internalType": "address", "name": "onBehalfOf", "type": "address"},
+                {"internalType": "uint16", "name": "referralCode", "type": "uint16"}
+            ],
+            "outputs": []
+        },
+        {
+            "type": "function",
+            "name": "borrow",
+            "stateMutability": "nonpayable",
+            "inputs": [
+                {"internalType": "address", "name": "asset", "type": "address"},
+                {"internalType": "uint256", "name": "amount", "type": "uint256"},
+                {"internalType": "uint256", "name": "interestRateMode", "type": "uint256"},
+                {"internalType": "uint16", "name": "referralCode", "type": "uint16"},
+                {"internalType": "address", "name": "onBehalfOf", "type": "address"}
+            ],
+            "outputs": []
+        },
+        {
+            "type": "function",
+            "name": "repay",
+            "stateMutability": "nonpayable",
+            "inputs": [
+                {"internalType": "address", "name": "asset", "type": "address"},
+                {"internalType": "uint256", "name": "amount", "type": "uint256"},
+                {"internalType": "uint256", "name": "interestRateMode", "type": "uint256"},
+                {"internalType": "address", "name": "onBehalfOf", "type": "address"}
+            ],
+            "outputs": [
+                {"internalType": "uint256", "name": "", "type": "uint256"}
+            ]
+        },
+        {
+            "type": "function",
+            "name": "withdraw",
+            "stateMutability": "nonpayable",
+            "inputs": [
+                {"internalType": "address", "name": "asset", "type": "address"},
+                {"internalType": "uint256", "name": "amount", "type": "uint256"},
+                {"internalType": "address", "name": "to", "type": "address"}
+            ],
+            "outputs": [
+                {"internalType": "uint256", "name": "", "type": "uint256"}
+            ]
+        }
+    ]
 
 SUPPLY_MAP = {
     Contracts.PHRS: b_wphrs,

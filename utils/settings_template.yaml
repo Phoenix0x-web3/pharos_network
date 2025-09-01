@@ -97,10 +97,20 @@ brokex_count:
   min: 5
   max: 10
 
-# CFD Trading Brokex position count
+# Lending count
 lending_count:
   min: 5
   max: 10
+
+# Bitverse position count
+bitverse_count:
+  min: 5
+  max: 10
+
+# Bitverse position percent
+bitverse_percent:
+  min: 35
+  max: 60
 
 # Invite Codes for pharos network, example [invite_code1, invite_code2]
 invite_codes: [] 

@@ -6,10 +6,14 @@ from faker import Faker
 from loguru import logger
 from sqlalchemy.testing.suite.test_reflection import users
 
+from data.models import Contracts
 from data.settings import Settings
+from libs.eth_async.data.models import TokenAmount
+from libs.eth_async.utils.utils import randfloat
 from modules.autostaking import AutoStaking
 from libs.eth_async.client import Client
 from libs.base import Base
+from modules.bitverse import Bitverse
 from modules.brokex import Brokex
 from modules.faroswap import Faroswap, FaroswapLiquidity
 from modules.nft_badges import NFTS
@@ -50,6 +54,7 @@ class Controller:
         self.faroswap = Faroswap(client=client, wallet=wallet)
         self.faroswap_liqudity = FaroswapLiquidity(client=client, wallet=wallet)
         self.openfi = OpenFi(client=client, wallet=wallet)
+        self.bitverse = Bitverse(client=client, wallet=wallet)
 
 
     @controller_log('CheckIn')
@@ -289,6 +294,47 @@ class Controller:
 
         n = count if have < limit else random.randint(1, 3)
         return [factory for _ in range(n)]
+
+    async def bitverse_positions(self):
+
+        balance = await self.bitverse.get_all_balance()
+        print(balance)
+
+        return
+        settings = Settings()
+
+        percent = randfloat(
+            from_=settings.bitverse_percent_min,
+            to_=settings.bitverse_percent_max,
+            step=0.001
+        ) / 100
+
+        if not balance:
+            usdt_balance = await self.client.wallet.balance(token=Contracts.USDT.address)
+
+            if float(usdt_balance.Ether) < 10:
+                return await self.zenith_liq.process_back_swap_from_natve(token=Contracts.USDT, amount=TokenAmount(
+                        amount=random.randint(30, 50),
+                        decimals=6)
+                                                                          )
+
+            else:
+                return await self.bitverse.deposit(
+                    token=Contracts.USDT,
+                    amount=TokenAmount(
+                        amount=float(usdt_balance.Ether) * percent, decimals=6)
+                )
+
+        balance = float(balance[0]['balanceSize'])
+
+        if balance < 10:
+            return await self.zenith_liq.process_back_swap_from_natve(token=Contracts.USDT, amount=TokenAmount(
+                amount=random.randint(30, 50),
+                decimals=6))
+
+        return await self.bitverse.bitverse_controller(percent=percent)
+
+
 
     async def build_actions(self):
 
