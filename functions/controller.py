@@ -311,18 +311,23 @@ class Controller:
         if not balance or refill:
             usdt_balance = await self.client.wallet.balance(token=Contracts.USDT.address)
             if float(usdt_balance.Ether) < 10:
-                return await self.zenith_liq.process_back_swap_from_natve(token=Contracts.USDT, amount=TokenAmount(
+
+                swap = self.zenith_liq.process_back_swap_from_natve(token=Contracts.USDT, amount=TokenAmount(
                         amount=random.randint(30, 50),
                         decimals=6)
                                                                           )
+                return await self.bitverse_positions()
+
             else:
-                return await self.bitverse.deposit(
+                deposit = self.bitverse.deposit(
                     token=Contracts.USDT,
                     amount=TokenAmount(
                         amount=float(usdt_balance.Ether) * percent, decimals=6)
                 )
+                logger.success(deposit)
+                return await self.bitverse_positions()
 
-        balance = float(balance[0]['balanceSize'])
+        balance = float(balance[0]['availableBalanceSize'])
 
         if balance < 10:
             return await self.bitverse_positions(refill=True)

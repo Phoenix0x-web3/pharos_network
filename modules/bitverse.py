@@ -442,10 +442,9 @@ class Bitverse(Base):
         ]
 
         balance = await self.get_all_balance()
-
         leverage = None
 
-        balance = float(balance[0]['balanceSize'])
+        balance = float(balance[0]['availableBalanceSize'])
 
         amount = TokenAmount(
             amount=int(balance * percent), decimals=6)
@@ -454,12 +453,18 @@ class Bitverse(Base):
         side = random.choice([0, 1])
 
         positions = await self._get_all_positions()
-
         if positions:
             current_positions = [position for position in positions if position['symbol'] == pair]
             if current_positions:
                 close_position = await self.close_position(current_positions[0])
                 logger.success(close_position)
+                await asyncio.sleep(20, 30)
+
+                return await self.bitverse_controller(percent=percent)
+
+            close_position = await self.close_position(positions[0])
+            logger.success(close_position)
+            await asyncio.sleep(20, 30)
 
         return await self.place_order(pair=pair, side=side, amount=amount, leverage=leverage)
 
