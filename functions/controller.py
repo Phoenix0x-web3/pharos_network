@@ -312,14 +312,14 @@ class Controller:
             usdt_balance = await self.client.wallet.balance(token=Contracts.USDT.address)
             if float(usdt_balance.Ether) < 10:
 
-                swap = self.zenith_liq.process_back_swap_from_natve(token=Contracts.USDT, amount=TokenAmount(
+                swap = await self.zenith_liq.process_back_swap_from_natve(token=Contracts.USDT, amount=TokenAmount(
                         amount=random.randint(30, 50),
                         decimals=6)
                                                                           )
                 return await self.bitverse_positions()
 
             else:
-                deposit = self.bitverse.deposit(
+                deposit = await self.bitverse.deposit(
                     token=Contracts.USDT,
                     amount=TokenAmount(
                         amount=float(usdt_balance.Ether) * percent, decimals=6)
