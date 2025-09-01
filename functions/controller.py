@@ -296,7 +296,7 @@ class Controller:
         n = count if have < limit else random.randint(1, 3)
         return [factory for _ in range(n)]
 
-    async def bitverse_positions(self):
+    async def bitverse_positions(self, refill=None):
 
         balance = await self.bitverse.get_all_balance()
 
@@ -308,15 +308,13 @@ class Controller:
             step=0.001
         ) / 100
 
-        if not balance:
+        if not balance or refill:
             usdt_balance = await self.client.wallet.balance(token=Contracts.USDT.address)
-
             if float(usdt_balance.Ether) < 10:
                 return await self.zenith_liq.process_back_swap_from_natve(token=Contracts.USDT, amount=TokenAmount(
                         amount=random.randint(30, 50),
                         decimals=6)
                                                                           )
-
             else:
                 return await self.bitverse.deposit(
                     token=Contracts.USDT,
@@ -327,9 +325,7 @@ class Controller:
         balance = float(balance[0]['balanceSize'])
 
         if balance < 10:
-            return await self.zenith_liq.process_back_swap_from_natve(token=Contracts.USDT, amount=TokenAmount(
-                amount=random.randint(30, 50),
-                decimals=6))
+            return await self.bitverse_positions(refill=True)
 
         return await self.bitverse.bitverse_controller(percent=percent)
 
