@@ -292,6 +292,7 @@ class Controller:
     async def form_actions(have: int, factory, count: int):
         limit = 91
 
+
         n = count if have < limit else random.randint(1, 3)
         return [factory for _ in range(n)]
 
@@ -428,6 +429,10 @@ class Controller:
             if self.wallet.points >= 10000:
                 rand = random.randint(3, 6)
                 build_array = build_array[:rand]
+                build_array += await self.form_actions(user_tasks.get("114", 0), self.openfi.lending_controller,
+                                                       lending_count)
+                build_array += await self.form_actions(user_tasks.get("119", 0), self.bitverse_positions,
+                                                       bitverse_count)
 
             if settings.capmonster_api_key != '':
 
