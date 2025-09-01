@@ -24,7 +24,7 @@ class BaseAsyncSession(requests.AsyncSession):
     def __init__(
             self,
             proxy: str = None,
-            fingerprint: dict = FINGERPRINT_DEFAULT,
+            fingerprint: dict = FINGERPRINT_MAC136,
             **session_kwargs,
     ):
         headers = session_kwargs.pop("headers", {})
