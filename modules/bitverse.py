@@ -462,9 +462,6 @@ class Bitverse(Base):
 
                 return await self.bitverse_controller(percent=percent)
 
-            close_position = await self.close_position(positions[0])
-            logger.success(close_position)
-            await asyncio.sleep(20, 30)
 
         return await self.place_order(pair=pair, side=side, amount=amount, leverage=leverage)
 
