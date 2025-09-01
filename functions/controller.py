@@ -298,9 +298,7 @@ class Controller:
     async def bitverse_positions(self):
 
         balance = await self.bitverse.get_all_balance()
-        print(balance)
 
-        return
         settings = Settings()
 
         percent = randfloat(
@@ -355,6 +353,7 @@ class Controller:
         defi_lp_count = random.randint(settings.liquidity_count_min, settings.liquidity_count_max)
         faro_lp_count = random.randint(settings.liquidity_count_min, settings.liquidity_count_max)
         lending_count = random.randint(settings.lending_count_min, settings.lending_count_max)
+        bitverse_count = random.randint(settings.bitverse_count_min, settings.bitverse_count_max)
 
         wallet_balance = await self.client.wallet.balance()
 
@@ -419,6 +418,7 @@ class Controller:
             build_array += await self.form_actions(user_tasks.get("111", 0), self.brokex_positions, brokex_count)
             build_array += await self.form_actions(user_tasks.get("106", 0), self.faroswap_liqudity.liquidity_controller, faro_lp_count)
             build_array += await self.form_actions(user_tasks.get("114", 0), self.openfi.lending_controller, lending_count)
+            build_array += await self.form_actions(user_tasks.get("119", 0), self.bitverse_positions(), bitverse_count)
 
             zenith_current_lp = await self.zenith_liq.check_any_positions()
 

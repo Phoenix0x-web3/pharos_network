@@ -448,7 +448,7 @@ class Bitverse(Base):
         balance = float(balance[0]['balanceSize'])
 
         amount = TokenAmount(
-            amount=int(balance * 0.15), decimals=6)
+            amount=int(balance * percent), decimals=6)
 
         pair = random.choice(TRADE_PAIRS)
         side = random.choice([0, 1])
