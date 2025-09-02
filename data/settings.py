@@ -41,6 +41,8 @@ class Settings(Singleton):
         self.autostake_count_max = json_data.get("autostake_count", {}).get('max')
         self.liquidity_count_min = json_data.get("liquidity_count", {}).get('min')
         self.liquidity_count_max = json_data.get("liquidity_count", {}).get('max')
+        self.lending_count_min = json_data.get("lending_count", {}).get('min')
+        self.lending_count_max = json_data.get("lending_count", {}).get('max')
         self.liquidity_percent_min = json_data.get("liquidity_percent", {}).get('min')
         self.liquidity_percent_max = json_data.get("liquidity_percent", {}).get('max')
         self.brokex_percent_min = json_data.get("brokex_percent", {}).get('min')
@@ -50,6 +52,10 @@ class Settings(Singleton):
         self.retry = json_data.get("retry", {})
         self.discord_proxy = json_data.get("discord_proxy", {})
         self.capmonster_api_key = json_data.get("capmonster_api_key", {})
+        self.bitverse_count_min = json_data.get("bitverse_count", {}).get('min')
+        self.bitverse_count_max = json_data.get("bitverse_count", {}).get('max')
+        self.bitverse_percent_min = json_data.get("bitverse_percent", {}).get('min')
+        self.bitverse_percent_max = json_data.get("bitverse_percent", {}).get('max')
 
 # Configure the logger based on the settings
 settings = Settings()

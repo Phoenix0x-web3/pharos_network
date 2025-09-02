@@ -110,6 +110,7 @@ class Faroswap(Base):
             return 'Failed | No balance in all tokens, try to faucet first'
 
         from_token = random.choice(tokens)
+
         while balance_map[from_token.title] == 0:
             from_token = random.choice(tokens)
 

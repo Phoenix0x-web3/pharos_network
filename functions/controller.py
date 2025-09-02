@@ -6,13 +6,18 @@ from faker import Faker
 from loguru import logger
 from sqlalchemy.testing.suite.test_reflection import users
 
+from data.models import Contracts
 from data.settings import Settings
+from libs.eth_async.data.models import TokenAmount
+from libs.eth_async.utils.utils import randfloat
 from modules.autostaking import AutoStaking
 from libs.eth_async.client import Client
 from libs.base import Base
+from modules.bitverse import Bitverse
 from modules.brokex import Brokex
 from modules.faroswap import Faroswap, FaroswapLiquidity
 from modules.nft_badges import NFTS
+from modules.openfi import OpenFi
 from modules.pharos_portal import PharosPortal
 from modules.pns import PNS
 from modules.primus import Primus
@@ -48,6 +53,8 @@ class Controller:
         self.nfts = NFTS(client=client, wallet=wallet)
         self.faroswap = Faroswap(client=client, wallet=wallet)
         self.faroswap_liqudity = FaroswapLiquidity(client=client, wallet=wallet)
+        self.openfi = OpenFi(client=client, wallet=wallet)
+        self.bitverse = Bitverse(client=client, wallet=wallet)
 
 
     @controller_log('CheckIn')
@@ -285,8 +292,49 @@ class Controller:
     async def form_actions(have: int, factory, count: int):
         limit = 91
 
+
         n = count if have < limit else random.randint(1, 3)
         return [factory for _ in range(n)]
+
+    async def bitverse_positions(self, refill=None):
+
+        balance = await self.bitverse.get_all_balance()
+
+        settings = Settings()
+
+        percent = randfloat(
+            from_=settings.bitverse_percent_min,
+            to_=settings.bitverse_percent_max,
+            step=0.001
+        ) / 100
+
+        if not balance or refill:
+            usdt_balance = await self.client.wallet.balance(token=Contracts.USDT.address)
+            if float(usdt_balance.Ether) < 10:
+
+                swap = await self.zenith_liq.process_back_swap_from_natve(token=Contracts.USDT, amount=TokenAmount(
+                        amount=random.randint(30, 50),
+                        decimals=6)
+                                                                          )
+                return await self.bitverse_positions()
+
+            else:
+                deposit = await self.bitverse.deposit(
+                    token=Contracts.USDT,
+                    amount=TokenAmount(
+                        amount=float(usdt_balance.Ether) * percent, decimals=6)
+                )
+                logger.success(deposit)
+                return await self.bitverse_positions()
+
+        balance = float(balance[0]['availableBalanceSize'])
+
+        if balance < 10:
+            return await self.bitverse_positions(refill=True)
+
+        return await self.bitverse.bitverse_controller(percent=percent)
+
+
 
     async def build_actions(self):
 
@@ -306,6 +354,8 @@ class Controller:
         lp_count = random.randint(settings.liquidity_count_min, settings.liquidity_count_max)
         defi_lp_count = random.randint(settings.liquidity_count_min, settings.liquidity_count_max)
         faro_lp_count = random.randint(settings.liquidity_count_min, settings.liquidity_count_max)
+        lending_count = random.randint(settings.lending_count_min, settings.lending_count_max)
+        bitverse_count = random.randint(settings.bitverse_count_min, settings.bitverse_count_max)
 
         wallet_balance = await self.client.wallet.balance()
 
@@ -369,6 +419,8 @@ class Controller:
             build_array += await self.form_actions(user_tasks.get("111", 0), self.brokex.deposit_liquidity, lp_count // 2)
             build_array += await self.form_actions(user_tasks.get("111", 0), self.brokex_positions, brokex_count)
             build_array += await self.form_actions(user_tasks.get("106", 0), self.faroswap_liqudity.liquidity_controller, faro_lp_count)
+            build_array += await self.form_actions(user_tasks.get("114", 0), self.openfi.lending_controller, lending_count)
+            #build_array += await self.form_actions(user_tasks.get("119", 0), self.bitverse_positions, bitverse_count)
 
             zenith_current_lp = await self.zenith_liq.check_any_positions()
 
