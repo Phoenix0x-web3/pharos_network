@@ -420,7 +420,7 @@ class Controller:
             build_array += await self.form_actions(user_tasks.get("111", 0), self.brokex_positions, brokex_count)
             build_array += await self.form_actions(user_tasks.get("106", 0), self.faroswap_liqudity.liquidity_controller, faro_lp_count)
             build_array += await self.form_actions(user_tasks.get("114", 0), self.openfi.lending_controller, lending_count)
-            build_array += await self.form_actions(user_tasks.get("119", 0), self.bitverse_positions, bitverse_count)
+            #build_array += await self.form_actions(user_tasks.get("119", 0), self.bitverse_positions, bitverse_count)
 
             zenith_current_lp = await self.zenith_liq.check_any_positions()
 
