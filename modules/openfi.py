@@ -192,6 +192,20 @@ LENDING_ABI = [
             "outputs": [
                 {"internalType": "uint256", "name": "", "type": "uint256"}
             ]
+        },
+        {
+            "inputs": [{"internalType": "address", "name": "user", "type": "address"}],
+            "name": "getUserAccountData",
+            "outputs": [
+                {"internalType": "uint256", "name": "totalCollateralBase", "type": "uint256"},
+                {"internalType": "uint256", "name": "totalDebtBase", "type": "uint256"},
+                {"internalType": "uint256", "name": "availableBorrowsBase", "type": "uint256"},
+                {"internalType": "uint256", "name": "currentLiquidationThreshold", "type": "uint256"},
+                {"internalType": "uint256", "name": "ltv", "type": "uint256"},
+                {"internalType": "uint256", "name": "healthFactor", "type": "uint256"},
+            ],
+            "stateMutability": "view",
+            "type": "function",
         }
     ]
 
@@ -256,21 +270,34 @@ class OpenFi(Base):
         if all(float(value) == 0 for value in balance_map.values()):
             return 'Failed | No balance in all tokens, try to faucet first'
 
-        o_balance_map = await self.balance_map(tokens=o_tokens)
-        #print(o_balance_map)
-
         from_token = random.choice(tokens)
         while balance_map[from_token.title] == 0:
             from_token = random.choice(tokens)
-
         amount = float((balance_map[from_token.title])) * percent_to_swap
 
         amount = TokenAmount(amount=amount, decimals=18 if from_token == Contracts.PHRS else 6)
 
-        return await self.supply(
-            token=from_token,
-            amount=amount
-        )
+        actions = [
+            lambda: self.supply(token=from_token,amount=amount)
+        ]
+        allowance_borrow = await self.get_allowance_borrow()
+
+        if allowance_borrow > 0.5:
+            borrow_assets = [Contracts.USDT,Contracts.USDC]
+            borrow_token = random.choice(borrow_assets)
+            actions.append(lambda: self.borrow(token=borrow_token, amount=TokenAmount(amount=(allowance_borrow * percent_to_swap), decimals=6)))
+
+        repay_amounts = await self.get_current_borrows()
+
+        if all(float(value.Ether) > 0 for value in repay_amounts.values()):
+            token, borrow_amount = random.choice(list(repay_amounts.items()))
+            actions.append(lambda: self.repay(token=token, amount=TokenAmount(
+                amount=float(borrow_amount.Ether) * percent_to_swap,
+                decimals=6)))
+
+        action = random.choice(actions)
+
+        return await action()
 
     async def _prepare_contract(self, address: str):
 
@@ -330,9 +357,9 @@ class OpenFi(Base):
         if receipt:
             return f'Success supplied {amount.Ether:.5f} {token.title}'
 
-        return f'Failed to supply {amount.Ether:.5f} {token.title}'
+        raise Exception(f'Failed to supply {amount.Ether:.5f} {token.title}')
 
-    @controller_log('Supply')
+    @controller_log('Borrow')
     async def borrow(self, token: RawContract, amount: TokenAmount):
 
         contract = await self._prepare_contract(SUPPLY_MAP[token])
@@ -382,6 +409,90 @@ class OpenFi(Base):
         await asyncio.sleep(random.randint(2, 4))
         receipt = await tx.wait_for_receipt(client=self.client, timeout=300)
         if receipt:
-            return f'Success supplied {amount.Ether:.5f} {token.title}'
+            return f'Success borrowed {amount.Ether:.5f} {token.title}'
 
-        return f'Failed to supply {amount.Ether:.5f} {token.title}'
+        raise Exception(f'Failed to borrow {amount.Ether:.5f} {token.title}')
+
+    @controller_log('Repay')
+    async def repay(self, token: RawContract, amount: TokenAmount):
+
+        contract = await self._prepare_contract(SUPPLY_MAP[token])
+        contract = await self.client.contracts.get(contract_address=contract)
+
+        from_token_is_phrs = token.address.upper() == Contracts.PHRS.address.upper()
+
+        logger.debug(f"{self.wallet} | {self.__module_name__} | Trying to Repay {amount} {token.title}")
+
+        if from_token_is_phrs:
+
+            data = TxArgs(
+                address=token.address,
+                onBehalfOf=self.client.account.address,
+                referralCode=0,
+            ).tuple()
+
+            encode = contract.encode_abi("repay", args=data)
+
+        else:
+            data = TxArgs(
+                address=token.address,
+                amount=amount.Wei,
+                onBehalfOf=self.client.account.address,
+                referralCode=0,
+            ).tuple()
+
+            encode = contract.encode_abi("repay", args=data)
+
+        if not from_token_is_phrs:
+            if await self.approve_interface(
+                    token_address=token.address,
+                    spender=contract.address,
+                    amount=None
+            ):
+                await asyncio.sleep(2)
+            else:
+                return f' can not approve'
+
+        tx_params = TxParams(
+            to=contract.address,
+            data=encode,
+            value=amount.Wei if from_token_is_phrs else 0
+        )
+
+        tx = await self.client.transactions.sign_and_send(tx_params=tx_params)
+        await asyncio.sleep(random.randint(2, 4))
+        receipt = await tx.wait_for_receipt(client=self.client, timeout=300)
+        if receipt:
+            return f'Success borrowed {amount.Ether:.5f} {token.title}'
+
+        raise Exception(f'Failed to borrow {amount.Ether:.5f} {token.title}')
+
+
+    async def get_allowance_borrow(self):
+
+        contract = await self._prepare_contract(b_coin)
+        contract = await self.client.contracts.get(contract)
+        data = await contract.functions.getUserAccountData(
+            self.client.account.address
+        ).call()
+        allowance_borrow = data[2] / 10**8
+
+        return allowance_borrow
+
+    async def get_current_borrows(self):
+        provider = '0x54cb4f6C4c12105B48b11e21d78becC32Ef694EC'
+        tokens = [Contracts.USDT, Contracts.USDC]
+        contract = await self._prepare_contract(provider)
+        contract = await self.client.contracts.get(contract)
+
+        map = {}
+        for token in tokens:
+            data = await contract.functions.getUserReserveData(
+                token.address,
+                self.client.account.address
+            ).call()
+
+            if data[2] > 1000:
+                map[token] = TokenAmount(amount=data[2], decimals=6, wei=True)
+
+        return map
