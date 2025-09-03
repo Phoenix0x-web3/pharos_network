@@ -292,7 +292,6 @@ class Controller:
     async def form_actions(have: int, factory, count: int):
         limit = 91
 
-
         n = count if have < limit else random.randint(1, 3)
         return [factory for _ in range(n)]
 
@@ -426,10 +425,6 @@ class Controller:
 
             if zenith_current_lp:
                 build_array += [self.zenith_liq.remove_liquidity for _ in range(random.randint(2, 5))]
-
-            if self.wallet.points >= 10000:
-                rand = random.randint(3, 6)
-                build_array = build_array[:rand]
 
             if settings.capmonster_api_key != '':
 
