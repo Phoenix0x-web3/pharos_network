@@ -289,11 +289,14 @@ class OpenFi(Base):
 
         repay_amounts = await self.get_current_borrows()
 
-        if all(float(value.Ether) > 0 for value in repay_amounts.values()):
-            token, borrow_amount = random.choice(list(repay_amounts.items()))
-            actions.append(lambda: self.repay(token=token, amount=TokenAmount(
-                amount=float(borrow_amount.Ether) * percent_to_swap,
-                decimals=6)))
+        if repay_amounts:
+            if all(float(value.Ether) > 0 for value in repay_amounts.values()):
+
+                token, borrow_amount = random.choice(list(repay_amounts.items()))
+
+                actions.append(lambda: self.repay(token=token, amount=TokenAmount(
+                    amount=float(borrow_amount.Ether) * percent_to_swap,
+                    decimals=6)))
 
         action = random.choice(actions)
 
@@ -486,6 +489,7 @@ class OpenFi(Base):
         contract = await self.client.contracts.get(contract)
 
         map = {}
+
         for token in tokens:
             data = await contract.functions.getUserReserveData(
                 token.address,
