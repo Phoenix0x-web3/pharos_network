@@ -21,6 +21,27 @@ from utils.encryption import get_private_key, prk_encrypt
 from data.settings import Settings
 from utils.encryption import check_encrypt_param
 
+def parse_proxy(proxy: str | None) -> Optional[str]:
+    if not proxy:
+        return None
+    if proxy.startswith('http'):
+        return proxy
+    elif "@" in proxy and not proxy.startswith('http'):
+        return "http://" + proxy
+    else:
+        value = proxy.split(':')
+        if len(value) == 4:
+            ip, port, login, password = value
+            return f'http://{login}:{password}@{ip}:{port}'
+        else:
+            print(f"Invalid proxy format: {proxy}")
+            return None 
+        
+def pick_proxy(proxies : list, i: int) -> Optional[str]:
+    if not proxies:
+        return None
+    return proxies[i % len(proxies)]
+
 def remove_line_from_file(value: str, filename: str) -> bool:
     file_path = os.path.join(FILES_DIR, filename)
 
@@ -66,19 +87,11 @@ class Import:
 
         record_count = len(private_keys)
 
-        def pick_proxy(i: int) -> Optional[str]:
-            if not proxies:
-                return None
-            if i < len(proxies):
-                return proxies[i % len(proxies)]
-
-            return random.choice(proxies)
-
         wallets: List[Dict[str, Optional[str]]] = []
         for i in range(record_count):
             wallets.append({
                 "private_key": private_keys[i],
-                "proxy": pick_proxy(i),
+                "proxy": parse_proxy(pick_proxy(proxies, i)),
                 "twitter_token": twitter_tokens[i] if i < len(twitter_tokens) else None,
                 "discord_token": discord_tokens[i] if i < len(discord_tokens) else None,
             })
@@ -176,31 +189,23 @@ class Import:
 class Sync:
     
     @staticmethod
-    def parse_tokens_and_proxies_from_txt() -> List[Dict[str, Optional[str]]]:
+    def parse_tokens_and_proxies_from_txt(wallets : List) -> List[Dict[str, Optional[str]]]:
 
         proxies        = read_lines("proxy.txt")
         twitter_tokens = read_lines("twitter_tokens.txt")
         discord_tokens = read_lines("discord_tokens.txt")
         
-        record_count = max(len(twitter_tokens), len(discord_tokens))
+        record_count = len(wallets)
 
-        def pick_proxy(i: int) -> Optional[str]:
-            if not proxies:
-                return None
-            if i < len(proxies):
-                return proxies[i % len(proxies)]
-
-            return random.choice(proxies)
-
-        wallets: List[Dict[str, Optional[str]]] = []
+        wallet_auxiliary: List[Dict[str, Optional[str]]] = []
         for i in range(record_count):
-            wallets.append({
-                "proxy": pick_proxy(i),
+            wallet_auxiliary.append({
+                "proxy": parse_proxy(pick_proxy(proxies, i)),
                 "twitter_token": twitter_tokens[i] if i < len(twitter_tokens) else None,
                 "discord_token": discord_tokens[i] if i < len(discord_tokens) else None,
             })
 
-        return wallets
+        return wallet_auxiliary
     
 
     @staticmethod
@@ -209,18 +214,18 @@ class Sync:
             logger.error(f"Decryption Failed | Wrong Password")
             return
                
-        wallet_auxiliary_data_raw  = Sync.parse_tokens_and_proxies_from_txt()
-
-        wallet_auxiliary_data = [SimpleNamespace(**w) for w in wallet_auxiliary_data_raw]
-          
         wallets = db.all(Wallet)
- 
-        if len(wallet_auxiliary_data) != len(wallets):
-            logger.warning("Mismatch between wallet data and tokens/proxies data. Exiting sync.")
-            return
-        
+
         if len(wallets) <= 0:
             logger.warning("No wallets in DB, nothing to update")
+            return
+        
+        wallet_auxiliary_data_raw  = Sync.parse_tokens_and_proxies_from_txt(wallets)
+
+        wallet_auxiliary_data = [SimpleNamespace(**w) for w in wallet_auxiliary_data_raw]
+        
+        if len(wallet_auxiliary_data) != len(wallets):
+            logger.warning("Mismatch between wallet data and tokens/proxies data. Exiting sync.")
             return
         
         total = len(wallets)
