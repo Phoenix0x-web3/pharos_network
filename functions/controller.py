@@ -461,7 +461,7 @@ class Controller:
             await self.faucet_task()
                 
         nft_badges = await self.nfts.check_badges()
-
+        random.shuffle(nft_badges)
         for nft_badge in nft_badges:
             wallet_balance = await self.client.wallet.balance()
             if wallet_balance.Ether < 1:
@@ -469,6 +469,9 @@ class Controller:
                 break
             
             await self.nfts.nfts_controller(not_minted=[nft_badge])
+    
+        return f"Done minting badges"
+    
 
     @controller_log('Bind Discord')
     async def bind_discord_flow(self):
