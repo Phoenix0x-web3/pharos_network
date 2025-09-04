@@ -374,7 +374,7 @@ class Bitverse(Base):
             "isV2": "0",
             "orderType": "2",
             "price": "0",
-            "size": position['size'],
+            "size": position['totalQty'],
         }
 
         close = await self._close_simulation(payload=payload)
@@ -382,7 +382,7 @@ class Bitverse(Base):
         res = close["result"]
         decimals = res['sizeScale']
 
-        close_qty = TokenAmount(amount=position['size'], decimals=decimals)
+        close_qty = TokenAmount(amount=position['totalQty'], decimals=decimals)
 
         fee_items = []
         items = res.get("item", [])
@@ -425,29 +425,31 @@ class Bitverse(Base):
 
         return await self.deposit(USDT, amount)
 
-    async def bitverse_controller(self, percent: float) -> str:
+    async def bitverse_controller(self, amount: float | TokenAmount) -> str:
 
         TRADE_PAIRS = [
-            'BTC-USD',
+            #'BTC-USD',
             'ETH-USD',
-            'GLXY-USD',
-            'NVDA-USD',
-            'BTBT-USD',
-            'TSLA-USD',
-            'BMNR-USD',
-            'CRCL-USD',
-            'RIOT-USD',
-            'BTCS-USD',
-            'BLSH-USD',
+            #'GLXY-USD',
+            # 'NVDA-USD',
+            # 'BTBT-USD',
+            # 'TSLA-USD',
+            # 'BMNR-USD',
+            # 'CRCL-USD',
+            #'RIOT-USD',
+            # 'BTCS-USD',
+            #'BLSH-USD',
         ]
 
-        balance = await self.get_all_balance()
         leverage = None
 
-        balance = float(balance[0]['availableBalanceSize'])
+        #balance = float(balance[0]['availableBalanceSize'])
+        if isinstance(amount, TokenAmount):
+            amount=amount
 
-        amount = TokenAmount(
-            amount=int(balance * percent), decimals=6)
+        if isinstance(amount, int):
+            amount = TokenAmount(
+                amount=int(amount), decimals=6)
 
         pair = random.choice(TRADE_PAIRS)
         side = random.choice([0, 1])
@@ -456,12 +458,24 @@ class Bitverse(Base):
         if positions:
             current_positions = [position for position in positions if position['symbol'] == pair]
             if current_positions:
-                close_position = await self.close_position(current_positions[0])
-                logger.success(close_position)
-                await asyncio.sleep(20, 30)
 
-                return await self.bitverse_controller(percent=percent)
+                action = random.choice([0, 1])
 
+                if action == 0:
+                    logger.debug(f"{self.wallet} | {self.__module_name__} | Trying to close {current_positions[0].get('symbol')} position")
+                    close_position = await self.close_position(current_positions[0])
+                    logger.success(close_position)
+                    await asyncio.sleep(45, 60)
+                    return await self.bitverse_controller(amount=amount)
+
+                if action == 1:
+                    pos = current_positions[0]
+                    logger.debug(f"{self.wallet} | {self.__module_name__} | Trying to increase {pos.get('symbol')} position")
+                    pair = pos.get('symbol')
+                    leverage = pos.get('leverageE2')
+                    side = int(pos.get('side'))
+                    side = 0 if side == 1 else 1
+                    return await self.place_order(pair=pair, side=side, amount=amount, leverage=leverage)
 
         return await self.place_order(pair=pair, side=side, amount=amount, leverage=leverage)
 
