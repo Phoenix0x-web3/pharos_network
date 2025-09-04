@@ -94,11 +94,18 @@ PNS = RawContract(
     address="0x4af366c7269DC9a0335Bd055Af979729c20e0F5F",
     abi=NFT_ABI,
 )  
-GRANDLINE = RawContract(
-    title="GRANDLINE",
+BROKEX  = RawContract(
+    title="BROKEX ",
     address="0x9979b7fedf761c2989642f63ba6ed580dbdfc46f",
     abi=NFT_ABI,
 )
+
+OPENFI = RawContract(
+    title="OPENFI",
+    address="0x822483f6cf39b7dad66fec5f4feecbfd72172626",
+    abi=NFT_ABI,
+)
+
 
 
 class NFTS(Base):
@@ -160,7 +167,8 @@ class NFTS(Base):
             SPOUT,
             GOTCHIPUS,
             PNS,
-            GRANDLINE
+            BROKEX,
+            OPENFI
         ]
 
         not_minted = []
@@ -184,3 +192,4 @@ class NFTS(Base):
         nft = random.choice(not_minted)
 
         return await self.mint_nft(contract=nft)
+    

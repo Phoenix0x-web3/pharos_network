@@ -163,6 +163,10 @@ async def activity(action: int):
 
     elif action == 4:
         await execute(wallets, update_points)
+        
+    elif action == 5:
+        await execute(wallets, mint_nft_badges)    
+        
 
 async def join_discord(wallet):
     client = Client(private_key=wallet.private_key, proxy=wallet.proxy, network=Networks.PharosTestnet)
@@ -227,3 +231,14 @@ async def update_points(wallet):
     controller = Controller(client=client, wallet=wallet)
     
     await controller.update_db_by_user_info()
+    
+async def mint_nft_badges(wallet):
+    await random_sleep_before_start(wallet=wallet)
+     
+    client = Client(private_key=wallet.private_key, proxy=wallet.proxy, network=Networks.PharosTestnet, check_proxy=False)
+
+    controller = Controller(client=client, wallet=wallet)
+    
+    await controller.mint_nft_badges()    
+    
+    

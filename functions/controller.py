@@ -451,7 +451,27 @@ class Controller:
         invite_code = user_data.get('InviteCode')
         logger.info(f"{self.wallet} | Total Points: [{total_points}] | Invite Code: [{invite_code}]")
         return await update_points_invites(self.wallet.private_key, total_points, invite_code)
- 
+    
+    controller_log("Mint NFT Badges") 
+    @async_retry(retries=Settings().retry, delay=3, to_raise=False)
+    async def mint_nft_badges (self):
+        faucet_status = await self.pharos_portal.get_faucet_status()
+
+        if faucet_status.get('data').get('is_able_to_faucet'):
+            await self.faucet_task()
+                
+        nft_badges = await self.nfts.check_badges()
+        random.shuffle(nft_badges)
+        for nft_badge in nft_badges:
+            wallet_balance = await self.client.wallet.balance()
+            if wallet_balance.Ether < 1:
+                logger.info(f"{self.wallet} | Not enough balance {wallet_balance} for minting badged | Awaiting for next faucet")
+                break
+            
+            await self.nfts.nfts_controller(not_minted=[nft_badge])
+    
+        return f"Done minting badges"
+    
 
     @controller_log('Bind Discord')
     async def bind_discord_flow(self):

@@ -22,6 +22,7 @@ PROJECT_ACTIONS =   [
                     "2. Twitter Tasks",
                     "3. Join and Bind Discord",
                     "4. Update Points",
+                    "5. Mint All Badges",
                     "Back"
                     ]
 
@@ -86,7 +87,9 @@ async def choose_action():
         
     elif '4' in action:
         await activity(action=4)
-        
+    elif '5' in action:
+        await activity(action=5) 
+           
     elif action == "Exit":
         console.print(f"[bold red]Exiting {PROJECT}...[/bold red]")
         raise SystemExit(0)
