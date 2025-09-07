@@ -62,7 +62,8 @@ class Settings(Singleton):
 
         self.r2_stake_min = json_data.get("r2_stake", {}).get('min')
         self.r2_stake_max = json_data.get("r2_stake", {}).get('max')
-        self.r2_count_min = json_data.get("r2_count", {}).get('mix')
+
+        self.r2_count_min = json_data.get("r2_count", {}).get('min')
         self.r2_count_max = json_data.get("r2_count", {}).get('max')
 
 # Configure the logger based on the settings
