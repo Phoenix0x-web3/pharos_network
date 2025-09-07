@@ -448,7 +448,7 @@ class Controller:
                 build_array += await self.form_actions(user_tasks.get("117", 0),
                                                        self.r2_swap, r2_swap_count)
                 build_array += await self.form_actions(user_tasks.get("116", 0),
-                                                       self.r2_stake(), r2_stake_count)
+                                                       self.r2_stake, r2_stake_count)
 
 
             random.shuffle(build_array)
