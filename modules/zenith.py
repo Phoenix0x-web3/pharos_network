@@ -551,6 +551,7 @@ class ZenithLiquidity(Zenith):
     @controller_log("Add Liquidity (v3)")
     async def liquidity_controller(self):
         settings = Settings()
+
         percent_to_liq = randfloat(
             from_=settings.liquidity_percent_min,
             to_=settings.liquidity_percent_max,

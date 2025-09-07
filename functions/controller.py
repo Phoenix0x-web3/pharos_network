@@ -10,6 +10,7 @@ from data.models import Contracts
 from data.settings import Settings
 from libs.eth_async.data.models import TokenAmount
 from libs.eth_async.utils.utils import randfloat
+from modules.R2 import R2, USDC_R2
 from modules.autostaking import AutoStaking
 from libs.eth_async.client import Client
 from libs.base import Base
@@ -55,6 +56,7 @@ class Controller:
         self.faroswap_liqudity = FaroswapLiquidity(client=client, wallet=wallet)
         self.openfi = OpenFi(client=client, wallet=wallet)
         self.bitverse = Bitverse(client=client, wallet=wallet)
+        self.r2 = R2(client=client, wallet=wallet)
 
 
     @controller_log('CheckIn')
@@ -336,7 +338,11 @@ class Controller:
 
         return await self.bitverse.bitverse_controller(amount=amount)
 
+    async def r2_stake(self):
+        return await self.r2.r2_controller(action='stake')
 
+    async def r2_swap(self):
+        return await self.r2.r2_controller(action='swap')
 
     async def build_actions(self):
 
@@ -358,6 +364,9 @@ class Controller:
         faro_lp_count = random.randint(settings.liquidity_count_min, settings.liquidity_count_max)
         lending_count = random.randint(settings.lending_count_min, settings.lending_count_max)
         bitverse_count = random.randint(settings.bitverse_count_min, settings.bitverse_count_max)
+
+        r2_swap_count = random.randint(settings.r2_count_min, settings.r2_count_max)
+        r2_stake_count = random.randint(settings.r2_count_min, settings.r2_count_max)
 
         wallet_balance = await self.client.wallet.balance()
 
@@ -432,6 +441,15 @@ class Controller:
 
                 if random.randint(1, 6) == 1:
                     build_array.append(lambda: self.zenith_faucet())
+
+            usdc_r2_balance = await self.client.wallet.balance(token=USDC_R2)
+
+            if float(usdc_r2_balance.Ether) > 0:
+                build_array += await self.form_actions(user_tasks.get("117", 0),
+                                                       self.r2_swap, r2_swap_count)
+                build_array += await self.form_actions(user_tasks.get("116", 0),
+                                                       self.r2_stake, r2_stake_count)
+
 
             random.shuffle(build_array)
 

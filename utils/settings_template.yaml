@@ -112,6 +112,22 @@ bitverse_percent:
   min: 35
   max: 60
 
+# R2 Action Count
+r2_count:
+  min: 7
+  max: 15
+
+# R2 Swap Percent
+r2_swap:
+  min: 15
+  max: 25
+
+# R2 Stake Percent
+r2_stake:
+  min: 5
+  max: 10
+
+
 # Invite Codes for pharos network, example [invite_code1, invite_code2]
 invite_codes: [] 
 
