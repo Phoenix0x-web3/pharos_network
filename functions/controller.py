@@ -338,7 +338,11 @@ class Controller:
 
         return await self.bitverse.bitverse_controller(amount=amount)
 
+    async def r2_stake(self):
+        return await self.r2.r2_controller(action='stake')
 
+    async def r2_swap(self):
+        return await self.r2.r2_controller(action='swap')
 
     async def build_actions(self):
 
@@ -442,9 +446,9 @@ class Controller:
 
             if float(usdc_r2_balance.Ether) > 0:
                 build_array += await self.form_actions(user_tasks.get("117", 0),
-                                                       lambda: self.r2.r2_controller(action='swap'), r2_swap_count)
+                                                       self.r2_swap, r2_swap_count)
                 build_array += await self.form_actions(user_tasks.get("116", 0),
-                                                       lambda: self.r2.r2_controller(action='stake'), r2_stake_count)
+                                                       self.r2_stake(), r2_stake_count)
 
 
             random.shuffle(build_array)
