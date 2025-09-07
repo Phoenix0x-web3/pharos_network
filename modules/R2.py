@@ -97,14 +97,6 @@ class R2(Base):
     def __init__(self, client: Client, wallet: Wallet):
         self.client = client
         self.wallet = wallet
-        self.session = Browser(wallet=wallet)
-
-        self.base_headers = {
-            "accept": "application/json, text/plain, */*",
-            "accept-language": "en-US,en;q=0.9",
-            "sec-gpc": "1",
-            "referer": "https://faroswap.xyz/",
-        }
 
     @staticmethod
     def _zero_permit() -> tuple[int, int, int, bytes, bytes]:
