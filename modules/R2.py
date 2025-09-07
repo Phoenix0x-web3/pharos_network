@@ -225,7 +225,7 @@ class R2(Base):
         receipt = await tx.wait_for_receipt(client=self.client, timeout=300)
 
         if receipt:
-            return f"Success | Swapped swap {amount} {from_token.title} to {amount} {to_token.title}"
+            return f"Success | Swapped {amount} {from_token.title} to {amount} {to_token.title}"
 
     @controller_log('Stake R2 USD')
     async def _stake(self, amount: TokenAmount) -> str:
