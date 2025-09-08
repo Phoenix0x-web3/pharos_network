@@ -402,6 +402,14 @@ class Controller:
                 if len(final_actions) == 0:
                     return f"{self.wallet} | Not enought balance for actions | Awaiting for next faucet"
 
+            usdc_r2_balance = await self.client.wallet.balance(token=USDC_R2)
+
+            if float(usdc_r2_balance.Ether) < 1:
+                await self.zenith.swap_to_r2_usdc()
+                await asyncio.sleep(3, 7)
+
+                usdc_r2_balance = await self.client.wallet.balance(token=USDC_R2)
+
             twitter_tasks, discord_tasks = await self.pharos_portal.tasks_flow()
 
             aquaflux_nft = await self.aquaflux.already_minted(premium=True)
@@ -460,7 +468,8 @@ class Controller:
                 if random.randint(1, 6) == 1:
                     build_array.append(lambda: self.zenith_faucet())
 
-            usdc_r2_balance = await self.client.wallet.balance(token=USDC_R2)
+
+
 
             if float(usdc_r2_balance.Ether) > 0:
                 build_array += await self.form_actions(user_tasks.get("117", 0),

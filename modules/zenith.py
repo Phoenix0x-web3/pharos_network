@@ -16,6 +16,7 @@ from libs.eth_async.utils.utils import randfloat
 
 import time
 
+from modules.R2 import USDC_R2
 from utils.browser import Browser
 from utils.captcha.captcha_handler import CloudflareHandler
 from utils.db_api.models import Wallet
@@ -135,6 +136,25 @@ class Zenith(Base):
                     else await self.client.transactions.get_decimals(contract=from_token.address)
             ),
             fee=fee
+        )
+
+    async def swap_to_r2_usdc(self):
+
+        settings = Settings()
+        percent_to_swap = randfloat(
+            from_=settings.swap_percent_from,
+            to_=settings.swap_percent_to,
+            step=0.001
+        ) / 100
+        balance = await self.client.wallet.balance()
+
+        amount = float(balance.Ether) * percent_to_swap
+
+        return await self._swap(
+            from_token=Contracts.PHRS,
+            to_token=USDC_R2,
+            amount=TokenAmount(amount=amount),
+            slippage=35
         )
 
     async def correct_tokens_position(self,
