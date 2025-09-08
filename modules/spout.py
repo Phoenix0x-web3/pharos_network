@@ -160,9 +160,7 @@ class Spout(Base):
                 logger.success(deploy)
             else: raise Exception
 
-        identity = await self.get_identity()
-
-        signature = await self.get_kyc_signature(indentity=identity)
+        signature = await self.get_kyc_signature()
 
         claims = await self.get_claim_ids(identity_address=identity)
 
