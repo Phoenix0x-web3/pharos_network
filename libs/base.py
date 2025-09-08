@@ -188,6 +188,8 @@ class Base:
 
             if self.client.network == Networks.Ethereum:
                 weth =Contracts.WETH_ETHEREUM
+            if self.client.network == Networks.PharosTestnet:
+                weth =Contracts.WPHRS
             else:
                 weth = Contracts.WETH
 
