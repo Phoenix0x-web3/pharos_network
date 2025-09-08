@@ -124,7 +124,7 @@ class Spout(Base):
 
         return await c.functions.getClaimIdsByTopic(topic).call()
 
-    @async_retry(retries=10, delay=3)
+    @async_retry(retries=50, delay=1)
     async def get_kyc_signature(self):
         identity = await self.get_identity()
 
@@ -135,6 +135,7 @@ class Spout(Base):
             "topic": 1,
             "countryCode": 91
         }
+
         headers = {
             "Accept": "*/*",
             "Content-Type": "application/json",
@@ -161,6 +162,7 @@ class Spout(Base):
             else: raise Exception
 
         signature = await self.get_kyc_signature()
+
         identity = await self.get_identity()
 
         claims = await self.get_claim_ids(identity_address=identity)
@@ -223,7 +225,7 @@ class Spout(Base):
 
         data = to_bytes(hexstr="0x6fdd523c9e64db4a7a67716a6b20d5da5ce39e3ee59b2ca281248b18087e860")
 
-        #payload = to_bytes(hexstr=data_hash)
+        #data = to_bytes(hexstr=data_hash)
 
         data = TxArgs(
             topic = topic,
