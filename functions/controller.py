@@ -409,6 +409,7 @@ class Controller:
                 await asyncio.sleep(3, 7)
 
                 usdc_r2_balance = await self.client.wallet.balance(token=USDC_R2)
+                wallet_balance = await self.client.wallet.balance()
 
             twitter_tasks, discord_tasks = await self.pharos_portal.tasks_flow()
 
