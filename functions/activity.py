@@ -238,7 +238,8 @@ async def mint_nft_badges(wallet):
     client = Client(private_key=wallet.private_key, proxy=wallet.proxy, network=Networks.PharosTestnet, check_proxy=False)
 
     controller = Controller(client=client, wallet=wallet)
-    
-    await controller.mint_nft_badges()    
+    native = await controller.zenith.swaps_controller(to_native=True)
+    logger.success(native)
+    await controller.mint_nft_badges()
     
     

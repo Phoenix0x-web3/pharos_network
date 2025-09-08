@@ -1,5 +1,7 @@
+from data.config import ABIS_DIR
 from libs.eth_async.classes import Singleton
 from libs.eth_async.data.models import RawContract, DefaultABIs
+from libs.eth_async.utils.files import read_json
 
 
 class Contracts(Singleton):
@@ -31,5 +33,5 @@ class Contracts(Singleton):
     WPHRS = RawContract(
         title='WPHRS',
         address='0x76aaada469d23216be5f7c596fa25f282ff9b364',
-        abi=DefaultABIs.Token
+        abi=read_json(path=(ABIS_DIR, 'WETH.json'))
     )

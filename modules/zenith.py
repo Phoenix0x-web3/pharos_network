@@ -88,6 +88,12 @@ class Zenith(Base):
                     result = f"{token.title}: Failed | {e}"
                     results.append(result)
 
+            wphrs = await self.client.wallet.balance(token=Contracts.WPHRS)
+
+            if float(wphrs.Ether) > 0:
+                result = await self.unwrap_eth(amount=wphrs)
+                results.append(result)
+
             return f"Swap all to native | {results}"
 
 
