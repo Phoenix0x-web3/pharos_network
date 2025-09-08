@@ -82,8 +82,8 @@ class Import:
         twitter_tokens = read_lines("twitter_tokens.txt")
         discord_tokens = read_lines("discord_tokens.txt")
 
-        if not private_keys or not proxies:
-            raise ValueError("File private_keys.txt и proxy.txt must contain information")
+        if not private_keys :
+            raise ValueError("File private_keys.txt must not be empty")
 
         record_count = len(private_keys)
 
