@@ -33,5 +33,5 @@ class Contracts(Singleton):
     WPHRS = RawContract(
         title='WPHRS',
         address='0x76aaada469d23216be5f7c596fa25f282ff9b364',
-        abi=read_json(path=(ABIS_DIR, 'WETH.json'))
+        abi=read_json(path=(ABIS_DIR, 'weth.json'))
     )
