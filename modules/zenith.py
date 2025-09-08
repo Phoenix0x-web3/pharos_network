@@ -154,7 +154,7 @@ class Zenith(Base):
             from_token=Contracts.PHRS,
             to_token=USDC_R2,
             amount=TokenAmount(amount=amount),
-            slippage=35
+            slippage=30
         )
 
     async def correct_tokens_position(self,

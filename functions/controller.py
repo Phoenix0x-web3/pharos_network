@@ -404,7 +404,7 @@ class Controller:
 
             usdc_r2_balance = await self.client.wallet.balance(token=USDC_R2)
 
-            if float(usdc_r2_balance.Ether) < 1:
+            if float(usdc_r2_balance.Ether) < 0.3:
                 await self.zenith.swap_to_r2_usdc()
                 await asyncio.sleep(3, 7)
 
