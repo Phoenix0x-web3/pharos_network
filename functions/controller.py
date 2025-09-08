@@ -587,7 +587,8 @@ class Controller:
                 _, discord_tasks = await self.pharos_portal.tasks_flow()
 
                 return await self.discord_tasks(tasks=discord_tasks)
-
+            self.wallet.discord_status = DiscordStatus.ok
+            db.commit()
             return f"Already verified discord Task"
 
         return f'Failed | Something Wrong {user_data}'
