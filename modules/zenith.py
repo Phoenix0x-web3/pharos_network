@@ -115,7 +115,7 @@ class Zenith(Base):
             to_token = random.choice(tokens)
 
         if from_token.address != Contracts.PHRS.address:
-            amount = balance_map[from_token.title]
+            amount = float((balance_map[from_token.title])) * (100 - percent_to_swap)
         else:
             amount = float((balance_map[from_token.title])) * percent_to_swap
 
