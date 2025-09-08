@@ -23,6 +23,7 @@ from modules.pharos_portal import PharosPortal
 from modules.pns import PNS
 from modules.primus import Primus
 from modules.rwafi import AquaFlux
+from modules.spout import Spout
 from modules.zenith import Zenith, ZenithLiquidity
 
 from utils.db_api.models import Wallet
@@ -57,6 +58,7 @@ class Controller:
         self.openfi = OpenFi(client=client, wallet=wallet)
         self.bitverse = Bitverse(client=client, wallet=wallet)
         self.r2 = R2(client=client, wallet=wallet)
+        self.spout = Spout(client=client, wallet=wallet)
 
 
     @controller_log('CheckIn')
@@ -368,6 +370,8 @@ class Controller:
         r2_swap_count = random.randint(settings.r2_count_min, settings.r2_count_max)
         r2_stake_count = random.randint(settings.r2_count_min, settings.r2_count_max)
 
+        spout_count = random.randint(settings.spout_count_min, settings.spout_count_max)
+
         wallet_balance = await self.client.wallet.balance()
 
         if wallet_balance.Ether == 0:
@@ -431,6 +435,7 @@ class Controller:
             build_array += await self.form_actions(user_tasks.get("106", 0), self.faroswap_liqudity.liquidity_controller, faro_lp_count)
             build_array += await self.form_actions(user_tasks.get("114", 0), self.openfi.lending_controller, lending_count)
             build_array += await self.form_actions(user_tasks.get("119", 0), self.bitverse_positions, bitverse_count)
+            build_array += await self.form_actions(user_tasks.get("118", 0), self.spout.swap_controller(), spout_count)
 
             zenith_current_lp = await self.zenith_liq.check_any_positions()
 
