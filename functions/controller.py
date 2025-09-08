@@ -17,6 +17,7 @@ from libs.base import Base
 from modules.bitverse import Bitverse
 from modules.brokex import Brokex
 from modules.faroswap import Faroswap, FaroswapLiquidity
+from modules.gotchipus import Gotchipus
 from modules.nft_badges import NFTS
 from modules.openfi import OpenFi
 from modules.pharos_portal import PharosPortal
@@ -60,6 +61,7 @@ class Controller:
         self.bitverse = Bitverse(client=client, wallet=wallet)
         self.r2 = R2(client=client, wallet=wallet)
         self.spout = Spout(client=client, wallet=wallet)
+        self.gotchipus = Gotchipus(client=client, wallet=wallet)
 
     @controller_log('CheckIn')
     async def check_in_task(self):
@@ -469,6 +471,9 @@ class Controller:
                 if random.randint(1, 6) == 1:
                     build_array.append(lambda: self.zenith_faucet())
 
+            free_gotchipus_mint = await self.gotchipus.check_gotchipus_free_ntf()
+            if free_gotchipus_mint < 1:
+                build_array.append(lambda: self.gotchipus.mint_gotchipus())
 
 
 
