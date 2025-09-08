@@ -201,6 +201,22 @@ class Spout(Base):
 
         return 'Failed | Deploy Identity'
 
+
+    def _norm_v(self, v: int) -> int:
+        v = int(v)
+        if v in (27, 28): return v
+        if v in (0, 1):   return 27 + v
+        return v
+
+    def _pack_rsv(self, sig: dict) -> bytes:
+        r = int(sig["r"], 16).to_bytes(32, "big")  # фикс 32
+        s = int(sig["s"], 16).to_bytes(32, "big")  # фикс 32
+        v = self._norm_v(int(sig["v"])).to_bytes(1, "big")
+        out = r + s + v
+        if len(out) != 65:
+            raise ValueError(f"Bad signature length={len(out)}")
+        return out
+
     @controller_log('Claims')
     async def add_claim(
         self,
@@ -208,12 +224,14 @@ class Spout(Base):
     ) -> str:
 
         sig_dict = signature["signature"]
-        r_bytes = int(sig_dict["r"], 16).to_bytes(32, "big")  # фиксированная ширина 32
-        s_bytes = int(sig_dict["s"], 16).to_bytes(32, "big")
-        v_val = int(sig_dict["v"])
-        v_norm = v_val if v_val in (27, 28) else (27 + v_val if v_val in (0, 1) else v_val)
-        v_byte = v_norm.to_bytes(1, "big")
-        sig65 = r_bytes + s_bytes + v_byte
+        # r_bytes = int(sig_dict["r"], 16).to_bytes(32, "big")  # фиксированная ширина 32
+        # s_bytes = int(sig_dict["s"], 16).to_bytes(32, "big")
+        # v_val = int(sig_dict["v"])
+        # v_norm = v_val if v_val in (27, 28) else (27 + v_val if v_val in (0, 1) else v_val)
+        # v_byte = v_norm.to_bytes(1, "big")
+        # sig65 = r_bytes + s_bytes + v_byte
+
+        sig65 = self._pack_rsv(signature["signature"])
 
         issuer_address = signature["issuerAddress"]
         data_hash = signature["dataHash"]
@@ -224,7 +242,6 @@ class Spout(Base):
         c = await self.client.contracts.get(contract_address=RawContract(title="SpoutIdentity", address=identity, abi=SPOUT_ABI))
 
         data = to_bytes(hexstr="0x6fdd523c9e64db4a7a67716a6b20d5da5ce39e3ee59b2ca281248b18087e860")
-
         #data = to_bytes(hexstr=data_hash)
 
         data = TxArgs(
