@@ -161,6 +161,7 @@ class Spout(Base):
             else: raise Exception
 
         signature = await self.get_kyc_signature()
+        identity = await self.get_identity()
 
         claims = await self.get_claim_ids(identity_address=identity)
 
@@ -221,6 +222,7 @@ class Spout(Base):
         c = await self.client.contracts.get(contract_address=RawContract(title="SpoutIdentity", address=identity, abi=SPOUT_ABI))
 
         data = to_bytes(hexstr="0x6fdd523c9e64db4a7a67716a6b20d5da5ce39e3ee59b2ca281248b18087e860")
+
         #payload = to_bytes(hexstr=data_hash)
 
         data = TxArgs(
