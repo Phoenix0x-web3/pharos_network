@@ -433,7 +433,11 @@ class Controller:
             build_array += await self.form_actions(user_tasks.get("114", 0), self.openfi.lending_controller,
                                                    lending_count)
             build_array += await self.form_actions(user_tasks.get("119", 0), self.bitverse_positions, bitverse_count)
-            build_array += await self.form_actions(user_tasks.get("118", 0), self.spout.swap_controller, spout_count)
+
+            usdc_balance = await self.client.wallet.balance(token=USDC_R2)
+
+            if float(usdc_balance.Ether) > 1:
+                build_array += await self.form_actions(user_tasks.get("118", 0), self.spout.swap_controller, spout_count)
 
             zenith_current_lp = await self.zenith_liq.check_any_positions()
 

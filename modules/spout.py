@@ -124,7 +124,7 @@ class Spout(Base):
 
         return await c.functions.getClaimIdsByTopic(topic).call()
 
-    @async_retry(retries=50, delay=1)
+    @async_retry(retries=15, delay=2)
     async def get_kyc_signature(self):
         identity = await self.get_identity()
 
@@ -223,7 +223,7 @@ class Spout(Base):
         signature: dict,
     ) -> str:
 
-        sig_dict = signature["signature"]
+        #sig_dict = signature["signature"]
         # r_bytes = int(sig_dict["r"], 16).to_bytes(32, "big")  # фиксированная ширина 32
         # s_bytes = int(sig_dict["s"], 16).to_bytes(32, "big")
         # v_val = int(sig_dict["v"])
