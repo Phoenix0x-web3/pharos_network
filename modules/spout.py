@@ -125,10 +125,12 @@ class Spout(Base):
         return await c.functions.getClaimIdsByTopic(topic).call()
 
     @async_retry(retries=10, delay=3)
-    async def get_kyc_signature(self, indentity: str):
+    async def get_kyc_signature(self):
+        identity = await self.get_identity()
+
         data = {
             "userAddress": self.client.account.address,
-            "onchainIDAddress": indentity,
+            "onchainIDAddress": identity,
             "claimData": "KYC passed",
             "topic": 1,
             "countryCode": 91
