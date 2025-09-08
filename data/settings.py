@@ -66,6 +66,12 @@ class Settings(Singleton):
         self.r2_count_min = json_data.get("r2_count", {}).get('min')
         self.r2_count_max = json_data.get("r2_count", {}).get('max')
 
+        self.spout_count_min = json_data.get("spout_count", {}).get('min')
+        self.spout_count_max = json_data.get("spout_count", {}).get('max')
+
+        self.spout_percent_min = json_data.get("spout_percent", {}).get('min')
+        self.spout_percent_max = json_data.get("spout_percent", {}).get('max')
+
 # Configure the logger based on the settings
 settings = Settings()
 

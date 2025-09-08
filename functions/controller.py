@@ -23,6 +23,7 @@ from modules.pharos_portal import PharosPortal
 from modules.pns import PNS
 from modules.primus import Primus
 from modules.rwafi import AquaFlux
+from modules.spout import Spout
 from modules.zenith import Zenith, ZenithLiquidity
 
 from utils.db_api.models import Wallet
@@ -34,11 +35,12 @@ from utils.twitter.twitter_client import TwitterClient
 from utils.db_update import update_points_invites
 from utils.retry import async_retry
 
+
 class Controller:
     __controller__ = 'Controller'
 
     def __init__(self, client: Client, wallet: Wallet):
-        #super().__init__(client)
+        # super().__init__(client)
         self.client = client
         self.wallet = wallet
         self.base = Base(client=client, wallet=wallet)
@@ -57,7 +59,7 @@ class Controller:
         self.openfi = OpenFi(client=client, wallet=wallet)
         self.bitverse = Bitverse(client=client, wallet=wallet)
         self.r2 = R2(client=client, wallet=wallet)
-
+        self.spout = Spout(client=client, wallet=wallet)
 
     @controller_log('CheckIn')
     async def check_in_task(self):
@@ -115,7 +117,6 @@ class Controller:
 
         raise Exception(f"{self.wallet} | Error in Faucet Task")
 
-
     @controller_log('Zenith Faucet')
     async def zenith_faucet(self):
         twitter_link = await self.zenith.zenith_faucet_get_twitter()
@@ -123,10 +124,9 @@ class Controller:
         if 'Failed' not in twitter_link:
 
             if twitter_link.get('state') == 0:
-
                 await self.twitter.initialize()
                 bind_url = await self.twitter.connect_twitter_to_site_oauth2(twitter_auth_url=twitter_link.get('url'))
-                await asyncio.sleep(random.randint(2,7))
+                await asyncio.sleep(random.randint(2, 7))
                 twitter_link = await self.zenith.zenith_faucet_get_twitter()
 
             if twitter_link.get('state') == 1:
@@ -141,7 +141,6 @@ class Controller:
 
         return 'Failed | Twitter Bind'
 
-
     @controller_log('Twitter Tasks')
     async def twitter_tasks(self, twitter_tasks: list):
 
@@ -152,7 +151,7 @@ class Controller:
 
             for task in twitter_tasks:
                 if task['task_type'] == 'twitter':
-                    #todo follow, retweet, reply in twitter
+                    # todo follow, retweet, reply in twitter
                     name = task['name']
                     if 'Follow' in name:
                         follow = query_to_json(task['url'])
@@ -186,7 +185,6 @@ class Controller:
                             task_status = await self.pharos_portal.verify_task(task=task)
                             results.append(task_status)
 
-
             return results
 
         except Exception as e:
@@ -217,7 +215,6 @@ class Controller:
 
         return await self.brokex.claim_faucet()
 
-
     @controller_log('Aquaflux Flow')
     async def aquaflux_flow(self):
         settings = Settings()
@@ -232,7 +229,7 @@ class Controller:
 
             if 'Failed' not in bind_twitter:
                 logger.success(bind_twitter)
-                await asyncio.sleep(random.randint(5,10))
+                await asyncio.sleep(random.randint(5, 10))
                 result = await self.twitter.follow_account(account_name='AquaFluxPro')
                 await asyncio.sleep(random.randint(3, 7))
 
@@ -248,13 +245,15 @@ class Controller:
 
         if 'Failed' not in claim_tokens:
             logger.success(claim_tokens)
-            await asyncio.sleep(random.randint(settings.random_pause_between_actions_min, settings.random_pause_between_actions_max))
+            await asyncio.sleep(
+                random.randint(settings.random_pause_between_actions_min, settings.random_pause_between_actions_max))
 
             combine = await self.aquaflux.combine()
             if 'Failed' not in combine:
                 logger.success(combine)
                 await asyncio.sleep(
-                    random.randint(settings.random_pause_between_actions_min, settings.random_pause_between_actions_max))
+                    random.randint(settings.random_pause_between_actions_min,
+                                   settings.random_pause_between_actions_max))
 
                 mint = await self.aquaflux.mint()
                 if 'Failed' not in mint:
@@ -315,8 +314,8 @@ class Controller:
             if float(usdt_balance.Ether) < 10:
 
                 swap = await self.zenith_liq.process_back_swap_from_natve(token=Contracts.USDT, amount=TokenAmount(
-                        amount=random.randint(30, 50),
-                        decimals=6)
+                    amount=random.randint(30, 50),
+                    decimals=6)
                                                                           )
                 return await self.bitverse_positions()
 
@@ -358,7 +357,7 @@ class Controller:
         autostake_count = random.randint(settings.autostake_count_min, settings.autostake_count_max)
         brokex_count = random.randint(settings.brokex_count_min, settings.brokex_count_max)
 
-        #todo check TX in brokex and zentih for liq
+        # todo check TX in brokex and zentih for liq
         lp_count = random.randint(settings.liquidity_count_min, settings.liquidity_count_max)
         defi_lp_count = random.randint(settings.liquidity_count_min, settings.liquidity_count_max)
         faro_lp_count = random.randint(settings.liquidity_count_min, settings.liquidity_count_max)
@@ -367,6 +366,8 @@ class Controller:
 
         r2_swap_count = random.randint(settings.r2_count_min, settings.r2_count_max)
         r2_stake_count = random.randint(settings.r2_count_min, settings.r2_count_max)
+
+        spout_count = random.randint(settings.spout_count_min, settings.spout_count_max)
 
         wallet_balance = await self.client.wallet.balance()
 
@@ -380,7 +381,6 @@ class Controller:
             if wallet_balance.Ether == 0:
                 raise Exception(f'{self.wallet} | Failed Faucet | Got 0 PHRS after registration task')
 
-
         if wallet_balance:
             faucet_status = await self.pharos_portal.get_faucet_status()
 
@@ -389,9 +389,7 @@ class Controller:
 
             if float(wallet_balance.Ether) <= 0.0001:
                 if len(final_actions) == 0:
-
                     return f"{self.wallet} | Not enought balance for actions | Awaiting for next faucet"
-
 
             twitter_tasks, discord_tasks = await self.pharos_portal.tasks_flow()
 
@@ -422,15 +420,20 @@ class Controller:
             user_tasks = await self.user_tasks()
 
             build_array += await self.form_actions(user_tasks.get("101", 0), self.zenith.swaps_controller, swaps_count)
-            build_array += await self.form_actions(user_tasks.get("107", 0), self.faroswap.swap_controller, swaps_faroswap)
+            build_array += await self.form_actions(user_tasks.get("107", 0), self.faroswap.swap_controller,
+                                                   swaps_faroswap)
             build_array += await self.form_actions(user_tasks.get("102", 0), self.random_liquidity, defi_lp_count)
             build_array += await self.form_actions(user_tasks.get("108", 0), self.primus.tip, tips_count)
             build_array += await self.form_actions(user_tasks.get("110", 0), self.autostaking_task, autostake_count)
-            build_array += await self.form_actions(user_tasks.get("111", 0), self.brokex.deposit_liquidity, lp_count // 2)
+            build_array += await self.form_actions(user_tasks.get("111", 0), self.brokex.deposit_liquidity,
+                                                   lp_count // 2)
             build_array += await self.form_actions(user_tasks.get("111", 0), self.brokex_positions, brokex_count)
-            build_array += await self.form_actions(user_tasks.get("106", 0), self.faroswap_liqudity.liquidity_controller, faro_lp_count)
-            build_array += await self.form_actions(user_tasks.get("114", 0), self.openfi.lending_controller, lending_count)
+            build_array += await self.form_actions(user_tasks.get("106", 0),
+                                                   self.faroswap_liqudity.liquidity_controller, faro_lp_count)
+            build_array += await self.form_actions(user_tasks.get("114", 0), self.openfi.lending_controller,
+                                                   lending_count)
             build_array += await self.form_actions(user_tasks.get("119", 0), self.bitverse_positions, bitverse_count)
+            build_array += await self.form_actions(user_tasks.get("118", 0), self.spout.swap_controller(), spout_count)
 
             zenith_current_lp = await self.zenith_liq.check_any_positions()
 
@@ -450,7 +453,6 @@ class Controller:
                 build_array += await self.form_actions(user_tasks.get("116", 0),
                                                        self.r2_stake, r2_stake_count)
 
-
             random.shuffle(build_array)
 
             final_actions += build_array
@@ -464,32 +466,33 @@ class Controller:
         await self.pharos_portal.login()
 
         user_data = await self.pharos_portal.get_user_info()
-        
+
         total_points = user_data.get('TotalPoints')
         invite_code = user_data.get('InviteCode')
         logger.info(f"{self.wallet} | Total Points: [{total_points}] | Invite Code: [{invite_code}]")
         return await update_points_invites(self.wallet.private_key, total_points, invite_code)
-    
-    controller_log("Mint NFT Badges") 
+
+    controller_log("Mint NFT Badges")
+
     @async_retry(retries=Settings().retry, delay=3, to_raise=False)
-    async def mint_nft_badges (self):
+    async def mint_nft_badges(self):
         faucet_status = await self.pharos_portal.get_faucet_status()
 
         if faucet_status.get('data').get('is_able_to_faucet'):
             await self.faucet_task()
-                
+
         nft_badges = await self.nfts.check_badges()
         random.shuffle(nft_badges)
         for nft_badge in nft_badges:
             wallet_balance = await self.client.wallet.balance()
             if wallet_balance.Ether < 1:
-                logger.info(f"{self.wallet} | Not enough balance {wallet_balance} for minting badged | Awaiting for next faucet")
+                logger.info(
+                    f"{self.wallet} | Not enough balance {wallet_balance} for minting badged | Awaiting for next faucet")
                 break
-            
+
             await self.nfts.nfts_controller(not_minted=[nft_badge])
-    
+
         return f"Done minting badges"
-    
 
     @controller_log('Bind Discord')
     async def bind_discord_flow(self):
