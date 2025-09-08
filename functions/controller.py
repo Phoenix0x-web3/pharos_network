@@ -382,10 +382,21 @@ class Controller:
                 raise Exception(f'{self.wallet} | Failed Faucet | Got 0 PHRS after registration task')
 
         if wallet_balance:
+
+            wphrs = await self.client.wallet.balance(token=Contracts.WPHRS)
+
+            if float(wphrs.Ether) > 0:
+                await self.base.unwrap_eth(amount=wphrs)
+
+            await asyncio.sleep(3, 5)
+
+            wallet_balance = await self.client.wallet.balance()
+
             faucet_status = await self.pharos_portal.get_faucet_status()
 
             if faucet_status.get('data').get('is_able_to_faucet'):
                 final_actions.append(lambda: self.faucet_task())
+
 
             if float(wallet_balance.Ether) <= 0.0001:
                 if len(final_actions) == 0:
