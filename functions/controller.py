@@ -471,11 +471,26 @@ class Controller:
                 if random.randint(1, 6) == 1:
                     build_array.append(lambda: self.zenith_faucet())
 
-            free_gotchipus_mint = await self.gotchipus.check_gotchipus_free_ntf()
-            if free_gotchipus_mint < 1:
-                build_array.append(lambda: self.gotchipus.mint_gotchipus())
+            gotchipus_ids = await self.gotchipus.get_gotchipus_tokens()
 
+            if not gotchipus_ids:
+                build_array.append(lambda: self.gotchipus.flow())
 
+            if gotchipus_ids:
+                can_check_in = await self.gotchipus.check_in()
+                if can_check_in:
+                    build_array.append(lambda: self.gotchipus.check_in())
+
+                can_pet = await self.gotchipus.can_check_pet()
+                if can_pet:
+                    build_array.append(lambda: self.gotchipus.pet())
+
+                gotchipus_count = random.randint(
+                    settings.gotchipus_count_min,
+                    settings.gotchipus_count_max
+                )
+
+                build_array.extend([lambda: self.gotchipus.transfer_from_gotchipus() for _ in range(gotchipus_count)])
 
             if float(usdc_r2_balance.Ether) > 0:
                 build_array += await self.form_actions(user_tasks.get("117", 0),

@@ -137,6 +137,11 @@ spout_count:
   min: 5
   max: 10
 
+# Gotchipus Send tokens count
+gotchipus_count:
+  min: 5
+  max: 10
+
 # Invite Codes for pharos network, example [invite_code1, invite_code2]
 invite_codes: [] 
 

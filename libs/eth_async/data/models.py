@@ -477,7 +477,6 @@ class Networks:
         )
 
 
-
 class RawContract(AutoRepr):
     """
     An instance of a raw contract.

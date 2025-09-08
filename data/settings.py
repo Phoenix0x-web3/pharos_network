@@ -72,6 +72,9 @@ class Settings(Singleton):
         self.spout_percent_min = json_data.get("spout_percent", {}).get('min')
         self.spout_percent_max = json_data.get("spout_percent", {}).get('max')
 
+        self.gotchipus_count_min = json_data.get("gotchipus_count", {}).get('min')
+        self.gotchipus_count_max = json_data.get("gotchipus_count", {}).get('max')
+
 # Configure the logger based on the settings
 settings = Settings()
 
