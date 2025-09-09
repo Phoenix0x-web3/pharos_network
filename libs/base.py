@@ -130,9 +130,10 @@ class Base:
         tx = await self.client.transactions.sign_and_send(tx_params=tx_params)
         await asyncio.sleep(random.randint(2, 4))
         receipt = await tx.wait_for_receipt(client=self.client, timeout=300)
-        if receipt:
-            return (f'Balance Sender | Success send {amount.Ether:.5f} ETH to {to_address}')
 
+        if receipt:
+            return receipt
+            return (f'Balance Sender | Success send {amount.Ether:.5f} ETH to {to_address}')
         else:
             return f'Balance Sender | Failed'
 
