@@ -2,6 +2,7 @@ import asyncio
 import json
 import random
 
+from eth_utils import to_checksum_address
 from faker import Faker
 from loguru import logger
 from sqlalchemy.testing.suite.test_reflection import users
@@ -346,12 +347,31 @@ class Controller:
     async def r2_swap(self):
         return await self.r2.r2_controller(action='swap')
 
+    async_retry()
+    async def get_onchain_txs(self) -> list:
+        url = 'https://api.socialscan.io/pharos-testnet/v1/explorer/transactions?size=12'
+
+        r = await self.pharos_portal.session.get(url=url)
+
+        if not r.json().get('data'):
+            raise Exception(f"No Onchain tx data")
+
+        data =  r.json().get('data')
+        return [item['from_address'] for item in data][5:]
+
     @controller_log('Send Tokens Onchain')
     async def send_tokens(self):
-        amount = randfloat(from_=0.00001, to_=0.0001, step=0.00001)
+
+        addresses = await self.get_onchain_txs()
+        addresses.append(self.client.account.address)
+
+        random.shuffle(addresses)
+        to_address = random.choice(addresses)
+
+        amount = randfloat(from_=0.00001, to_=0.005, step=0.00001)
         amount = TokenAmount(amount=amount)
 
-        tx = await self.base.send_eth(to_address=self.client.account.address, amount=amount)
+        tx = await self.base.send_eth(to_address=to_checksum_address(to_address), amount=amount)
         tx = tx['transactionHash'].hex()
 
         return await self.pharos_portal.send_verify(tx=tx)
