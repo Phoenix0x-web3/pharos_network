@@ -112,15 +112,13 @@ class PharosPortal(Base):
         }
 
         if registration:
-            # Get invite codes from settings and database
-            invite_codes_from_db = [
-                code[0] for code in db.all(Wallet.invite_code, Wallet.invite_code != "")
-            ]
-                    
-            all_invite_codes = list(set(settings.invite_codes + invite_codes_from_db))
-                        
-            # Randomly select an invite code if available
-            invite_code = random.choice(all_invite_codes) if all_invite_codes else ""
+            if settings.invite_codes:  # use only settings if provided
+                invite_code = random.choice(settings.invite_codes)
+            else:
+                invite_codes_from_db = [
+                    code[0] for code in db.all(Wallet.invite_code, Wallet.invite_code != "")
+                ]
+                invite_code = random.choice(invite_codes_from_db) if invite_codes_from_db else ""
         
             if invite_code:
                 payload["invite_code"] = invite_code
