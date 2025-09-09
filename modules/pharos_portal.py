@@ -1,6 +1,7 @@
 import asyncio
 import random
 import secrets
+from time import sleep
 
 from loguru import logger
 from curl_cffi import requests
@@ -150,6 +151,31 @@ class PharosPortal(Base):
 
         return r.json()
 
+    async def send_verify(self, tx):
+        if not self.auth:
+            await self.login()
+
+        headers = {
+            **self.base_headers,
+            'authorization': f'Bearer {self.jwt}',
+        }
+
+        payload = {
+            'address': self.client.account.address,
+            'task_id': 103,
+            'tx_hash': tx.lower()
+        }
+
+        r = await self.session.post(
+            url=f"{self.BASE}/task/verify",
+            headers=headers,
+            json=payload,
+            timeout=120,
+        )
+
+        return r.json().get('msg')
+
+
     async def get_twitter_link(self):
         headers = {
             **self.base_headers,
@@ -162,8 +188,6 @@ class PharosPortal(Base):
             allow_redirects=False,
             timeout=120,
         )
-
-        
 
         return r.headers.get('location')
 

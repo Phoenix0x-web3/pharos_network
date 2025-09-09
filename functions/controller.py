@@ -2,6 +2,7 @@ import asyncio
 import json
 import random
 
+from eth_utils import to_checksum_address
 from faker import Faker
 from loguru import logger
 from sqlalchemy.testing.suite.test_reflection import users
@@ -77,6 +78,7 @@ class Controller:
         swap = random.choice(swap_protocols)
 
         return await swap
+
 
     async def random_liquidity(self):
 
@@ -345,6 +347,35 @@ class Controller:
     async def r2_swap(self):
         return await self.r2.r2_controller(action='swap')
 
+    async_retry()
+    async def get_onchain_txs(self) -> list:
+        url = 'https://api.socialscan.io/pharos-testnet/v1/explorer/transactions?size=12'
+
+        r = await self.pharos_portal.session.get(url=url)
+
+        if not r.json().get('data'):
+            raise Exception(f"No Onchain tx data")
+
+        data =  r.json().get('data')
+        return [item['from_address'] for item in data][5:]
+
+    @controller_log('Send Tokens Onchain')
+    async def send_tokens(self):
+
+        addresses = await self.get_onchain_txs()
+        addresses.append(self.client.account.address)
+
+        random.shuffle(addresses)
+        to_address = random.choice(addresses)
+
+        amount = randfloat(from_=0.00001, to_=0.005, step=0.00001)
+        amount = TokenAmount(amount=amount)
+
+        tx = await self.base.send_eth(to_address=to_checksum_address(to_address), amount=amount)
+        tx = tx['transactionHash'].hex()
+
+        return await self.pharos_portal.send_verify(tx=tx)
+
     async def build_actions(self):
 
         final_actions = []
@@ -456,6 +487,8 @@ class Controller:
                                                    lending_count)
             build_array += await self.form_actions(user_tasks.get("119", 0), self.bitverse_positions, bitverse_count)
 
+            build_array += await self.form_actions(user_tasks.get("103", 0), self.send_tokens, tips_count)
+
             usdc_balance = await self.client.wallet.balance(token=USDC_R2)
 
             if float(usdc_balance.Ether) > 1:
@@ -518,7 +551,6 @@ class Controller:
         return await update_points_invites(self.wallet.private_key, total_points, invite_code)
 
     controller_log("Mint NFT Badges")
-
     @async_retry(retries=Settings().retry, delay=3, to_raise=False)
     async def mint_nft_badges(self):
         faucet_status = await self.pharos_portal.get_faucet_status()
