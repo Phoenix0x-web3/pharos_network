@@ -510,6 +510,7 @@ class Controller:
                 build_array.append(lambda: self.gotchipus.flow())
 
             if gotchipus_ids:
+
                 can_check_in = await self.gotchipus.check_in()
                 if can_check_in:
                     build_array.append(lambda: self.gotchipus.check_in())
@@ -517,6 +518,11 @@ class Controller:
                 can_pet = await self.gotchipus.can_check_pet()
                 if can_pet:
                     build_array.append(lambda: self.gotchipus.pet())
+
+                tasks_completed = await self.gotchipus.check_tasks_completed()
+
+                if not tasks_completed:
+                    build_array.append(lambda: self.gotchipus.complete_tasks())
 
                 gotchipus_count = random.randint(
                     settings.gotchipus_count_min,
