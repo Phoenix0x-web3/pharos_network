@@ -486,7 +486,7 @@ class Controller:
                 if can_pet:
                     build_array.append(lambda: self.gotchipus.pet())
 
-                tasks_completed = await self.gotchipus.check_task_completed()
+                tasks_completed = await self.gotchipus.check_tasks_completed()
 
                 if not tasks_completed:
                     build_array.append(lambda: self.gotchipus.complete_tasks())
