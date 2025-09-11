@@ -443,6 +443,23 @@ class Gotchipus(Base):
         data = r.json().get('data')
         return data
 
+    @async_retry()
+    async def check_task_completed(self, task: dict) -> str:
+        url = f"{self.BASE_API}/api/tasks/is_task_completed"
+
+        payload = {
+            "address": self.client.account.address,
+            "task_id": int(task['task_id'])
+        }
+
+        r = await self.session.post(url=url, json=payload, headers=self.base_headers)
+        r.raise_for_status()
+
+        if r.json().get('status') == "success":
+            return r.json().get('data')
+
+        raise Exception(f"Failed | {task['task_title']} | {r.json()}")
+
     @controller_log('Completed Task')
     @async_retry()
     async def task_completed(self, task: dict) -> str:
@@ -473,6 +490,20 @@ class Gotchipus(Base):
             else:
                 logger.warning(status)
 
+    async def check_tasks_completed(self):
+        tasks = await self.get_all_tasks()
+
+        res = []
+
+        for task in tasks:
+            status = await self.check_task_completed(task=task)
+            res.append(status)
+
+
+        if False in res:
+            return False
+
+        return True
     async def can_check_in(self):
         info = await self.get_tasks_info()
 
