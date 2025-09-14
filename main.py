@@ -12,10 +12,10 @@ from utils.db_api.wallet_api import db
 from utils.db_import_export_sync import Import, Export, Sync
 from utils.output import show_channel_info
 from utils.git_version import check_for_updates
+from data.constants import PROJECT_NAME
 
 console = Console()
 
-PROJECT = 'Pharos Network'
 
 PROJECT_ACTIONS =   [
                     "1. Run All Tasks In Random Order",
@@ -33,7 +33,7 @@ async def choose_action():
             message=Fore.LIGHTBLACK_EX + 'Choose action',
             choices=[
                 "DB Actions",
-                PROJECT,
+                PROJECT_NAME,
                 "Exit"
             ],
         )
@@ -43,7 +43,7 @@ async def choose_action():
     category = answers.get("category")
 
     if category == "Exit":
-        console.print(f"[bold red]Exiting {PROJECT}...[/bold red]")
+        console.print(f"[bold red]Exiting {PROJECT_NAME}...[/bold red]")
         raise SystemExit(0)
 
     if category == "DB Actions":
@@ -52,7 +52,7 @@ async def choose_action():
                    "Export wallets to TXT",
                    "Back"]
 
-    if category == PROJECT:
+    if category == PROJECT_NAME:
         actions = PROJECT_ACTIONS
 
     act_question = [
@@ -91,20 +91,20 @@ async def choose_action():
         await activity(action=5) 
            
     elif action == "Exit":
-        console.print(f"[bold red]Exiting {PROJECT}...[/bold red]")
+        console.print(f"[bold red]Exiting {PROJECT_NAME}...[/bold red]")
         raise SystemExit(0)
 
     await choose_action()
 
 async def main():
     create_files()
-    await check_for_updates(repo_name=PROJECT, repo_private=False)
+    await check_for_updates(repo_name=PROJECT_NAME, repo_private=False)
     db.ensure_model_columns(Wallet)
     await choose_action()
 
 if __name__ == '__main__':
 
-    show_channel_info(PROJECT)
+    show_channel_info(PROJECT_NAME)
 
     if platform.system() == "Windows":
         asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
