@@ -387,6 +387,7 @@ class Controller:
         swaps_count = random.randint(settings.swaps_count_min, settings.swaps_count_max)
         swaps_faroswap = random.randint(settings.swaps_count_min, settings.swaps_count_max)
         tips_count = random.randint(settings.tips_count_min, settings.tips_count_max)
+        domains_count = random.randint(settings.domains_count_min, settings.domains_count_max)
         autostake_count = random.randint(settings.autostake_count_min, settings.autostake_count_max)
         brokex_count = random.randint(settings.brokex_count_min, settings.brokex_count_max)
 
@@ -453,12 +454,6 @@ class Controller:
             if len(twitter_tasks) > 0:
                 build_array.append(lambda: self.twitter_tasks(twitter_tasks=twitter_tasks))
 
-            if wallet_balance.Ether > 0.35:
-                domains = await self.pns.check_pns_domain()
-
-                if len(domains) == 0:
-                    final_actions.append(lambda: self.pns.mint())
-
             if wallet_balance.Ether > 1:
                 nft_badges = await self.nfts.check_badges()
 
@@ -488,7 +483,11 @@ class Controller:
             build_array += await self.form_actions(user_tasks.get("119", 0), self.bitverse_positions, bitverse_count)
 
             build_array += await self.form_actions(user_tasks.get("103", 0), self.send_tokens, tips_count)
-
+            
+            
+            if wallet_balance.Ether > 0.20:               
+                build_array += await self.form_actions(user_tasks.get("104", 0),self.pns.mint, domains_count)
+ 
             usdc_balance = await self.client.wallet.balance(token=USDC_R2)
 
             if float(usdc_balance.Ether) > 1:

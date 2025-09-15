@@ -121,11 +121,6 @@ random_pause_between_actions:
   min: 20
   max: 30
 
-# Telegram Bot ID for notifications
-tg_bot_id: ''
-
-# You can find your chat ID by messaging @userinfobot or using https://web.telegram.org/. (example 1540239116)
-tg_user_id: ''
 ```
 
 ### 3. Module Configurations
