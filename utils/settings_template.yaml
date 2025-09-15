@@ -142,12 +142,10 @@ gotchipus_count:
   min: 5
   max: 10
 
+# Mint Pharos Identity Service action count
+domains_count:
+  min: 1
+  max: 5  
+  
 # Invite Codes for pharos network, example [invite_code1, invite_code2]
 invite_codes: [] 
-
-# Telegram Bot ID for notifications
-tg_bot_id: ""
-
-# You can find your chat ID by messaging @userinfobot or using https://web.telegram.org/. (example 1540239116)
-tg_user_id: ""
-

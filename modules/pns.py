@@ -32,8 +32,7 @@ RESOLVER = RawContract(
     abi=read_json((ABIS_DIR, "pns_controller.json")),
 )
 
-DURATION = 31_536_000
-
+ONE_MONTH_DURATION = 2_592_000
 
 class PNS(Base):
     __module_name__ = "Pharos Name Service"
@@ -62,8 +61,9 @@ class PNS(Base):
         name = await self._rand_domain()
         owner = self.client.account.address
         secret = HexBytes(os.urandom(32))
-
-        price = await contract.functions.rentPrice(name, DURATION).call()
+        duration = random.randint(ONE_MONTH_DURATION, ONE_MONTH_DURATION * 3) # 1 to 3 months
+        
+        price = await contract.functions.rentPrice(name, duration).call()
         value = int(price[0]) + int(price[1])
         amount = TokenAmount(amount=value, wei=True)
 
@@ -76,7 +76,7 @@ class PNS(Base):
         commitment = await contract.functions.makeCommitment(
             name,
             owner,
-            DURATION,
+            duration,
             secret,
             RESOLVER.address,
             [],
@@ -104,13 +104,13 @@ class PNS(Base):
         logger.debug(f'{self.wallet} | {self.__module_name__} | Awaiting {delay} secs for commintment applying ')
         await asyncio.sleep(delay)
 
-        price = await contract.functions.rentPrice(name, DURATION).call()
+        price = await contract.functions.rentPrice(name, duration).call()
         value = int(price[0]) + int(price[1])
         amount = TokenAmount(amount=value, wei=True)
 
         reg_data = contract.encode_abi(
             "register",
-            args=[name, owner, DURATION, secret, RESOLVER.address, [], True, 0]
+            args=[name, owner, duration, secret, RESOLVER.address, [], True, 0]
         )
 
         tx_register = TxParams(
