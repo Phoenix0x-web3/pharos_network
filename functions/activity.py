@@ -83,7 +83,10 @@ async def execute(wallets : List[Wallet], task_func, random_pause_wallet_after_c
         async def sem_task(wallet : Wallet):
             async with semaphore:
                 try:
-                    await task_func(wallet)
+                    # таймаут 60 минут = 3600 секунд
+                    await asyncio.wait_for(task_func(wallet), timeout=3600)
+                except asyncio.TimeoutError:
+                    logger.error(f"[{wallet.id}] failed: timeout after 60 minutes")
                 except Exception as e:
                     logger.error(f"[{wallet.id}] failed: {e}")
 

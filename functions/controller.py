@@ -424,7 +424,6 @@ class Controller:
 
             brokex_faucet = await self.brokex.has_claimed()
 
-            #danger
             if len(twitter_tasks) > 0:
                 build_array.append(lambda: self.twitter_tasks(tasks_to_do=twitter_tasks))
 
