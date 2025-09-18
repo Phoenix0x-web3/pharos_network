@@ -463,6 +463,11 @@ class PharosPortal(Base):
         social_tasks  = (all_tasks.get("Social Tasks") or {}).get("tasks") or []
 
         twitter_tasks = await self._twitter_actions_from_social(social_tasks, completed_ids)
+        
+         # If the only remaining twitter task are 205 → return empty
+        if twitter_tasks and {t.get("task_id") for t in twitter_tasks} == {205}:
+            twitter_tasks = []
+        
         discord_tasks = [task for task in social_tasks if task['task_type'] == 'discord']
         
         return twitter_tasks, discord_tasks
