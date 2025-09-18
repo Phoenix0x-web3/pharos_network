@@ -442,8 +442,47 @@ class PharosPortal(Base):
         twitter_tasks = [task for task in social_to_do if task['task_type'] == 'twitter']
         discrod_tasks = [task for task in social_to_do if task['task_type'] == 'discord']
 
-        return twitter_tasks, discrod_tasks
+        twitter_tasks_ids = []
 
+        for task in twitter_tasks:
+            if task["task_id"] != 205:
+                twitter_tasks_ids.append(task["task_id"])
+            if "follow_item" in task:
+                for sub in task["follow_item"]:
+                    if sub["task_id"] != 205:
+                        twitter_tasks_ids.append(sub["task_id"])
+
+        return twitter_tasks_ids, discrod_tasks
+
+    async def prepare_twitter_tasks(self, twitter_tasks, user_tasks):
+        tasks_to_do = [task for task in twitter_tasks if str(task) not in list(user_tasks.keys())]
+        return tasks_to_do
+
+    async def follow_and_verify_twitter_task(self, task_id: int, verify=False) -> dict:
+
+        headers = {
+            **self.base_headers,
+            'authorization': f'Bearer {self.jwt}',
+        }
+
+        payload = {
+            'address': self.client.account.address,
+            'task_id': task_id
+        }
+
+        r = await self.session.post(
+            url=f"{self.BASE}/task/follow" if not verify else f"{self.BASE}/task/verify",
+            headers=headers,
+            json=payload
+        )
+
+        r.raise_for_status()
+
+        if r.json().get('msg') == 'success':
+
+            return f"Task {task_id}: {r.json().get('msg')}"
+
+        raise Exception(f"Task {task_id} Failed: {r.text}")
 
     async def verify_task(self, task: dict) -> dict:
 
