@@ -146,48 +146,20 @@ class Controller:
         return 'Failed | Twitter Bind'
 
     @controller_log('Twitter Tasks')
-    async def twitter_tasks(self, twitter_tasks: list):
+    async def twitter_tasks(self, tasks_to_do):
 
         results = []
 
         try:
-            await self.twitter.initialize()
+            for task in tasks_to_do:
+                result = await self.pharos_portal.follow_and_verify_twitter_task(task_id=task)
+                if result:
+                    results.append(result)
+                await asyncio.sleep(random.randint(3, 7))
 
-            for task in twitter_tasks:
-                if task['task_type'] == 'twitter':
-                    # todo follow, retweet, reply in twitter
-                    name = task['name']
-                    if 'Follow' in name:
-                        follow = query_to_json(task['url'])
-                        result = await self.twitter.follow_account(account_name=follow['screen_name'])
-                        await asyncio.sleep(random.randint(3, 7))
-
-                        if result:
-                            task_status = await self.pharos_portal.verify_task(task=task)
-                            results.append(task_status)
-
-                    if 'Retweet' in name:
-                        retweet = query_to_json(task['url'])
-                        result = await self.twitter.retweet(tweet_id=retweet['tweet_id'])
-
-                        await asyncio.sleep(random.randint(3, 7))
-
-                        if result:
-                            task_status = await self.pharos_portal.verify_task(task=task)
-                            results.append(task_status)
-
-                    if 'Reply' in name:
-                        retweet = query_to_json(task['url'])
-                        faker = Faker()
-
-                        fake_sentence = faker.sentence(variable_nb_words=False)
-                        result = await self.twitter.reply(tweet_id=retweet['in_reply_to'], reply_text=fake_sentence)
-
-                        await asyncio.sleep(random.randint(3, 7))
-
-                        if result:
-                            task_status = await self.pharos_portal.verify_task(task=task)
-                            results.append(task_status)
+            if not any("Failed" in r for r in results):
+                verify = await self.pharos_portal.follow_and_verify_twitter_task(task_id=205, verify=True)
+                results.append(verify)
 
             return results
 
@@ -195,8 +167,6 @@ class Controller:
             logger.error(e)
             return f'Failed | {e}'
 
-        finally:
-            await self.twitter.close()
 
     async def discord_tasks(self, tasks: list):
         try:
@@ -424,6 +394,8 @@ class Controller:
 
             await asyncio.sleep(3, 5)
 
+            user_tasks = await self.user_tasks()
+
             wallet_balance = await self.client.wallet.balance()
 
             faucet_status = await self.pharos_portal.get_faucet_status()
@@ -446,13 +418,15 @@ class Controller:
                 wallet_balance = await self.client.wallet.balance()
 
             twitter_tasks, discord_tasks = await self.pharos_portal.tasks_flow()
+            twitter_tasks = await self.pharos_portal.prepare_twitter_tasks(twitter_tasks=twitter_tasks, user_tasks=user_tasks)
 
             aquaflux_nft = await self.aquaflux.already_minted(premium=True)
 
             brokex_faucet = await self.brokex.has_claimed()
 
+            #danger
             if len(twitter_tasks) > 0:
-                build_array.append(lambda: self.twitter_tasks(twitter_tasks=twitter_tasks))
+                build_array.append(lambda: self.twitter_tasks(tasks_to_do=twitter_tasks))
 
             if wallet_balance.Ether > 1:
                 nft_badges = await self.nfts.check_badges()
@@ -465,7 +439,7 @@ class Controller:
             if not brokex_faucet:
                 build_array.append(lambda: self.brokex_faucet())
 
-            user_tasks = await self.user_tasks()
+
 
             build_array += await self.form_actions(user_tasks.get("101", 0), self.zenith.swaps_controller, swaps_count)
             build_array += await self.form_actions(user_tasks.get("107", 0), self.faroswap.swap_controller,

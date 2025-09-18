@@ -208,18 +208,25 @@ async def twitter_tasks(wallet):
 
     controller = Controller(client=client, wallet=wallet)
     try:
+
+        user_tasks = await controller.user_tasks()
+
         twitter_tasks, discord_tasks = await controller.pharos_portal.tasks_flow()
+
+        twitter_tasks = await controller.pharos_portal.prepare_twitter_tasks(twitter_tasks=twitter_tasks,
+                                                                       user_tasks=user_tasks)
         if not twitter_tasks:
             logger.info(f"{wallet} No new twitter tasks available")
             return
-        result = await controller.twitter_tasks(twitter_tasks=twitter_tasks)
+
+        result = await controller.twitter_tasks(twitter_tasks)
 
         if 'Failed' not in result:
             logger.success(result)
 
             return result
 
-        logger.error(result)
+        logger.exception(result)
 
     except Exception as e:
         logger.error(e)

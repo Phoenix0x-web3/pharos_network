@@ -3,6 +3,7 @@ import contextlib
 import json
 import random
 import re
+import time
 import uuid
 import zlib
 from typing import Any, Dict, Optional, Tuple, Callable, Awaitable
@@ -170,6 +171,27 @@ class DiscordInviter:
     def _generate_session_id() -> str:
         return uuid.uuid4().hex
 
+    @staticmethod
+    def _uuid() -> str:
+        return str(uuid.uuid4())
+
+    @staticmethod
+    def _monotonic_ms() -> int:
+        # аналог performance.now(): монотонные миллисекунды от старта процесса
+        return int(time.perf_counter() * 1000)
+
+    def _init_launch_artifacts(self) -> None:
+        # создаём единоразово на запуск (или на первый connect)
+        if not getattr(self, "client_launch_id", None):
+            self.client_launch_id = self._uuid()
+        if not getattr(self, "launch_signature", None):
+            self.launch_signature = self._uuid()
+
+    def _reset_heartbeat_session(self) -> None:
+        # пересоздаём на каждый новый Gateway connect
+        self.client_heartbeat_session_id = self._uuid()
+        self.client_heartbeat_initialization_timestamp = self._monotonic_ms()
+
     def _super_props(self) -> str:
         return build_xsuperparams(
             user_agent=self.async_session.user_agent,
@@ -232,6 +254,9 @@ class DiscordInviter:
         return wrapper
 
     async def connect(self):
+        self._init_launch_artifacts()
+        self._reset_heartbeat_session()
+
         connector_args = {"proxy": self.proxy} if self.proxy else {}
         self.client_session = aiohttp.ClientSession(**connector_args)
         self.ws = await self.client_session.ws_connect(
@@ -279,7 +304,13 @@ class DiscordInviter:
                     "referring_domain_current": "",
                     "release_channel": "stable",
                     "client_build_number": 432548,
-                    "client_event_source": None
+                    "client_event_source": None,
+                    "client_app_state": "focused",  # или "background" если окно не в фокусе
+                    "client_launch_id": self.client_launch_id,  # UUIDv4 — на запуск
+                    "client_heartbeat_session_id": self.client_heartbeat_session_id,  # UUIDv4 — на connect
+                    "launch_signature": self.launch_signature,  # UUIDv4 — на запуск
+                    "gateway_connect_reasons": "AppSkeleton",  # как в твоём дампе
+                    "is_fast_connect": False,
                 },
                 "presence": {
                     "status": "unknown",
@@ -289,6 +320,7 @@ class DiscordInviter:
                 },
                 "compress": False,
                 "client_state": {"guild_versions": {}},
+                "client_heartbeat_initialization_timestamp": self.client_heartbeat_initialization_timestamp,
             },
         }
         try:
