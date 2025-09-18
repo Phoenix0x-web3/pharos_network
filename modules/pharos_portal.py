@@ -430,59 +430,84 @@ class PharosPortal(Base):
 
         return r.json()
 
+    async def _twitter_actions_from_social(self, social_tasks : list, completed_ids : list) -> list[dict]:
+        out = []
+        for t in social_tasks:
+            if t.get("task_type") != "twitter":
+                continue
+
+            # nested follow items
+            for sub in t.get("follow_item", []) or []:
+                bt = sub.get("button_text")
+                tid = sub.get("task_id")
+                if tid is None or bt is None or tid in completed_ids:
+                    continue
+                    
+                out.append({"type": bt, "task_id": tid})
+
+   
+            bt = t.get("button_text")
+            tid = t.get("task_id")
+            if tid is None or bt is None or tid in completed_ids:
+                continue
+                
+            out.append({"type": bt, "task_id": tid})
+            
+        return out
+            
     async def tasks_flow(self):
-        all_tasks = await self.get_user_tasks()
+        all_tasks  = await self.get_user_tasks()
         user_tasks = await self.get_user_tasks(user=True)
-        completed_task_ids = {task['TaskId'] for task in user_tasks}
 
-        social_tasks = all_tasks.get('Social Tasks').get('tasks')
+        completed_ids = {task.get("TaskId") for task in user_tasks}
+        social_tasks  = (all_tasks.get("Social Tasks") or {}).get("tasks") or []
 
-        social_to_do = [social_task for social_task in social_tasks if social_task['task_id'] not in completed_task_ids]
-
-        twitter_tasks = [task for task in social_to_do if task['task_type'] == 'twitter']
-        discrod_tasks = [task for task in social_to_do if task['task_type'] == 'discord']
-
-        twitter_tasks_ids = []
-
-        for task in twitter_tasks:
-            if task["task_id"] != 205:
-                twitter_tasks_ids.append(task["task_id"])
-            if "follow_item" in task:
-                for sub in task["follow_item"]:
-                    if sub["task_id"] != 205:
-                        twitter_tasks_ids.append(sub["task_id"])
-
-        return twitter_tasks_ids, discrod_tasks
+        twitter_tasks = await self._twitter_actions_from_social(social_tasks, completed_ids)
+        discord_tasks = [task for task in social_tasks if task['task_type'] == 'discord']
+        
+        return twitter_tasks, discord_tasks
 
     async def prepare_twitter_tasks(self, twitter_tasks, user_tasks):
         tasks_to_do = [task for task in twitter_tasks if str(task) not in list(user_tasks.keys())]
         return tasks_to_do
 
-    async def follow_and_verify_twitter_task(self, task_id: int, verify=False) -> dict:
+    @async_retry(retries=3, delay=3, to_raise=False)
+    @controller_log('Follow and  Verify Twitter Tasks')
+    async def follow_and_verify_twitter_task(self, twitter_tasks : list[dict]) -> list[dict]:
+        
+        result = []
+        
+        for task in twitter_tasks:
+        
+            task_id = task.get('task_id')
+            task_type = task.get('type')
+            
+            headers = {
+                **self.base_headers,
+                'authorization': f'Bearer {self.jwt}',
+            }
 
-        headers = {
-            **self.base_headers,
-            'authorization': f'Bearer {self.jwt}',
-        }
+            payload = {
+                'address': self.client.account.address,
+                'task_id': task_id
+            }
 
-        payload = {
-            'address': self.client.account.address,
-            'task_id': task_id
-        }
+            r = await self.session.post(
+                url=f"{self.BASE}/task/follow" if task_type == "Follow" else f"{self.BASE}/task/verify",
+                headers=headers,
+                json=payload
+            )
 
-        r = await self.session.post(
-            url=f"{self.BASE}/task/follow" if not verify else f"{self.BASE}/task/verify",
-            headers=headers,
-            json=payload
-        )
+            r.raise_for_status()
 
-        r.raise_for_status()
+            if r.json().get('code') != 0:
+                raise Exception(f"Task {task_id} Failed: {r.text}")
+            
+            result.append(f"Task {task_id}: {r.json().get('msg')}")
 
-        if r.json().get('msg') == 'success':
-
-            return f"Task {task_id}: {r.json().get('msg')}"
-
-        raise Exception(f"Task {task_id} Failed: {r.text}")
+            
+        return result
+    
 
     async def verify_task(self, task: dict) -> dict:
 

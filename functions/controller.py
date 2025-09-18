@@ -147,21 +147,8 @@ class Controller:
 
     @controller_log('Twitter Tasks')
     async def twitter_tasks(self, tasks_to_do):
-
-        results = []
-
         try:
-            for task in tasks_to_do:
-                result = await self.pharos_portal.follow_and_verify_twitter_task(task_id=task)
-                if result:
-                    results.append(result)
-                await asyncio.sleep(random.randint(3, 7))
-
-            if not any("Failed" in r for r in results):
-                verify = await self.pharos_portal.follow_and_verify_twitter_task(task_id=205, verify=True)
-                results.append(verify)
-
-            return results
+            return await self.pharos_portal.follow_and_verify_twitter_task(tasks_to_do)
 
         except Exception as e:
             logger.error(e)
