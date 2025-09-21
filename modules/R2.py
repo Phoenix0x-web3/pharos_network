@@ -116,7 +116,8 @@ class R2(Base):
         for token in tokens:
             balance = await self.client.wallet.balance(token.address)
 
-            balance_map[token.title] = balance.Ether
+            if balance.Ether > 0.1:
+                balance_map[token.title] = balance.Ether
 
         if all(float(value) == 0 for value in balance_map.values()):
             return 'Failed | No balance in all tokens, try to faucet first'
@@ -129,6 +130,7 @@ class R2(Base):
             ) / 100
 
             from_token = random.choice(tokens)
+
             while balance_map[from_token.title] == 0:
                 from_token = random.choice(tokens)
 

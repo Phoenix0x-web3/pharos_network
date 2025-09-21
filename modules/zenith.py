@@ -107,7 +107,8 @@ class Zenith(Base):
             else:
                 balance = await self.client.wallet.balance(token.address)
 
-            balance_map[token.title] = balance.Ether
+            if balance.Ether > 0.1:
+                balance_map[token.title] = balance.Ether
 
         if all(float(value) == 0 for value in balance_map.values()):
             return 'Failed | No balance in all tokens, try to faucet first'
@@ -116,10 +117,8 @@ class Zenith(Base):
         while balance_map[from_token.title] == 0:
             from_token = random.choice(tokens)
 
+        tokens.remove(from_token)
         to_token = random.choice(tokens)
-
-        while to_token == from_token:
-            to_token = random.choice(tokens)
 
         if from_token.address != Contracts.PHRS.address:
             amount = float((balance_map[from_token.title])) - float((balance_map[from_token.title])) * percent_to_swap
@@ -601,7 +600,8 @@ class ZenithLiquidity(Zenith):
             else:
                 balance = await self.client.wallet.balance(token.address)
 
-            balance_map[token.title] = balance.Ether
+            if balance.Ether > 0.1:
+                balance_map[token.title] = balance.Ether
 
         if all(float(value) == 0 for value in balance_map.values()):
             return 'Failed | No balance in all tokens, try to faucet first'

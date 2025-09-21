@@ -240,7 +240,8 @@ class OpenFi(Base):
             else:
                 balance = await self.client.wallet.balance(token.address)
 
-            balance_map[token.title] = balance.Ether
+            if balance.Ether > 0.1:
+                balance_map[token.title] = balance.Ether
 
         return balance_map
 

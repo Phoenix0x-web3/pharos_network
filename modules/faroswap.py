@@ -79,15 +79,11 @@ class Faroswap(Base):
                 try:
                     if token == Contracts.PHRS:
                         continue
-
                     amount = await self.client.wallet.balance(token=token)
-
                     if amount.Ether == 0:
                         continue
-
                     swap = await self._swap(from_token=token, to_token=Contracts.WPHRS, amount=amount)
                     result = f"{amount} {token.title}: Success"
-
                     results.append(result)
                 except Exception as e:
                     result = f"{token.title}: Failed | {e}"
@@ -104,7 +100,8 @@ class Faroswap(Base):
             else:
                 balance = await self.client.wallet.balance(token.address)
 
-            balance_map[token.title] = balance.Ether
+            if balance.Ether > 0.1:
+                balance_map[token.title] = balance.Ether
 
         if all(float(value) == 0 for value in balance_map.values()):
             return 'Failed | No balance in all tokens, try to faucet first'
@@ -114,10 +111,8 @@ class Faroswap(Base):
         while balance_map[from_token.title] == 0:
             from_token = random.choice(tokens)
 
+        tokens.remove(from_token)
         to_token = random.choice(tokens)
-
-        while to_token == from_token:
-            to_token = random.choice(tokens)
 
         amount = float((balance_map[from_token.title])) * percent_to_swap
 
@@ -509,6 +504,9 @@ class FaroswapLiquidity(Faroswap):
                     return 'Failed | No balance, try to faucet first'
             else:
                 balance = await self.client.wallet.balance(token.address)
+
+            if balance.Ether > 0.1:
+                balance_map[token.title] = balance.Ether
 
             balance_map[token.title] = balance.Ether
 

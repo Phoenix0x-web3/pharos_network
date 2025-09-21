@@ -177,8 +177,9 @@ class Controller:
         return await self.brokex.claim_faucet()
 
     @controller_log('Aquaflux Flow')
-    async def aquaflux_flow(self):
+    async def aquaflux_flow(self, check_again=False):
         settings = Settings()
+
         aquaflux_twitter_bound = await self.aquaflux.twitter_bound()
 
         if not aquaflux_twitter_bound:
@@ -197,10 +198,14 @@ class Controller:
         check_twitter_following = await self.aquaflux.check_twitter_following()
 
         if not check_twitter_following:
+
+            if check_again:
+                raise Exception(f'Following is @AquaFluxPro not working')
+
             result = await self.twitter.follow_account(account_name='AquaFluxPro')
             await asyncio.sleep(random.randint(3, 7))
 
-            return await self.aquaflux_flow()
+            return await self.aquaflux_flow(check_again=True)
 
         claim_tokens = await self.aquaflux.claim_tokens()
 
@@ -425,8 +430,6 @@ class Controller:
                 build_array.append(lambda: self.aquaflux_flow())
             if not brokex_faucet:
                 build_array.append(lambda: self.brokex_faucet())
-
-
 
             build_array += await self.form_actions(user_tasks.get("101", 0), self.zenith.swaps_controller, swaps_count)
             build_array += await self.form_actions(user_tasks.get("107", 0), self.faroswap.swap_controller,
