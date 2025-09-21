@@ -477,13 +477,13 @@ class FaroswapLiquidity(Faroswap):
         ) / 100
 
         tokens = [
-            #Contracts.USDT,
+            Contracts.USDT,
             Contracts.USDC,
         ]
 
         to_tokens = [
             Contracts.USDT,
-            #Contracts.USDC,
+            Contracts.USDC,
         ]
 
         balance_map = await self.balance_map(tokens)
@@ -498,7 +498,6 @@ class FaroswapLiquidity(Faroswap):
 
         a_amt = TokenAmount(amount=float((balance_map[from_token])) * percent_to_liq, decimals = 18 if from_token.title == 'PHRS' else 6)
 
-        balance_map.pop(from_token.title)
         tokens.remove(from_token)
 
         to_token = random.choice(to_tokens)
