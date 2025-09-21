@@ -108,9 +108,6 @@ class Faroswap(Base):
 
         from_token = random.choice(tokens)
 
-        while balance_map[from_token.title] == 0:
-            from_token = random.choice(tokens)
-
         tokens.remove(from_token)
         to_token = random.choice(tokens)
 
@@ -514,9 +511,6 @@ class FaroswapLiquidity(Faroswap):
             return 'Failed | No balance in all tokens, try to faucet first'
 
         from_token = random.choice(tokens)
-
-        while balance_map[from_token.title] == 0:
-            from_token = random.choice(tokens)
 
         a_amt = TokenAmount(amount=float((balance_map[from_token.title])) * percent_to_liq, decimals = 18 if from_token.title == 'PHRS' else 6)
 

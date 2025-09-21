@@ -272,8 +272,8 @@ class OpenFi(Base):
             return 'Failed | No balance in all tokens, try to faucet first'
 
         from_token = random.choice(tokens)
-        while balance_map[from_token.title] == 0:
-            from_token = random.choice(tokens)
+
+
         amount = float((balance_map[from_token.title])) * percent_to_swap
 
         amount = TokenAmount(amount=amount, decimals=18 if from_token == Contracts.PHRS else 6)

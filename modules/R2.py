@@ -131,9 +131,6 @@ class R2(Base):
 
             from_token = random.choice(tokens)
 
-            while balance_map[from_token.title] == 0:
-                from_token = random.choice(tokens)
-
             tokens.remove(from_token)
             to_token = random.choice(tokens)
 
