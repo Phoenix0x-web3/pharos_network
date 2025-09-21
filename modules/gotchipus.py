@@ -304,6 +304,7 @@ class Gotchipus(Base):
         url = f"{self.BASE_API}/api/story/stream"
         r = await self.session.get(url=url, headers=self.base_headers)
         return r.json()
+
     @controller_log('Gotchipus Send')
     async def transfer_from_gotchipus(self):
         c = await self.client.contracts.get(contract_address=GOTCHIPUS_FREE)
@@ -313,6 +314,7 @@ class Gotchipus(Base):
         )
 
         gotchipus_address = await self.get_tokenid_wallet()
+
         token_id = await self.get_gotchipus_tokens()
         token_id = token_id[0]
 
@@ -548,8 +550,6 @@ class Gotchipus(Base):
         return r.json().get('tokenBoundAccount')
 
 
-
-
     async def owner_of(self) -> str:
         token_id = await self.get_gotchipus_tokens()
         token_id = token_id[0]
@@ -593,6 +593,7 @@ class Gotchipus(Base):
                 logger.success(p)
 
         tr = await self.transfer_from_gotchipus()
+
         if 'Failed' not in tr:
             logger.success(tr)
 

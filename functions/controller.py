@@ -494,6 +494,14 @@ class Controller:
                 if not tasks_completed:
                     build_array.append(lambda: self.gotchipus.complete_tasks())
 
+                gotchipus_address = await self.gotchipus.get_tokenid_wallet()
+                gotchipus_balance = await self.client.wallet.balance(address=gotchipus_address)
+
+                if gotchipus_balance.Ether <= 0.001:
+                    final_actions.append(lambda: self.base.send_eth(to_address=gotchipus_address, amount=TokenAmount(
+                        amount=randfloat(from_=0.001, to_=0.01, step=0.001)
+                    )))
+
                 gotchipus_count = random.randint(
                     settings.gotchipus_count_min,
                     settings.gotchipus_count_max
