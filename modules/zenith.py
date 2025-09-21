@@ -110,6 +110,9 @@ class Zenith(Base):
             if balance.Ether > 0.1:
                 balance_map[token.title] = balance.Ether
 
+        if not balance_map:
+            return f"{self.wallet} | {self.__module_name__} | No balances try to faucet first"
+
         if all(float(value) == 0 for value in balance_map.values()):
             return 'Failed | No balance in all tokens, try to faucet first'
 
@@ -600,6 +603,9 @@ class ZenithLiquidity(Zenith):
 
             if balance.Ether > 0.1:
                 balance_map[token.title] = balance.Ether
+
+        if not balance_map:
+            return f"{self.wallet} | {self.__module_name__} | No balances try to faucet first"
 
         if all(float(value) == 0 for value in balance_map.values()):
             return 'Failed | No balance in all tokens, try to faucet first'

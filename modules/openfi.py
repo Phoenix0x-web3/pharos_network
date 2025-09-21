@@ -268,6 +268,10 @@ class OpenFi(Base):
 
         balance_map = await self.balance_map(tokens=tokens)
         #print(balance_map)
+
+        if not balance_map:
+            return f"{self.wallet} | {self.__module_name__} | No balances try to faucet first"
+
         if all(float(value) == 0 for value in balance_map.values()):
             return 'Failed | No balance in all tokens, try to faucet first'
 
