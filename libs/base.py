@@ -25,6 +25,19 @@ class Base:
         self.wallet: Wallet = wallet
         self.browser: Browser = Browser(wallet=self.wallet)
 
+    async def balance_map(self, tokens: list):
+        balance_map = {}
+        for token in tokens:
+            if token == Contracts.PHRS:
+                balance = await self.client.wallet.balance()
+            else:
+                balance = await self.client.wallet.balance(token.address)
+
+            if balance.Ether > 0.001:
+                balance_map[token] = balance.Ether
+
+        return balance_map
+
     async def get_token_price(self, token_symbol='ETH', second_token: str = 'USDT') -> float | None:
         token_symbol, second_token = token_symbol.upper(), second_token.upper()
 

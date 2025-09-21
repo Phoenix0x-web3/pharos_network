@@ -240,7 +240,8 @@ class OpenFi(Base):
             else:
                 balance = await self.client.wallet.balance(token.address)
 
-            balance_map[token.title] = balance.Ether
+            if balance.Ether > 0.1:
+                balance_map[token] = balance.Ether
 
         return balance_map
 
@@ -265,15 +266,17 @@ class OpenFi(Base):
             oWPRH
         ]
 
-        balance_map = await self.balance_map(tokens=tokens)
-        #print(balance_map)
+        balance_map = await self.balance_map(tokens)
+
+        if not balance_map:
+            return f"{self.wallet} | {self.__module_name__} | No balances try to faucet first"
+
         if all(float(value) == 0 for value in balance_map.values()):
             return 'Failed | No balance in all tokens, try to faucet first'
 
-        from_token = random.choice(tokens)
-        while balance_map[from_token.title] == 0:
-            from_token = random.choice(tokens)
-        amount = float((balance_map[from_token.title])) * percent_to_swap
+        from_token = random.choice(list(balance_map.keys()))
+
+        amount = float((balance_map[from_token])) * percent_to_swap
 
         amount = TokenAmount(amount=amount, decimals=18 if from_token == Contracts.PHRS else 6)
 

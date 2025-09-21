@@ -97,34 +97,23 @@ class Zenith(Base):
 
             return f"Swap all to native | {results}"
 
+        balance_map = await self.balance_map(tokens)
 
-        balance_map = {}
-        for token in tokens:
-            if token == Contracts.PHRS:
-                balance = await self.client.wallet.balance()
-                if balance.Ether == 0:
-                    return 'Failed | No balance, try to faucet first'
-            else:
-                balance = await self.client.wallet.balance(token.address)
-
-            balance_map[token.title] = balance.Ether
+        if not balance_map:
+            return f"{self.wallet} | {self.__module_name__} | No balances try to faucet first"
 
         if all(float(value) == 0 for value in balance_map.values()):
             return 'Failed | No balance in all tokens, try to faucet first'
 
-        from_token = random.choice(tokens)
-        while balance_map[from_token.title] == 0:
-            from_token = random.choice(tokens)
+        from_token = random.choice(list(balance_map.keys()))
 
+        tokens.remove(from_token)
         to_token = random.choice(tokens)
 
-        while to_token == from_token:
-            to_token = random.choice(tokens)
-
         if from_token.address != Contracts.PHRS.address:
-            amount = float((balance_map[from_token.title])) - float((balance_map[from_token.title])) * percent_to_swap
+            amount = float((balance_map[from_token])) - float((balance_map[from_token])) * percent_to_swap
         else:
-            amount = float((balance_map[from_token.title])) * percent_to_swap
+            amount = float((balance_map[from_token])) * percent_to_swap
 
         fee = random.choice([500, 3000])
         return await self._swap(
@@ -592,28 +581,18 @@ class ZenithLiquidity(Zenith):
 
         fee = random.choice(list(FEE_MAP.keys()))
 
-        balance_map = {}
-        for token in tokens:
-            if token == Contracts.PHRS:
-                balance = await self.client.wallet.balance()
-                if balance.Ether == 0:
-                    return 'Failed | No balance, try to faucet first'
-            else:
-                balance = await self.client.wallet.balance(token.address)
+        balance_map = await self.balance_map(tokens)
 
-            balance_map[token.title] = balance.Ether
+        if not balance_map:
+            return f"{self.wallet} | {self.__module_name__} | No balances try to faucet first"
 
         if all(float(value) == 0 for value in balance_map.values()):
             return 'Failed | No balance in all tokens, try to faucet first'
 
-        from_token = random.choice(tokens)
+        from_token = random.choice(list(balance_map.keys()))
 
-        while balance_map[from_token.title] == 0:
-            from_token = random.choice(tokens)
+        a_amt = TokenAmount(amount=float((balance_map[from_token])) * percent_to_liq, decimals = 18 if from_token.title == 'PHRS' else 6)
 
-        a_amt = TokenAmount(amount=float((balance_map[from_token.title])) * percent_to_liq, decimals = 18 if from_token.title == 'PHRS' else 6)
-
-        balance_map.pop(from_token.title)
         tokens.remove(from_token)
 
         to_token = random.choice(tokens)
