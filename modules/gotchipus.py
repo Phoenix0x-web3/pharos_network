@@ -343,6 +343,18 @@ class Gotchipus(Base):
 
         return f'Failed | Send PHRS to self'
 
+    @controller_log('Popup Gotchipus')
+    async def popup_gotchipus(self, address: str, amount: TokenAmount):
+
+        send_phrs = await self.send_eth(
+            to_address=address,
+            amount=amount
+        )
+
+        if send_phrs:
+            return f"Success | Sended {amount} PHRS to Gotchipus"
+
+        return f'Failed | Send PHRS to self'
 
     @controller_log("Summon Gotchipus")
     async def summon(self, utc: int = 0) -> str:
