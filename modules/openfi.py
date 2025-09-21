@@ -266,8 +266,7 @@ class OpenFi(Base):
             oWPRH
         ]
 
-        balance_map = await self.balance_map(tokens=tokens)
-        #print(balance_map)
+        balance_map = await self.balance_map(tokens)
 
         if not balance_map:
             return f"{self.wallet} | {self.__module_name__} | No balances try to faucet first"
@@ -275,8 +274,7 @@ class OpenFi(Base):
         if all(float(value) == 0 for value in balance_map.values()):
             return 'Failed | No balance in all tokens, try to faucet first'
 
-        from_token = random.choice(tokens)
-
+        from_token = random.choice(list(balance_map.keys()))
 
         amount = float((balance_map[from_token.title])) * percent_to_swap
 

@@ -112,18 +112,14 @@ class R2(Base):
             R2USD
         ]
 
-        balance_map = {}
-        for token in tokens:
-            balance = await self.client.wallet.balance(token.address)
-
-            if balance.Ether > 0.1:
-                balance_map[token.title] = balance.Ether
+        balance_map = await self.balance_map(tokens)
 
         if not balance_map:
             return f"{self.wallet} | {self.__module__} | No balances try to faucet first"
 
         if all(float(value) == 0 for value in balance_map.values()):
             return 'Failed | No balance in all tokens, try to faucet first'
+
 
         if action == 'swap':
 
@@ -132,7 +128,7 @@ class R2(Base):
                 settings.r2_swap_max
             ) / 100
 
-            from_token = random.choice(tokens)
+            from_token = random.choice(list(balance_map.keys()))
 
             tokens.remove(from_token)
             to_token = random.choice(tokens)
@@ -150,12 +146,14 @@ class R2(Base):
         if action == 'stake':
 
             token = R2USD
+
             percent_to_swap = random.randint(
                 settings.r2_stake_min,
                 settings.r2_stake_max
             ) / 100
 
-            if balance_map[token.title] == 0:
+            if not balance_map.get(token.title):
+            #if balance_map[token.title] == 0:
                 swap = await self._swap(from_token=USDC_R2, to_token=R2USD, amount=TokenAmount(
                     amount=random.randint(1, 100), decimals=6
                 ))
