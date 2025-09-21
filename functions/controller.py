@@ -192,21 +192,28 @@ class Controller:
             if 'Failed' not in bind_twitter:
                 logger.success(bind_twitter)
                 await asyncio.sleep(random.randint(5, 10))
-                result = await self.twitter.follow_account(account_name='AquaFluxPro')
-                await asyncio.sleep(random.randint(3, 7))
+                try:
+                    result = await self.twitter.follow_account(account_name='AquaFluxPro')
+                    if result:
+                        # await asyncio.sleep(random.randint(3, 7)
+                        return await self.aquaflux_flow(next_try=True)
+
+                except Exception as e:
+                    raise Exception(f'Cannot follow @AquaFluxPro | {e}')
 
         check_twitter_following = await self.aquaflux.check_twitter_following()
-
         if not check_twitter_following:
 
             if check_again:
-                raise Exception(f'Following is @AquaFluxPro not working')
+                raise Exception(f'Cannot check follow task @AquaFluxPro in twitter')
+            try:
+                result = await self.twitter.follow_account(account_name='AquaFluxPro')
+                if result:
+                    # await asyncio.sleep(random.randint(3, 7)
+                    return await self.aquaflux_flow(check_again=True)
 
-            result = await self.twitter.follow_account(account_name='AquaFluxPro')
-            await asyncio.sleep(random.randint(3, 7))
-
-            return await self.aquaflux_flow(check_again=True)
-
+            except Exception as e:
+                raise Exception(f'Cannot follow @AquaFluxPro | {e}')
         claim_tokens = await self.aquaflux.claim_tokens()
 
         if 'Failed' not in claim_tokens:
