@@ -111,9 +111,9 @@ class Zenith(Base):
         to_token = random.choice(tokens)
 
         if from_token.address != Contracts.PHRS.address:
-            amount = float((balance_map[from_token.title])) - float((balance_map[from_token.title])) * percent_to_swap
+            amount = float((balance_map[from_token])) - float((balance_map[from_token])) * percent_to_swap
         else:
-            amount = float((balance_map[from_token.title])) * percent_to_swap
+            amount = float((balance_map[from_token])) * percent_to_swap
 
         fee = random.choice([500, 3000])
         return await self._swap(
@@ -591,7 +591,7 @@ class ZenithLiquidity(Zenith):
 
         from_token = random.choice(list(balance_map.keys()))
 
-        a_amt = TokenAmount(amount=float((balance_map[from_token.title])) * percent_to_liq, decimals = 18 if from_token.title == 'PHRS' else 6)
+        a_amt = TokenAmount(amount=float((balance_map[from_token])) * percent_to_liq, decimals = 18 if from_token.title == 'PHRS' else 6)
 
         balance_map.pop(from_token.title)
         tokens.remove(from_token)

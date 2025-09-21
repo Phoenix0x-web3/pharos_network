@@ -133,7 +133,7 @@ class R2(Base):
             tokens.remove(from_token)
             to_token = random.choice(tokens)
 
-            amount = float((balance_map[from_token.title])) * percent_to_swap
+            amount = float((balance_map[from_token])) * percent_to_swap
 
             return await self._swap(
                 from_token=from_token,

@@ -34,7 +34,7 @@ class Base:
                 balance = await self.client.wallet.balance(token.address)
 
             if balance.Ether > 0.001:
-                balance_map[token.title] = balance.Ether
+                balance_map[token] = balance.Ether
 
         return balance_map
 

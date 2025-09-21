@@ -104,7 +104,7 @@ class Faroswap(Base):
         tokens.remove(from_token)
         to_token = random.choice(tokens)
 
-        amount = float((balance_map[from_token.title])) * percent_to_swap
+        amount = float((balance_map[from_token])) * percent_to_swap
 
         return await self._swap(
             from_token=from_token,
@@ -496,7 +496,7 @@ class FaroswapLiquidity(Faroswap):
 
         from_token = random.choice(list(balance_map.keys()))
 
-        a_amt = TokenAmount(amount=float((balance_map[from_token.title])) * percent_to_liq, decimals = 18 if from_token.title == 'PHRS' else 6)
+        a_amt = TokenAmount(amount=float((balance_map[from_token])) * percent_to_liq, decimals = 18 if from_token.title == 'PHRS' else 6)
 
         balance_map.pop(from_token.title)
         tokens.remove(from_token)

@@ -241,7 +241,7 @@ class OpenFi(Base):
                 balance = await self.client.wallet.balance(token.address)
 
             if balance.Ether > 0.1:
-                balance_map[token.title] = balance.Ether
+                balance_map[token] = balance.Ether
 
         return balance_map
 
@@ -276,7 +276,7 @@ class OpenFi(Base):
 
         from_token = random.choice(list(balance_map.keys()))
 
-        amount = float((balance_map[from_token.title])) * percent_to_swap
+        amount = float((balance_map[from_token])) * percent_to_swap
 
         amount = TokenAmount(amount=amount, decimals=18 if from_token == Contracts.PHRS else 6)
 
