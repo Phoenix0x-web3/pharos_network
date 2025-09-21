@@ -593,7 +593,6 @@ class ZenithLiquidity(Zenith):
 
         a_amt = TokenAmount(amount=float((balance_map[from_token])) * percent_to_liq, decimals = 18 if from_token.title == 'PHRS' else 6)
 
-        balance_map.pop(from_token.title)
         tokens.remove(from_token)
 
         to_token = random.choice(tokens)
