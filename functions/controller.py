@@ -498,7 +498,7 @@ class Controller:
                 gotchipus_balance = await self.client.wallet.balance(address=gotchipus_address)
 
                 if gotchipus_balance.Ether <= 0.001:
-                    final_actions.append(lambda: self.gotchipus.popup_gotchipus(to_address=gotchipus_address, amount=TokenAmount(
+                    final_actions.append(lambda: self.gotchipus.popup_gotchipus(address=gotchipus_address, amount=TokenAmount(
                         amount=randfloat(from_=0.001, to_=0.01, step=0.001)
                     )))
 
