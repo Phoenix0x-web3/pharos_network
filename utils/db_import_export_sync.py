@@ -256,6 +256,7 @@ class Sync:
 
                 if hasattr(wallet_instance, "discord_token") and wallet_instance.discord_token != wallet_data.discord_token:
                     wallet_instance.discord_token = wallet_data.discord_token
+                    wallet_instance.discord_status = None
                     changed = True
 
                 if changed:
