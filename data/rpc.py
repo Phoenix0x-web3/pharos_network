@@ -17,4 +17,5 @@ RPC_MAP = {
     'mode': 'https://mainnet.mode.network',
     'op_bnb': 'https://opbnb-mainnet-rpc.bnbchain.org',
     'pharos': 'https://testnet.dplabs-internal.com',
+    'monad': 'https://testnet-rpc.monad.xyz',
 }

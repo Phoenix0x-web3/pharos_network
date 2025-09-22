@@ -12,6 +12,7 @@ from functions.controller import Controller
 from functions.select_random_action import select_random_action
 from libs.eth_async.client import Client
 from libs.eth_async.data.models import Networks
+from modules.euclid import EuclidSwap
 from utils.db_api.models import Wallet
 from utils.db_api.wallet_api import db
 from data.settings import Settings
@@ -165,8 +166,27 @@ async def activity(action: int):
         await execute(wallets, update_points)
         
     elif action == 5:
-        await execute(wallets, mint_nft_badges)    
-        
+        await execute(wallets, mint_nft_badges)
+
+    elif action == 6:
+        await execute(wallets, transfer_from_monad)
+
+async def transfer_from_monad(wallet):
+    await random_sleep_before_start(wallet=wallet)
+    monad_transfer = EuclidSwap(wallet=wallet)
+
+    try:
+        result = await monad_transfer.swap_controller()
+
+        if 'Failed' not in result:
+            logger.success(result)
+
+            return result
+
+        logger.error(result)
+
+    except Exception as e:
+        logger.error(e)
 
 async def join_discord(wallet):
     client = Client(private_key=wallet.private_key, proxy=wallet.proxy, network=Networks.PharosTestnet)

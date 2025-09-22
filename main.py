@@ -23,6 +23,7 @@ PROJECT_ACTIONS =   [
                     "3. Join and Bind Discord",
                     "4. Update Points",
                     "5. Mint All Badges",
+                    "6. Transfer from Monad",
                     "Back"
                     ]
 
@@ -88,8 +89,10 @@ async def choose_action():
     elif '4' in action:
         await activity(action=4)
     elif '5' in action:
-        await activity(action=5) 
-           
+        await activity(action=5)
+    elif '6' in action:
+        await activity(action=6)
+
     elif action == "Exit":
         console.print(f"[bold red]Exiting {PROJECT_NAME}...[/bold red]")
         raise SystemExit(0)

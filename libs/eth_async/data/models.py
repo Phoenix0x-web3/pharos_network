@@ -476,6 +476,16 @@ class Networks:
             api=None
         )
 
+    MonadTestnet = Network(
+        name='Monad',
+        rpc=RPC_MAP['monad'],
+        chain_id=10143,
+        tx_type=0,
+        coin_symbol='MON',
+        decimals=18,
+        explorer='https://sepolia.etherscan.io'
+    )
+
 
 class RawContract(AutoRepr):
     """
