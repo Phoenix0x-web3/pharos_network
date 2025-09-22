@@ -75,6 +75,10 @@ class Settings(Singleton):
         self.gotchipus_count_min = json_data.get("gotchipus_count", {}).get('min')
         self.gotchipus_count_max = json_data.get("gotchipus_count", {}).get('max')
 
+        self.monad_transfer_min = json_data.get("monad_transfer", {}).get('min')
+        self.monad_transfer_max = json_data.get("monad_transfer", {}).get('max')
+
+
 # Configure the logger based on the settings
 settings = Settings()
 
