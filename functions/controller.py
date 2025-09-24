@@ -423,9 +423,10 @@ class Controller:
 
             brokex_faucet = await self.brokex.has_claimed()
 
-            #danger
-            if len(twitter_tasks) > 0:
-                build_array.append(lambda: self.twitter_tasks(tasks_to_do=twitter_tasks))
+            user_data = await self.pharos_portal.get_user_info()
+            if user_data.get('XId') != "":
+                if len(twitter_tasks) > 0:
+                    build_array.append(lambda: self.twitter_tasks(tasks_to_do=twitter_tasks))
 
             if wallet_balance.Ether > 1:
                 nft_badges = await self.nfts.check_badges()
