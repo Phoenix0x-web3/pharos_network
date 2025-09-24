@@ -229,24 +229,42 @@ async def twitter_tasks(wallet):
     controller = Controller(client=client, wallet=wallet)
     try:
 
-        user_tasks = await controller.user_tasks()
+        user_data = await controller.pharos_portal.get_user_info()
 
-        twitter_tasks, discord_tasks = await controller.pharos_portal.tasks_flow()
+        if user_data.get('XId') == '':
+            auth_url = await controller.pharos_portal.get_twitter_link()
 
-        twitter_tasks = await controller.pharos_portal.prepare_twitter_tasks(twitter_tasks=twitter_tasks,
-                                                                       user_tasks=user_tasks)
-        if not twitter_tasks:
-            logger.info(f"{wallet} No new twitter tasks available")
-            return
+            oauth2 = await controller.twitter.connect_twitter_to_site_oauth2(twitter_auth_url=auth_url)
 
-        result = await controller.twitter_tasks(twitter_tasks)
+            bind = await controller.pharos_portal.bind_twitter(redirect_url=oauth2.callback_url)
 
-        if 'Failed' not in result:
-            logger.success(result)
+            if 'Failed' not in bind:
+                logger.success(f'{wallet} | {bind}')
 
-            return result
+                await asyncio.sleep(random.randint(5, 10))
 
-        logger.exception(result)
+            user_data = await controller.pharos_portal.get_user_info()
+
+        if user_data.get('XId') != '':
+
+            user_tasks = await controller.user_tasks()
+
+            twitter_tasks, discord_tasks = await controller.pharos_portal.tasks_flow()
+
+            twitter_tasks = await controller.pharos_portal.prepare_twitter_tasks(twitter_tasks=twitter_tasks,
+                                                                           user_tasks=user_tasks)
+            if not twitter_tasks:
+                logger.info(f"{wallet} No new twitter tasks available")
+                return
+
+            result = await controller.twitter_tasks(twitter_tasks)
+
+            if 'Failed' not in result:
+                logger.success(result)
+
+                return result
+
+            logger.exception(result)
 
     except Exception as e:
         logger.error(e)
