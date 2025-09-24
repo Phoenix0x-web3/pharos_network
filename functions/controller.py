@@ -402,7 +402,6 @@ class Controller:
             if faucet_status.get('data').get('is_able_to_faucet'):
                 final_actions.append(lambda: self.faucet_task())
 
-
             if float(wallet_balance.Ether) <= 0.0001:
                 if len(final_actions) == 0:
                     return f"{self.wallet} | Not enought balance for actions | Awaiting for next faucet"
@@ -424,6 +423,7 @@ class Controller:
             brokex_faucet = await self.brokex.has_claimed()
 
             user_data = await self.pharos_portal.get_user_info()
+
             if user_data.get('XId') != "":
                 if len(twitter_tasks) > 0:
                     build_array.append(lambda: self.twitter_tasks(tasks_to_do=twitter_tasks))
