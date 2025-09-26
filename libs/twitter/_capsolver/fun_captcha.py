@@ -1,11 +1,11 @@
 from typing import List, Union
 
 from .core.base import BaseCaptcha
-from .core.enum import FunCaptchaTypeEnm, FunCaptchaClassificationTypeEnm
+from .core.enum import FunCaptchaClassificationTypeEnm, FunCaptchaTypeEnm
 from .core.serializer import (
-    FunCaptchaSer,
     CaptchaResponseSer,
     FunCaptchaClassificationOptionsSer,
+    FunCaptchaSer,
 )
 
 
@@ -217,9 +217,7 @@ class FunCaptchaClassification(BaseCaptcha):
         self,
         images: List[str],
         question: str,
-        captcha_type: Union[
-            FunCaptchaClassificationTypeEnm, str
-        ] = FunCaptchaClassificationTypeEnm.FunCaptchaClassification,
+        captcha_type: Union[FunCaptchaClassificationTypeEnm, str] = FunCaptchaClassificationTypeEnm.FunCaptchaClassification,
         *args,
         **kwargs,
     ):

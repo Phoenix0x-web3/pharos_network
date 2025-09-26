@@ -1,5 +1,5 @@
 from loguru import logger
-from sqlalchemy import create_engine, text, inspect
+from sqlalchemy import create_engine, inspect, text
 from sqlalchemy.exc import DatabaseError
 from sqlalchemy.orm import Session
 
@@ -26,7 +26,7 @@ class DB:
         self.Base = base
         self.Base.metadata.create_all(self.engine)
 
-    def all(self, entities=None, *criterion, stmt=None , order_by=None) -> list:
+    def all(self, entities=None, *criterion, stmt=None, order_by=None) -> list:
         """
         Fetches all rows.
 
@@ -107,7 +107,7 @@ class DB:
             self.s.add(row)
 
         else:
-            raise ValueError('Wrong type!')
+            raise ValueError("Wrong type!")
 
         self.commit()
 
@@ -121,7 +121,7 @@ class DB:
         :param default_value: the default value for the new column (optional)
         """
         inspector = inspect(self.engine)
-        columns = [col['name'] for col in inspector.get_columns(table_name)]
+        columns = [col["name"] for col in inspector.get_columns(table_name)]
 
         if column_name in columns:
             logger.warning(f"Column '{column_name}' already exists in table '{table_name}'.")
@@ -133,8 +133,7 @@ class DB:
 
             # Устанавливаем только DEFAULT, если оно задано
             if default_value is not None:
-                alter_table_query += f" DEFAULT '{default_value}'" if isinstance(default_value,
-                                                                                 str) else f" DEFAULT {default_value}"
+                alter_table_query += f" DEFAULT '{default_value}'" if isinstance(default_value, str) else f" DEFAULT {default_value}"
 
             with self.engine.connect() as connection:
                 connection.execute(text(alter_table_query))
@@ -158,7 +157,7 @@ class DB:
             self.Base.metadata.create_all(self.engine)
             inspector = inspect(self.engine)
 
-        existing_cols = {col['name'] for col in inspector.get_columns(table_name)}
+        existing_cols = {col["name"] for col in inspector.get_columns(table_name)}
         table = model.__table__
 
         for col in table.columns:
@@ -179,14 +178,6 @@ class DB:
                 default_val = 1 if default_val else 0
 
             if (col.nullable is False) and (default_val is None):
-                logger.warning(
-                    f"[schema] '{table_name}.{col.name}' NOT NULL without DEFAULT → adding as NULLABLE"
-                )
+                logger.warning(f"[schema] '{table_name}.{col.name}' NOT NULL without DEFAULT → adding as NULLABLE")
 
-            self.add_column_to_table(
-                table_name=table_name,
-                column_name=col.name,
-                column_type=col_type_sql,
-                default_value=default_val
-            )
-
+            self.add_column_to_table(table_name=table_name, column_name=col.name, column_type=col_type_sql, default_value=default_val)

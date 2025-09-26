@@ -1,14 +1,17 @@
 from __future__ import annotations
+
 import sys
-from libs.eth_async.classes import Singleton
-from data.config import LOG_FILE, SETTINGS_FILE
-from loguru import logger
+
 import yaml
+from loguru import logger
+
+from data.config import LOG_FILE, SETTINGS_FILE
+from libs.eth_async.classes import Singleton
 
 
 class Settings(Singleton):
     def __init__(self):
-        with open(SETTINGS_FILE, 'r') as file:
+        with open(SETTINGS_FILE, "r") as file:
             json_data = yaml.safe_load(file) or {}
 
         self.private_key_encryption = json_data.get("private_key_encryption", False)
@@ -24,59 +27,59 @@ class Settings(Singleton):
         self.random_pause_start_wallet_max = json_data.get("random_pause_start_wallet", {}).get("max")
         self.random_pause_between_actions_min = json_data.get("random_pause_between_actions", {}).get("min")
         self.random_pause_between_actions_max = json_data.get("random_pause_between_actions", {}).get("max")
-        self.random_pause_wallet_after_completion_min = json_data.get("random_pause_wallet_after_completion", {}).get('min')
-        self.random_pause_wallet_after_completion_max = json_data.get("random_pause_wallet_after_completion", {}).get('max')
+        self.random_pause_wallet_after_completion_min = json_data.get("random_pause_wallet_after_completion", {}).get("min")
+        self.random_pause_wallet_after_completion_max = json_data.get("random_pause_wallet_after_completion", {}).get("max")
         self.swap_percent_from = json_data.get("swap_percent", {}).get("min")
         self.swap_percent_to = json_data.get("swap_percent", {}).get("max")
         self.autostake_percent_min = json_data.get("autostake_percent", {}).get("min")
         self.autostake_percent_max = json_data.get("autostake_percent", {}).get("max")
         self.invite_codes = json_data.get("invite_codes", [])
-        self.swaps_count_min = json_data.get("swaps_count", {}).get('min')
-        self.swaps_count_max = json_data.get("swaps_count", {}).get('max')
-        self.tips_count_min = json_data.get("tips_count", {}).get('min')
-        self.tips_count_max = json_data.get("tips_count", {}).get('max')
-        self.domains_count_min = json_data.get("domains_count", {}).get('min')
-        self.domains_count_max = json_data.get("domains_count", {}).get('max')
-        self.autostake_count_min = json_data.get("autostake_count", {}).get('min')
-        self.autostake_count_max = json_data.get("autostake_count", {}).get('max')
-        self.liquidity_count_min = json_data.get("liquidity_count", {}).get('min')
-        self.liquidity_count_max = json_data.get("liquidity_count", {}).get('max')
-        self.lending_count_min = json_data.get("lending_count", {}).get('min')
-        self.lending_count_max = json_data.get("lending_count", {}).get('max')
-        self.liquidity_percent_min = json_data.get("liquidity_percent", {}).get('min')
-        self.liquidity_percent_max = json_data.get("liquidity_percent", {}).get('max')
-        self.brokex_percent_min = json_data.get("brokex_percent", {}).get('min')
-        self.brokex_percent_max = json_data.get("brokex_percent", {}).get('max')
-        self.brokex_count_min = json_data.get("brokex_count", {}).get('min')
-        self.brokex_count_max = json_data.get("brokex_count", {}).get('max')
+        self.swaps_count_min = json_data.get("swaps_count", {}).get("min")
+        self.swaps_count_max = json_data.get("swaps_count", {}).get("max")
+        self.tips_count_min = json_data.get("tips_count", {}).get("min")
+        self.tips_count_max = json_data.get("tips_count", {}).get("max")
+        self.domains_count_min = json_data.get("domains_count", {}).get("min")
+        self.domains_count_max = json_data.get("domains_count", {}).get("max")
+        self.autostake_count_min = json_data.get("autostake_count", {}).get("min")
+        self.autostake_count_max = json_data.get("autostake_count", {}).get("max")
+        self.liquidity_count_min = json_data.get("liquidity_count", {}).get("min")
+        self.liquidity_count_max = json_data.get("liquidity_count", {}).get("max")
+        self.lending_count_min = json_data.get("lending_count", {}).get("min")
+        self.lending_count_max = json_data.get("lending_count", {}).get("max")
+        self.liquidity_percent_min = json_data.get("liquidity_percent", {}).get("min")
+        self.liquidity_percent_max = json_data.get("liquidity_percent", {}).get("max")
+        self.brokex_percent_min = json_data.get("brokex_percent", {}).get("min")
+        self.brokex_percent_max = json_data.get("brokex_percent", {}).get("max")
+        self.brokex_count_min = json_data.get("brokex_count", {}).get("min")
+        self.brokex_count_max = json_data.get("brokex_count", {}).get("max")
         self.retry = json_data.get("retry", {})
         self.discord_proxy = json_data.get("discord_proxy", {})
         self.capmonster_api_key = json_data.get("capmonster_api_key", {})
-        self.bitverse_count_min = json_data.get("bitverse_count", {}).get('min')
-        self.bitverse_count_max = json_data.get("bitverse_count", {}).get('max')
-        self.bitverse_percent_min = json_data.get("bitverse_percent", {}).get('min')
-        self.bitverse_percent_max = json_data.get("bitverse_percent", {}).get('max')
+        self.bitverse_count_min = json_data.get("bitverse_count", {}).get("min")
+        self.bitverse_count_max = json_data.get("bitverse_count", {}).get("max")
+        self.bitverse_percent_min = json_data.get("bitverse_percent", {}).get("min")
+        self.bitverse_percent_max = json_data.get("bitverse_percent", {}).get("max")
 
-        self.r2_swap_min = json_data.get("r2_swap", {}).get('min')
-        self.r2_swap_max = json_data.get("r2_swap", {}).get('max')
+        self.r2_swap_min = json_data.get("r2_swap", {}).get("min")
+        self.r2_swap_max = json_data.get("r2_swap", {}).get("max")
 
-        self.r2_stake_min = json_data.get("r2_stake", {}).get('min')
-        self.r2_stake_max = json_data.get("r2_stake", {}).get('max')
+        self.r2_stake_min = json_data.get("r2_stake", {}).get("min")
+        self.r2_stake_max = json_data.get("r2_stake", {}).get("max")
 
-        self.r2_count_min = json_data.get("r2_count", {}).get('min')
-        self.r2_count_max = json_data.get("r2_count", {}).get('max')
+        self.r2_count_min = json_data.get("r2_count", {}).get("min")
+        self.r2_count_max = json_data.get("r2_count", {}).get("max")
 
-        self.spout_count_min = json_data.get("spout_count", {}).get('min')
-        self.spout_count_max = json_data.get("spout_count", {}).get('max')
+        self.spout_count_min = json_data.get("spout_count", {}).get("min")
+        self.spout_count_max = json_data.get("spout_count", {}).get("max")
 
-        self.spout_percent_min = json_data.get("spout_percent", {}).get('min')
-        self.spout_percent_max = json_data.get("spout_percent", {}).get('max')
+        self.spout_percent_min = json_data.get("spout_percent", {}).get("min")
+        self.spout_percent_max = json_data.get("spout_percent", {}).get("max")
 
-        self.gotchipus_count_min = json_data.get("gotchipus_count", {}).get('min')
-        self.gotchipus_count_max = json_data.get("gotchipus_count", {}).get('max')
+        self.gotchipus_count_min = json_data.get("gotchipus_count", {}).get("min")
+        self.gotchipus_count_max = json_data.get("gotchipus_count", {}).get("max")
 
-        self.monad_transfer_min = json_data.get("monad_transfer", {}).get('min')
-        self.monad_transfer_max = json_data.get("monad_transfer", {}).get('max')
+        self.monad_transfer_min = json_data.get("monad_transfer", {}).get("min")
+        self.monad_transfer_max = json_data.get("monad_transfer", {}).get("max")
 
 
 # Configure the logger based on the settings

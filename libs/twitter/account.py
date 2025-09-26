@@ -1,12 +1,12 @@
 from pathlib import Path
-from typing import Sequence, Iterable
+from typing import Iterable, Sequence
 
-from pydantic import Field
 import pyotp
+from pydantic import Field
 
-from .utils import hidden_value, load_lines, write_lines
 from .enums import AccountStatus
 from .models import User
+from .utils import hidden_value, load_lines, write_lines
 
 
 class Account(User):

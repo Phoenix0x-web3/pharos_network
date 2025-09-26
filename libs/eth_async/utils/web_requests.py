@@ -1,5 +1,7 @@
 from curl_cffi.requests import AsyncSession
+
 from libs.eth_async import exceptions
+
 
 def request_params(params: dict[str, ...] | None) -> dict[str, str | int | float] | None:
     """
@@ -24,7 +26,7 @@ def request_params(params: dict[str, ...] | None) -> dict[str, str | int | float
             new_params[key] = str(value).lower()
 
         elif isinstance(value, bytes):
-            new_params[key] = value.decode('utf-8')
+            new_params[key] = value.decode("utf-8")
 
     return new_params
 
@@ -52,7 +54,7 @@ def aiohttp_params(params: dict[str, ...] | None) -> dict[str, str | int | float
             new_params[key] = str(value).lower()
 
         elif isinstance(value, bytes):
-            new_params[key] = value.decode('utf-8')
+            new_params[key] = value.decode("utf-8")
 
     return new_params
 
@@ -71,14 +73,13 @@ async def async_get(url: str, headers: dict | None = None, **kwargs) -> dict | N
 
     """
     async with AsyncSession() as session:
-
         response = await session.get(
             url=url,
             headers=headers,
             impersonate="chrome120",
             **kwargs,
             # params=params,
-            #proxy=proxy_url
+            # proxy=proxy_url
         )
         status_code = response.status_code
 
@@ -111,7 +112,7 @@ async def async_put(url: str, headers: dict | None = None, **kwargs) -> dict | N
             headers=headers,
             **kwargs,
             # params=params,
-            #proxy=proxy_url
+            # proxy=proxy_url
         )
         status_code = response.status_code
 
@@ -121,7 +122,7 @@ async def async_put(url: str, headers: dict | None = None, **kwargs) -> dict | N
         raise exceptions.HTTPException(response=response, status_code=status_code)
 
 
-async def async_post(url: str, headers: dict | None = None, cookies_return = False, **kwargs) -> dict | None:
+async def async_post(url: str, headers: dict | None = None, cookies_return=False, **kwargs) -> dict | None:
     """
     Make a POST request and check if it was successful.
 
@@ -141,7 +142,7 @@ async def async_post(url: str, headers: dict | None = None, cookies_return = Fal
             impersonate="chrome136",
             **kwargs,
             # params=params,
-            #proxy=proxy_url
+            # proxy=proxy_url
         )
 
         status_code = response.status_code
@@ -153,7 +154,6 @@ async def async_post(url: str, headers: dict | None = None, cookies_return = Fal
 
             else:
                 return response.json()
-
 
         # if status_code <= 401:
         #     return response

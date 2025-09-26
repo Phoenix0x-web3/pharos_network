@@ -1,24 +1,26 @@
 from fake_useragent import UserAgent
 
 from libs.eth_async.exceptions import APIException
-from libs.eth_async.utils.web_requests import async_get, aiohttp_params
+from libs.eth_async.utils.web_requests import aiohttp_params, async_get
 
 
 class Tag:
     """
     An instance with tag values.
     """
-    Earliest: str = 'earliest'
-    Pending: str = 'pending'
-    Latest: str = 'latest'
+
+    Earliest: str = "earliest"
+    Pending: str = "pending"
+    Latest: str = "latest"
 
 
 class Sort:
     """
     An instance with sort values.
     """
-    Asc: str = 'asc'
-    Desc: str = 'desc'
+
+    Asc: str = "asc"
+    Desc: str = "desc"
 
 
 class Module:
@@ -32,6 +34,7 @@ class Module:
         module (str): a module name.
 
     """
+
     key: str
     url: str
     headers: dict[str, ...]
@@ -56,7 +59,8 @@ class Account(Module):
     """
     Class with functions related to 'account' API module.
     """
-    module: str = 'account'
+
+    module: str = "account"
 
     async def balance(self, address: str, tag: str = Tag.Latest) -> dict[str, ...]:
         """
@@ -72,37 +76,42 @@ class Account(Module):
             Dict[str, Any]: the dictionary with the Ether balance of the address in wei.
 
         """
-        action = 'balance'
+        action = "balance"
         if tag not in (Tag.Earliest, Tag.Earliest, Tag.Latest):
             raise APIException('"tag" parameter have to be either "earliest", "pending" or "latest"')
 
         params = {
-            'module': self.module,
-            'action': action,
-            'address': address,
-            'tag': tag,
-            'apikey': self.key,
+            "module": self.module,
+            "action": action,
+            "address": address,
+            "tag": tag,
+            "apikey": self.key,
         }
         return await async_get(self.url, params=aiohttp_params(params), headers=self.headers)
 
     async def balancemulti(self, address: list[str], tag: str = Tag.Latest):
-        action = 'balancemulti'
+        action = "balancemulti"
 
         if tag not in (Tag.Earliest, Tag.Earliest, Tag.Latest):
             raise APIException('"tag" parameter have to be either "earliest", "pending" or "latest"')
 
         params = {
-            'module': self.module,
-            'action': action,
-            'address': address,
-            'tag': tag,
-            'apikey': self.key,
+            "module": self.module,
+            "action": action,
+            "address": address,
+            "tag": tag,
+            "apikey": self.key,
         }
         return await async_get(self.url, params=aiohttp_params(params), headers=self.headers)
 
     async def txlist(
-            self, address: str, startblock: int | None = None, endblock: int | None = None,
-            page: int | None = None, offset: int | None = None, sort: str | Sort = Sort.Asc
+        self,
+        address: str,
+        startblock: int | None = None,
+        endblock: int | None = None,
+        page: int | None = None,
+        offset: int | None = None,
+        sort: str | Sort = Sort.Asc,
     ) -> dict[str, ...]:
         """
         Return the list of transactions performed by an address, with optional pagination.
@@ -122,86 +131,80 @@ class Account(Module):
             Dict[str, Any]: the dictionary with the list of transactions performed by the address.
 
         """
-        action = 'txlist'
-        if sort not in ('asc', 'desc'):
+        action = "txlist"
+        if sort not in ("asc", "desc"):
             raise APIException('"sort" parameter have to be either "asc" or "desc"')
 
         params = {
-            'module': self.module,
-            'action': action,
-            'address': address,
-            'startblock': startblock,
-            'endblock': endblock,
-            'page': page,
-            'offset': offset,
-            'sort': sort,
-            'apikey': self.key,
+            "module": self.module,
+            "action": action,
+            "address": address,
+            "startblock": startblock,
+            "endblock": endblock,
+            "page": page,
+            "offset": offset,
+            "sort": sort,
+            "apikey": self.key,
         }
 
         return await async_get(self.url, params=aiohttp_params(params), headers=self.headers)
 
     async def txlistinternal(
-            self,
-            address: str,
-            startblock: int | None = None,
-            endblock: int | None = None,
-            page: int = 1,
-            offset: int = 0,
-            sort: str = Sort.Asc
+        self, address: str, startblock: int | None = None, endblock: int | None = None, page: int = 1, offset: int = 0, sort: str = Sort.Asc
     ):
-        action = 'txlistinternal'
+        action = "txlistinternal"
 
-        if sort not in ('asc', 'desc'):
+        if sort not in ("asc", "desc"):
             raise APIException('"sort" parameter have to be either "asc" or "desc"')
 
         params = {
-            'module': self.module,
-            'action': action,
-            'address': address,
-            'startblock': startblock,
-            'endblock': endblock,
-            'page': page,
-            'offset': offset,
-            'sort': sort,
-            'apikey': self.key,
+            "module": self.module,
+            "action": action,
+            "address": address,
+            "startblock": startblock,
+            "endblock": endblock,
+            "page": page,
+            "offset": offset,
+            "sort": sort,
+            "apikey": self.key,
         }
 
         return await async_get(self.url, params=aiohttp_params(params), headers=self.headers)
 
     async def tokentx(
-            self,
-            contractaddress: str,
-            address: str,
-            page: int = 1,
-            offset: int = 0,
-            startblock: int | None = None,
-            endblock: int | None = None,
-            sort: str = Sort.Asc
+        self,
+        contractaddress: str,
+        address: str,
+        page: int = 1,
+        offset: int = 0,
+        startblock: int | None = None,
+        endblock: int | None = None,
+        sort: str = Sort.Asc,
     ):
-        action = 'tokentx'
+        action = "tokentx"
 
-        if sort not in ('asc', 'desc'):
+        if sort not in ("asc", "desc"):
             raise APIException('"sort" parameter have to be either "asc" or "desc"')
 
         params = {
-            'module': self.module,
-            'action': action,
-            'contractaddress': contractaddress,
-            'address': address,
-            'page': page,
-            'offset': offset,
-            'startblock': startblock,
-            'endblock': endblock,
-            'sort': sort,
-            'apikey': self.key,
+            "module": self.module,
+            "action": action,
+            "contractaddress": contractaddress,
+            "address": address,
+            "page": page,
+            "offset": offset,
+            "startblock": startblock,
+            "endblock": endblock,
+            "sort": sort,
+            "apikey": self.key,
         }
 
         return await async_get(self.url, params=aiohttp_params(params), headers=self.headers)
 
     async def txlist_all(
-            self,
-            address: str,
-            chain: str | None = 'kaia',
+        self,
+        address: str,
+        chain: str | None = "kaia",
     ) -> list[dict]:
         page = 1
         limit = 50
@@ -229,7 +232,8 @@ class Contract(Module):
     """
     Class with functions related to 'contract' API module.
     """
-    module: str = 'contract'
+
+    module: str = "contract"
 
     async def getabi(self, address: str) -> dict[str, ...]:
         """
@@ -244,38 +248,38 @@ class Contract(Module):
             Dict[str, Any]: the dictionary with the contract ABI.
 
         """
-        action = 'getabi'
+        action = "getabi"
         params = {
-            'module': self.module,
-            'action': action,
-            'address': address,
-            'apikey': self.key,
+            "module": self.module,
+            "action": action,
+            "address": address,
+            "apikey": self.key,
         }
         return await async_get(self.url, params=aiohttp_params(params), headers=self.headers)
 
     async def getsourcecode(self, address: str):
-        action = 'getsourcecode'
+        action = "getsourcecode"
 
         params = {
-            'module': self.module,
-            'action': action,
-            'address': address,
-            'apikey': self.key,
+            "module": self.module,
+            "action": action,
+            "address": address,
+            "apikey": self.key,
         }
         return await async_get(self.url, params=aiohttp_params(params), headers=self.headers)
 
 
 class Transaction(Module):
-    module: str = 'transaction'
+    module: str = "transaction"
 
     async def getstatus(self, txhash: str):
-        action = 'getstatus'
+        action = "getstatus"
 
         params = {
-            'module': self.module,
-            'action': action,
-            'txhash': txhash,
-            'apikey': self.key,
+            "module": self.module,
+            "action": action,
+            "txhash": txhash,
+            "apikey": self.key,
         }
         return await async_get(self.url, params=aiohttp_params(params), headers=self.headers)
 
@@ -310,7 +314,7 @@ class APIFunctions:
         """
         self.key = key
         self.url = url
-        self.headers = {'content-type': 'application/json', 'user-agent': UserAgent().chrome}
+        self.headers = {"content-type": "application/json", "user-agent": UserAgent().chrome}
         self.account = Account(self.key, self.url, self.headers)
         self.contract = Contract(self.key, self.url, self.headers)
         self.transaction = Transaction(self.key, self.url, self.headers)

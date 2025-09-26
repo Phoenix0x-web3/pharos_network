@@ -1,5 +1,5 @@
-import os
 import json
+import os
 
 
 def join_path(path: str | tuple | list) -> str:
@@ -24,8 +24,8 @@ def touch(path: str | tuple | list, file: bool = False) -> bool:
     path = join_path(path)
     if file:
         if not os.path.exists(path):
-            with open(path, 'w') as f:
-                f.write('')
+            with open(path, "w") as f:
+                f.write("")
 
             return True
 
@@ -38,8 +38,7 @@ def touch(path: str | tuple | list, file: bool = False) -> bool:
     return False
 
 
-def write_json(path: str | tuple | list, obj: list | dict, indent: int | None = None,
-               encoding: str | None = None) -> None:
+def write_json(path: str | tuple | list, obj: list | dict, indent: int | None = None, encoding: str | None = None) -> None:
     """
     Write Python list or dictionary to a JSON file.
 
@@ -49,5 +48,5 @@ def write_json(path: str | tuple | list, obj: list | dict, indent: int | None = 
     :param Optional[str] encoding: the name of the encoding used to decode or encode the file
     """
     path = join_path(path)
-    with open(path, mode='w', encoding=encoding) as f:
+    with open(path, mode="w", encoding=encoding) as f:
         json.dump(obj, f, indent=indent)

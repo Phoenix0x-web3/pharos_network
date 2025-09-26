@@ -63,16 +63,13 @@ class HTTPException(TwitterException):
         # Если ответ — строка, то это html
         if isinstance(data, str):
             if not data:
-                exception_message = (
-                    f"(response status: {response.status_code}) Empty response body."
-                )
+                exception_message = f"(response status: {response.status_code}) Empty response body."
             else:
                 self.html = data
                 exception_message = f"(response status: {response.status_code}) HTML Response:\n{self.html}"
             if response.status_code == 429:
                 exception_message = (
-                    f"(response status: {response.status_code}) Rate limit exceeded."
-                    f" Set wait_on_rate_limit=True to ignore this exception."
+                    f"(response status: {response.status_code}) Rate limit exceeded. Set wait_on_rate_limit=True to ignore this exception."
                 )
             super().__init__(exception_message)
             return
@@ -84,9 +81,7 @@ class HTTPException(TwitterException):
             if "code" in error:
                 self.error_codes.append(error["code"])
 
-        exception_message = _http_exception_message(
-            response, self.errors, self.detail, custom_exception_message
-        )
+        exception_message = _http_exception_message(response, self.errors, self.detail, custom_exception_message)
         super().__init__(exception_message)
 
 
@@ -146,18 +141,13 @@ class BadAccount(TwitterException):
 
 class BadAccountToken(BadAccount):
     def __init__(self, http_exception: "HTTPException", account: Account):
-        exception_message = (
-            "Bad Twitter account's auth_token. Relogin to get new token."
-        )
+        exception_message = "Bad Twitter account's auth_token. Relogin to get new token."
         super().__init__(http_exception, account, exception_message)
 
 
 class AccountLocked(BadAccount):
     def __init__(self, http_exception: "HTTPException", account: Account):
-        exception_message = (
-            f"Twitter account is locked."
-            f" Set CapSolver API key (capsolver_api_key) to auto-unlock."
-        )
+        exception_message = f"Twitter account is locked. Set CapSolver API key (capsolver_api_key) to auto-unlock."
         super().__init__(http_exception, account, exception_message)
 
 

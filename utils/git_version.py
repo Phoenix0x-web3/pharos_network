@@ -1,14 +1,15 @@
-import git
-import os
 import json
-import sys
+import os
 import platform
+import sys
 from datetime import datetime, timezone
 from typing import Optional, Tuple
+
+import git
 from loguru import logger
 
-from utils.browser import Browser
 from data.settings import Settings
+from utils.browser import Browser
 
 
 def get_local_commit(repo_path: str = ".") -> Tuple[Optional[str], Optional[str], Optional[str]]:
@@ -32,6 +33,7 @@ def get_local_commit(repo_path: str = ".") -> Tuple[Optional[str], Optional[str]
         logger.error(f"Error fetching local commit: {e}")
         return None, None, None
 
+
 def get_latest_commit_from_git(repo_path: str = ".", remote_name: str = "origin") -> Tuple[Optional[str], Optional[str], Optional[str]]:
     """
     Fetches the latest commit information from a remote Git repository using gitpython.
@@ -47,10 +49,10 @@ def get_latest_commit_from_git(repo_path: str = ".", remote_name: str = "origin"
         repo = git.Repo(repo_path)
         remote = repo.remotes[remote_name]
         remote.fetch()
-        
+
         remote_head = repo.refs[f"{remote_name}/{repo.active_branch.name}"]
         commit = repo.commit(remote_head)
-        
+
         commit_date = datetime.fromtimestamp(commit.committed_date, tz=timezone.utc).isoformat()
         return commit.hexsha[:7], commit_date, commit.message.strip()
     except git.InvalidGitRepositoryError:
@@ -59,6 +61,7 @@ def get_latest_commit_from_git(repo_path: str = ".", remote_name: str = "origin"
     except Exception as e:
         logger.error(f"Error fetching from Git: {e}. Ensure SSH/HTTPS credentials are configured for private repositories.")
         return None, None, None
+
 
 async def get_latest_commit_from_api(repo_owner: str, repo_name: str) -> Tuple[Optional[str], Optional[str], Optional[str]]:
     """
@@ -95,11 +98,12 @@ async def get_latest_commit_from_api(repo_owner: str, repo_name: str) -> Tuple[O
         return (
             data.get("sha", "")[:7],
             data.get("commit", {}).get("author", {}).get("date"),
-            data.get("commit", {}).get("message", "").strip()
+            data.get("commit", {}).get("message", "").strip(),
         )
     except Exception as e:
         logger.error(f"Error fetching commit from API: {e}")
         return None, None, None
+
 
 def read_local_version(version_file: str = "files/version.json") -> Tuple[Optional[str], Optional[str]]:
     """
@@ -122,6 +126,7 @@ def read_local_version(version_file: str = "files/version.json") -> Tuple[Option
         logger.error(f"Error reading local version from {version_file}: {e}")
         return None, None
 
+
 def save_local_version(commit_hash: str, commit_date: str, version_file: str = "files/version.json") -> None:
     """
     Saves the current version information to a file.
@@ -137,6 +142,7 @@ def save_local_version(commit_hash: str, commit_date: str, version_file: str = "
         logger.debug(f"Saved version info to {version_file}: {commit_hash}")
     except Exception as e:
         logger.error(f"Error saving version to {version_file}: {e}")
+
 
 def perform_git_pull(repo_path: str = ".", remote_name: str = "origin") -> bool:
     """
@@ -159,6 +165,7 @@ def perform_git_pull(repo_path: str = ".", remote_name: str = "origin") -> bool:
         logger.error(f"Error performing git pull: {e}")
         return False
 
+
 def restart_program():
     """
     Restarts the current program with the same arguments.
@@ -166,10 +173,11 @@ def restart_program():
     is_windows = platform.system() == "Windows"
     if is_windows:
         exit("Please restart the program on Windows after GitHub updates.")
-    
+
     logger.info("Restarting program after update")
     python = sys.executable
     os.execv(python, [python] + sys.argv)
+
 
 async def check_for_updates(
     repo_name: str,
@@ -177,7 +185,7 @@ async def check_for_updates(
     version_file: str = "files/version.json",
     repo_path: str = ".",
     remote_name: str = "origin",
-    repo_private: bool = False
+    repo_private: bool = False,
 ) -> None:
     """
     Checks for updates using gitpython if a Git repo exists, otherwise falls back to GitHub API via Browser.
@@ -191,13 +199,12 @@ async def check_for_updates(
         repo_path: Path to the Git repository (default: current directory).
         remote_name: Name of the remote (default: "origin").
     """
-    
 
     if not Settings().check_git_updates:
         return
-    
+
     repo_name = repo_name.strip().lower().replace(" ", "_")
-        
+
     logger.debug(f"Checking for updates in {repo_owner}/{repo_name}")
 
     is_git_repo = os.path.exists(os.path.join(repo_path, ".git"))
@@ -214,7 +221,9 @@ async def check_for_updates(
         if repo_private:
             latest_hash, latest_date, latest_message = get_latest_commit_from_git(repo_path, remote_name)
             if not latest_hash:
-                logger.warning("Warning: Failed to fetch updates via Git. Ensure SSH/HTTPS credentials are configured for private repositories.")
+                logger.warning(
+                    "Warning: Failed to fetch updates via Git. Ensure SSH/HTTPS credentials are configured for private repositories."
+                )
             if local_hash == latest_hash:
                 latest_dt = datetime.fromisoformat(latest_date.replace("Z", "+00:00"))
                 formatted_date = latest_dt.strftime("%d.%m.%Y %H:%M UTC")
@@ -269,11 +278,11 @@ async def check_for_updates(
     if is_git_repo:
         while True:
             response = input("Perform update y/N? ").strip().lower()
-            if response in ('y', 'n', ''):
+            if response in ("y", "n", ""):
                 break
             print("Please enter 'y' or 'n'.")
-        
-        if response == 'y':
+
+        if response == "y":
             if perform_git_pull(repo_path, remote_name):
                 save_local_version(latest_hash, latest_date, version_file)
                 print("Update successful. Restarting program...")
@@ -284,4 +293,3 @@ async def check_for_updates(
             print("Update skipped. Continuing with current version.")
     else:
         save_local_version(latest_hash, latest_date, version_file)
-    

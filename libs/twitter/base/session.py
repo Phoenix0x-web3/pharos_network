@@ -1,5 +1,5 @@
-from curl_cffi import requests
 from better_proxy import Proxy
+from curl_cffi import requests
 
 
 class BaseAsyncSession(requests.AsyncSession):
@@ -15,7 +15,7 @@ class BaseAsyncSession(requests.AsyncSession):
         "accept": "*/*",
         "accept-language": "en-US,en",
         "user-agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.0.0 Safari/537.36",
-        'Priority': 'u=1, i',
+        "Priority": "u=1, i",
         "sec-ch-ua": '"Google Chrome";v="125", "Chromium";v="125", "Not.A/Brand";v="24"',
         "sec-ch-ua-platform": '"Windows"',
         "sec-ch-ua-mobile": "?0",
@@ -35,9 +35,7 @@ class BaseAsyncSession(requests.AsyncSession):
         headers = session_kwargs["headers"] = session_kwargs.get("headers") or {}
         for k, v in self.DEFAULT_HEADERS.items():
             headers.setdefault(k, v)
-        session_kwargs["impersonate"] = (
-            session_kwargs.get("impersonate") or self.DEFAULT_IMPERSONATE
-        )
+        session_kwargs["impersonate"] = session_kwargs.get("impersonate") or self.DEFAULT_IMPERSONATE
         super().__init__(**session_kwargs)
         self.proxy = proxy
 

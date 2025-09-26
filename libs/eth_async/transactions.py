@@ -1,20 +1,21 @@
 from __future__ import annotations
+
 from typing import TYPE_CHECKING, Any
 
-from faker.providers import address
-from hexbytes import HexBytes
-
-from web3 import AsyncWeb3, Web3
-# from web3.middleware import ExtraDataToPOAMiddleware
-from web3.types import TxReceipt, _Hash32, TxParams
 from eth_account.datastructures import SignedTransaction
+from hexbytes import HexBytes
+from web3 import AsyncWeb3, Web3
+
+# from web3.middleware import ExtraDataToPOAMiddleware
+from web3.types import TxParams, TxReceipt, _Hash32
 
 from libs.eth_async.utils.web_requests import async_post
-from .data import types
+
 from . import exceptions
 from .classes import AutoRepr
+from .data import types
+from .data.models import CommonValues, TokenAmount, TxArgs
 from .utils.utils import api_key_required
-from .data.models import TokenAmount, CommonValues, TxArgs
 
 if TYPE_CHECKING:
     from .client import Client
@@ -32,6 +33,7 @@ class Tx(AutoRepr):
         input_data (Optional[Dict[str, Any]]): an input data.
 
     """
+
     hash: _Hash32 | None
     params: dict | None
     receipt: TxReceipt | None
@@ -72,20 +74,18 @@ class Tx(AutoRepr):
         """
         tx_data = await client.w3.eth.get_transaction(transaction_hash=self.hash)
         self.params = {
-            'chainId': client.network.chain_id,
-            'nonce': int(tx_data.get('nonce')),
-            'gasPrice': int(tx_data.get('gasPrice')),
-            'gas': int(tx_data.get('gas')),
-            'from': tx_data.get('from'),
-            'to': tx_data.get('to'),
-            'data': tx_data.get('input'),
-            'value': int(tx_data.get('value'))
+            "chainId": client.network.chain_id,
+            "nonce": int(tx_data.get("nonce")),
+            "gasPrice": int(tx_data.get("gasPrice")),
+            "gas": int(tx_data.get("gas")),
+            "from": tx_data.get("from"),
+            "to": tx_data.get("to"),
+            "data": tx_data.get("input"),
+            "value": int(tx_data.get("value")),
         }
         return self.params
 
-    async def wait_for_receipt(
-            self, client, timeout: int | float = 120, poll_latency: float = 0.1
-    ) -> dict[str, Any]:
+    async def wait_for_receipt(self, client, timeout: int | float = 120, poll_latency: float = 0.1) -> dict[str, Any]:
         """
         Wait for the transaction receipt.
 
@@ -99,10 +99,7 @@ class Tx(AutoRepr):
 
         """
         self.receipt = await client.transactions.wait_for_receipt(
-            w3=client.w3,
-            tx_hash=self.hash,
-            timeout=timeout,
-            poll_latency=poll_latency
+            w3=client.w3, tx_hash=self.hash, timeout=timeout, poll_latency=poll_latency
         )
         return self.receipt
 
@@ -135,17 +132,10 @@ class Transactions:
             Wei: the current max priority fee.
 
         """
-        query = [
-            {
-                "id": 26,
-                "jsonrpc": "2.0",
-                "method": "eth_maxPriorityFeePerGas"
-            }
-
-        ]
+        query = [{"id": 26, "jsonrpc": "2.0", "method": "eth_maxPriorityFeePerGas"}]
 
         response = await async_post(url=self.client.network.rpc, json=query)
-        max_priority_fee_per_gas = int(response[0]['result'], 16)
+        max_priority_fee_per_gas = int(response[0]["result"], 16)
         return TokenAmount(amount=max_priority_fee_per_gas, wei=True)
 
     async def estimate_gas(self, tx_params: TxParams) -> TokenAmount:
@@ -177,38 +167,38 @@ class Transactions:
 
         """
 
-        if 'chainId' not in tx_params:
-            tx_params['chainId'] = self.client.network.chain_id
+        if "chainId" not in tx_params:
+            tx_params["chainId"] = self.client.network.chain_id
 
-        if not tx_params.get('nonce'):
-            tx_params['nonce'] = await self.client.wallet.nonce()
+        if not tx_params.get("nonce"):
+            tx_params["nonce"] = await self.client.wallet.nonce()
 
-        if 'from' not in tx_params:
-            tx_params['from'] = self.client.account.address
+        if "from" not in tx_params:
+            tx_params["from"] = self.client.account.address
 
-        if 'gasPrice' not in tx_params and 'maxFeePerGas' not in tx_params:
+        if "gasPrice" not in tx_params and "maxFeePerGas" not in tx_params:
             gas_price = (await self.gas_price()).Wei
             if self.client.network.tx_type == 2:
-                tx_params['maxFeePerGas'] = gas_price
+                tx_params["maxFeePerGas"] = gas_price
 
             else:
-                tx_params['gasPrice'] = gas_price
+                tx_params["gasPrice"] = gas_price
 
-        elif 'gasPrice' in tx_params and not int(tx_params['gasPrice']):
-            tx_params['gasPrice'] = (await self.gas_price()).Wei
+        elif "gasPrice" in tx_params and not int(tx_params["gasPrice"]):
+            tx_params["gasPrice"] = (await self.gas_price()).Wei
 
-        if 'maxFeePerGas' in tx_params :
+        if "maxFeePerGas" in tx_params:
             block = await self.client.w3.eth.get_block("latest")
-            base_fee = block.get("baseFeePerGas")  
-            recommended_priority_fee = await self.client.w3.eth.max_priority_fee   
+            base_fee = block.get("baseFeePerGas")
+            recommended_priority_fee = await self.client.w3.eth.max_priority_fee
 
-            max_fee_per_gas = base_fee  + recommended_priority_fee
- 
-            tx_params['maxPriorityFeePerGas'] = recommended_priority_fee
-            tx_params['maxFeePerGas'] = int(max_fee_per_gas)
- 
-        if 'gas' not in tx_params or not int(tx_params['gas']):
-            tx_params['gas'] = (await self.estimate_gas(tx_params=tx_params)).Wei
+            max_fee_per_gas = base_fee + recommended_priority_fee
+
+            tx_params["maxPriorityFeePerGas"] = recommended_priority_fee
+            tx_params["maxFeePerGas"] = int(max_fee_per_gas)
+
+        if "gas" not in tx_params or not int(tx_params["gas"]):
+            tx_params["gas"] = (await self.estimate_gas(tx_params=tx_params)).Wei
 
         return tx_params
 
@@ -223,9 +213,7 @@ class Transactions:
             SignedTransaction: the signed transaction.
 
         """
-        return self.client.w3.eth.account.sign_transaction(
-            transaction_dict=tx_params, private_key=self.client.account.key
-        )
+        return self.client.w3.eth.account.sign_transaction(transaction_dict=tx_params, private_key=self.client.account.key)
 
     async def sign_and_send(self, tx_params: TxParams) -> Tx:
         """
@@ -247,9 +235,7 @@ class Transactions:
 
         return Tx(tx_hash=tx_hash, params=tx_params)
 
-    async def approved_amount(
-            self, token: types.Contract, spender: types.Contract, owner: types.Address | None = None
-    ) -> TokenAmount:
+    async def approved_amount(self, token: types.Contract, spender: types.Contract, owner: types.Address | None = None) -> TokenAmount:
         """
         Get approved amount of token.
 
@@ -269,17 +255,14 @@ class Transactions:
             owner = self.client.account.address
 
         return TokenAmount(
-            amount=await contract.functions.allowance(
-                AsyncWeb3.to_checksum_address(owner),
-                AsyncWeb3.to_checksum_address(spender)
-            ).call(),
+            amount=await contract.functions.allowance(AsyncWeb3.to_checksum_address(owner), AsyncWeb3.to_checksum_address(spender)).call(),
             decimals=await self.client.transactions.get_decimals(contract=contract.address),
-            wei=True
+            wei=True,
         )
 
     @staticmethod
     async def wait_for_receipt(
-            w3: AsyncWeb3, tx_hash: str | _Hash32, timeout: int | float = 120, poll_latency: float = 0.1
+        w3: AsyncWeb3, tx_hash: str | _Hash32, timeout: int | float = 120, poll_latency: float = 0.1
     ) -> dict[str, Any]:
         """
         Wait for a transaction receipt.
@@ -294,13 +277,15 @@ class Transactions:
             Dict[str, Any]: the transaction receipt.
 
         """
-        return dict(await w3.eth.wait_for_transaction_receipt(
-            transaction_hash=tx_hash, timeout=timeout, poll_latency=poll_latency
-        ))
+        return dict(await w3.eth.wait_for_transaction_receipt(transaction_hash=tx_hash, timeout=timeout, poll_latency=poll_latency))
 
     async def approve(
-            self, token: types.Contract, spender: types.Address, amount: types.Amount | None = None,
-            gas_limit: types.GasLimit | None = None, nonce: int | None = None
+        self,
+        token: types.Contract,
+        spender: types.Address,
+        amount: types.Amount | None = None,
+        gas_limit: types.GasLimit | None = None,
+        nonce: int | None = None,
     ) -> Tx:
         """
         Approve token spending for specified address.
@@ -323,30 +308,24 @@ class Transactions:
         if amount is None:
             amount = CommonValues.InfinityInt
         elif isinstance(amount, (int, float)):
-            amount = TokenAmount(
-                amount=amount,
-                decimals=await self.client.transactions.get_decimals(contract=contract.address)
-            ).Wei
+            amount = TokenAmount(amount=amount, decimals=await self.client.transactions.get_decimals(contract=contract.address)).Wei
         else:
             amount = amount.Wei
 
-        tx_args = TxArgs(
-            spender=spender,
-            amount=amount
-        )
+        tx_args = TxArgs(spender=spender, amount=amount)
 
         tx_params = {
-            'nonce': nonce,
-            'to': contract.address,
-            'data': contract.encode_abi('approve', args=tx_args.tuple()),
-            'maxFeePerGas': await self.client.w3.eth.max_priority_fee + Web3.to_wei(0.2, "gwei"),
-            'maxPriorityFeePerGas': await self.client.w3.eth.max_priority_fee,
+            "nonce": nonce,
+            "to": contract.address,
+            "data": contract.encode_abi("approve", args=tx_args.tuple()),
+            "maxFeePerGas": await self.client.w3.eth.max_priority_fee + Web3.to_wei(0.2, "gwei"),
+            "maxPriorityFeePerGas": await self.client.w3.eth.max_priority_fee,
         }
 
         if gas_limit:
             if isinstance(gas_limit, int):
                 gas_limit = TokenAmount(amount=gas_limit, wei=True)
-            tx_params['gas'] = gas_limit.Wei
+            tx_params["gas"] = gas_limit.Wei
 
         return await self.sign_and_send(tx_params=tx_params)
 
@@ -364,8 +343,12 @@ class Transactions:
 
     @api_key_required
     async def find_txs(
-            self, contract: types.Contract | list[types.Contract], function_name: str | None = '',
-            address: types.Address | None = None, after_timestamp: int = 0, before_timestamp: int = 999_999_999_999
+        self,
+        contract: types.Contract | list[types.Contract],
+        function_name: str | None = "",
+        address: types.Address | None = None,
+        after_timestamp: int = 0,
+        before_timestamp: int = 999_999_999_999,
     ) -> dict[str, ...]:
         """
         Find all transactions of interaction with the contract, in addition, you can filter transactions by
@@ -397,27 +380,27 @@ class Transactions:
             address = self.client.account.address
 
         txs = {}
-        coin_txs = (await self.client.network.api.functions.account.txlist(address))['result']
+        coin_txs = (await self.client.network.api.functions.account.txlist(address))["result"]
         for tx in coin_txs:
             if (
-                    after_timestamp < int(tx.get('timeStamp')) < before_timestamp and
-                    tx.get('isError') == '0' and
-                    tx.get('to') in contract_addresses and
-                    function_name in tx.get('functionName')
+                after_timestamp < int(tx.get("timeStamp")) < before_timestamp
+                and tx.get("isError") == "0"
+                and tx.get("to") in contract_addresses
+                and function_name in tx.get("functionName")
             ):
-                txs[tx.get('hash')] = tx
+                txs[tx.get("hash")] = tx
 
         return txs
 
     @api_key_required
     async def find_tx_by_method_id(self, address: str, to: str, method_id: str):
         txs = {}
-        coin_txs = (await self.client.network.api.functions.account.txlist(address))['result']
+        coin_txs = (await self.client.network.api.functions.account.txlist(address))["result"]
         for tx in coin_txs:
             # {'blockNumber': '17775679', 'timeStamp': '1690355483', 'hash': '0xce8add3eda0f57419ba41ea999912268f7ed19bda11cc19db098185bfb6c616e', 'nonce': '13', 'blockHash': '0xca8faf70a88f1bbbdb47f0390a050ec1c1c94e28f6cc5d7e793954519c7f739d', 'transactionIndex': '44', 'from': '0x36f302d18dcede1ab1174f47726e62212d1ccead', 'to': '0x32400084c286cf3e17e7b677ea9583e60a000324', 'value': '35703276971597170', 'gas': '124414', 'gasPrice': '18344087912', 'isError': '0', 'txreceipt_status': '1', 'input': '0xeb67241900000000000000000000000036f302d18dcede1ab1174f47726e62212d1ccead000000000000000000000000000000000000000000000000007d82a7600f4e7200000000000000000000000000000000000000000000000000000000000000e000000000000000000000000000000000000000000000000000000000000b73a30000000000000000000000000000000000000000000000000000000000000320000000000000000000000000000000000000000000000000000000000000010000000000000000000000000036f302d18dcede1ab1174f47726e62212d1ccead00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000', 'contractAddress': '', 'cumulativeGasUsed': '5139068', 'gasUsed': '118078', 'confirmations': '1531219', 'methodId': '0xeb672419', 'functionName': 'requestL2Transaction(address _contractL2,uint256 _l2Value,bytes _calldata,uint256 _l2GasLimit,uint256 _gasPricePerPubdata,bytes[] _factoryDeps,address _refundRecipient)'}
             # if tx.get('isError') == '0' and tx.get('to') == to.lower() and method_id in tx.get('methodId'):
-            if tx.get('isError') == '0' and tx.get('to') == to.lower() and tx.get('input').startswith(method_id):
-                txs[tx.get('hash')] = tx
+            if tx.get("isError") == "0" and tx.get("to") == to.lower() and tx.get("input").startswith(method_id):
+                txs[tx.get("hash")] = tx
         return txs
 
     async def get_transactions_by_address(self, address: str) -> list:
@@ -425,8 +408,8 @@ class Transactions:
         transactions = []
         while True:
             response = await self.client.network.api.functions.address.transactions(str(address), next_page_params)
-            next_page_params = response['next_page_params']
-            transactions.append(response['items'])
+            next_page_params = response["next_page_params"]
+            transactions.append(response["items"])
             if next_page_params is None:
                 return transactions
 
@@ -435,15 +418,14 @@ class Transactions:
         nfts = []
         while True:
             response = await self.client.network.api.functions.tokens.nft_instances(
-                address=str(nft_address),
-                next_page_params=next_page_params
+                address=str(nft_address), next_page_params=next_page_params
             )
-            next_page_params = response['next_page_params']
-            for item in response['items']:
-                if item.get('owner'):
-                    if item['owner'].get('hash') == str(owner):
-                        print(item['id'])
-                        nfts.append(item['id'])
+            next_page_params = response["next_page_params"]
+            for item in response["items"]:
+                if item.get("owner"):
+                    if item["owner"].get("hash") == str(owner):
+                        print(item["id"])
+                        nfts.append(item["id"])
             if next_page_params is None:
                 return nfts
 
@@ -451,15 +433,12 @@ class Transactions:
         next_page_params = None
         nfts = []
         while True:
-            response = await self.client.network.api.functions.address.nft(
-                address=str(owner),
-                next_page_params=next_page_params
-            )
-            next_page_params = response['next_page_params']
-            for item in response['items']:
-                if item.get('token'):
-                    if item['token'].get('address') == str(nft_address):
-                        nfts.append(item['id'])
+            response = await self.client.network.api.functions.address.nft(address=str(owner), next_page_params=next_page_params)
+            next_page_params = response["next_page_params"]
+            for item in response["items"]:
+                if item.get("token"):
+                    if item["token"].get("address") == str(nft_address):
+                        nfts.append(item["id"])
             if next_page_params is None:
                 return nfts
 
@@ -469,17 +448,16 @@ class Transactions:
         # nfts = {'contract1': [id1, id2], 'contract2': [id1]}
         while True:
             response = await self.client.network.api.functions.address.nft_collections(
-                address=str(self.client.account.address),
-                next_page_params=next_page_params
+                address=str(self.client.account.address), next_page_params=next_page_params
             )
-            next_page_params = response['next_page_params']
-            for item in response['items']:
+            next_page_params = response["next_page_params"]
+            for item in response["items"]:
                 ids = []
-                if item.get('token') and item.get('amount'):
-                    if contract := item['token'].get('address'):
-                        if type(instances := item.get('token_instances')) == list:
+                if item.get("token") and item.get("amount"):
+                    if contract := item["token"].get("address"):
+                        if type(instances := item.get("token_instances")) == list:
                             for instance in instances:
-                                ids.append(instance['id'])
+                                ids.append(instance["id"])
                 nfts[contract] = ids
             if next_page_params is None:
                 return nfts

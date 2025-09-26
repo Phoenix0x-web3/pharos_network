@@ -1,9 +1,10 @@
-from Crypto.Random import get_random_bytes
-from Crypto.Cipher import AES
-from binascii import unhexlify, hexlify
+from binascii import hexlify, unhexlify
 from hashlib import sha256
 from json import dumps
 from time import time
+
+from Crypto.Cipher import AES
+from Crypto.Random import get_random_bytes
 
 
 class XPFFHeaderGenerator:
@@ -15,13 +16,10 @@ class XPFFHeaderGenerator:
         self.last_guest_id = None
         self.last_xpff = None
 
-
     def generate_xpff(self, guest_id: str) -> str:
         current_ts = int(time() * 1e3)
         if (
-                self.last_guest_id == guest_id and
-                self.last_xpff and
-                (current_ts - self.last_ts) / 1e3 / 60 < 5  # previous xpff < 5 mins
+            self.last_guest_id == guest_id and self.last_xpff and (current_ts - self.last_ts) / 1e3 / 60 < 5  # previous xpff < 5 mins
         ):
             return self.last_xpff
 
@@ -29,17 +27,13 @@ class XPFFHeaderGenerator:
         self.last_guest_id = guest_id
 
         fingerprint = {
-            'webgl_fingerprint': '',
-            'canvas_fingerprint': '',
-            'navigator_properties': {
-                'hasBeenActive': 'true',
-                'userAgent': self.user_agent,
-                'webdriver': 'false'
-            },
-            'codec_fingerprint': '',
-            'audio_fingerprint': '',
-            'audio_properties': None,
-            'created_at': self.last_ts,
+            "webgl_fingerprint": "",
+            "canvas_fingerprint": "",
+            "navigator_properties": {"hasBeenActive": "true", "userAgent": self.user_agent, "webdriver": "false"},
+            "codec_fingerprint": "",
+            "audio_fingerprint": "",
+            "audio_properties": None,
+            "created_at": self.last_ts,
         }
         fingerprint_str = dumps(fingerprint, separators=(",", ":"))
 
@@ -50,7 +44,6 @@ class XPFFHeaderGenerator:
         self.last_xpff = hexlify(nonce + ciphertext + tag).decode()
         return self.last_xpff
 
-
     def decode_xpff(self, hex_string: str, guest_id: str) -> str:
         key = self._derive_xpff_key(guest_id)
         raw = unhexlify(hex_string)
@@ -60,7 +53,6 @@ class XPFFHeaderGenerator:
         cipher = AES.new(key, AES.MODE_GCM, nonce=nonce)
         plaintext = cipher.decrypt_and_verify(ciphertext, tag)
         return plaintext.decode()
-
 
     def _derive_xpff_key(self, guest_id: str) -> bytes:
         combined = self.base_key + guest_id

@@ -1,4 +1,5 @@
 import aiohttp
+
 from libs.eth_async import exceptions
 
 
@@ -25,7 +26,7 @@ def aiohttp_params(params: dict[str, ...] | None) -> dict[str, str | int | float
             new_params[key] = str(value).lower()
 
         elif isinstance(value, bytes):
-            new_params[key] = value.decode('utf-8')
+            new_params[key] = value.decode("utf-8")
 
     return new_params
 

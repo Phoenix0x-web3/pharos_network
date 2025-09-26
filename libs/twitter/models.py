@@ -1,5 +1,5 @@
-from typing import Optional, Any
 from datetime import datetime, timedelta
+from typing import Optional
 
 from pydantic import BaseModel, Field, field_validator
 
@@ -54,7 +54,7 @@ class User(BaseModel):
 
     @classmethod
     def from_raw_data(cls, data: dict):
-        legacy = data.get("legacy") or {}  
+        legacy = data.get("legacy") or {}
         keys = ("description", "followers_count", "friends_count")
 
         values = {key: legacy.get(key) for key in keys}
@@ -126,11 +126,7 @@ class Tweet(BaseModel):
             # No legacy data — you can either return None or raise an exception
             return None
 
-        user_data = (
-            data.get("core", {})
-            .get("user_results", {})
-            .get("result", {})
-        )
+        user_data = data.get("core", {}).get("user_results", {}).get("result", {})
         user = User.from_raw_data(user_data) if user_data else None
 
         id = int(legacy_data.get("id_str", 0))

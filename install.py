@@ -4,7 +4,6 @@ import platform
 import subprocess
 import sys
 
-
 parser = argparse.ArgumentParser()
 parser.add_argument(
     "-d",

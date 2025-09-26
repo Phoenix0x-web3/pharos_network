@@ -9,7 +9,7 @@ class BaseHTTPClient:
         if headers:
             for k, v in self._DEFAULT_HEADERS.items():
                 headers.setdefault(k, v)
-            
+
         self._session = BaseAsyncSession(
             headers=headers or self._DEFAULT_HEADERS,
             **session_kwargs,

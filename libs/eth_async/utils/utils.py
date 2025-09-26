@@ -4,8 +4,7 @@ from decimal import Decimal
 from libs.eth_async import exceptions
 
 
-def randfloat(from_: int | float | str, to_: int | float | str,
-              step: int | float | str | None = None) -> float:
+def randfloat(from_: int | float | str, to_: int | float | str, step: int | float | str | None = None) -> float:
     """
     Return a random float from the range.
 
@@ -66,7 +65,7 @@ def api_key_required(func):
 
     def func_wrapper(self, *args, **kwargs):
         if not self.client.network.api.key or not self.client.network.api.functions:
-            raise exceptions.APIException('To use this function, you must specify the explorer API key!')
+            raise exceptions.APIException("To use this function, you must specify the explorer API key!")
 
         else:
             return func(self, *args, **kwargs)
