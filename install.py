@@ -4,6 +4,8 @@ import platform
 import subprocess
 import sys
 
+from check_python import check_python_version
+
 parser = argparse.ArgumentParser()
 parser.add_argument(
     "-d",
@@ -22,6 +24,8 @@ def install_dependencies(pip_path: str):
         print("\nInstalling base dependencies...")
         subprocess.run([pip_path, "install", "-r", "requirements.txt"], check=True)
 
+
+check_python_version()
 
 is_windows = platform.system() == "Windows"
 venv_dir = "venv"

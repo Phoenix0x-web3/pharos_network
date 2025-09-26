@@ -6,6 +6,7 @@ from colorama import Fore
 from inquirer.themes import Default
 from rich.console import Console
 
+from check_python import check_python_version
 from data.constants import PROJECT_NAME
 from functions.activity import activity
 from utils.create_files import create_files
@@ -96,6 +97,7 @@ async def choose_action():
 
 
 async def main():
+    check_python_version()
     create_files()
     await check_for_updates(repo_name=PROJECT_NAME, repo_private=False)
     db.ensure_model_columns(Wallet)
