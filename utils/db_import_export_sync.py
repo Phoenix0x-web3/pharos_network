@@ -114,7 +114,7 @@ class Import:
             # Check pwd1
             try:
                 check_wallet = check_wallets[0]
-                pk = get_private_key(check_wallet.private_key)
+                get_private_key(check_wallet.private_key)
 
             except Exception as e:
                 sys.exit(f"Database not empty | You must use same password for new wallets | {e}")

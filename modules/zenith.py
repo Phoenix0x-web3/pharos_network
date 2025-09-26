@@ -70,7 +70,7 @@ class Zenith(Base):
                     if amount.Ether == 0:
                         continue
 
-                    swap = await self._swap(from_token=token, to_token=Contracts.WPHRS, amount=amount)
+                    await self._swap(from_token=token, to_token=Contracts.WPHRS, amount=amount)
                     result = f"{amount} {token.title}: Success"
 
                     results.append(result)
@@ -165,10 +165,9 @@ class Zenith(Base):
         pool = await self.client.contracts.get(contract_address=pool_contract)
         slot0 = await pool.functions.slot0().call()
 
-        liquidity = await pool.functions.liquidity().call()
+        await pool.functions.liquidity().call()
 
         sqrt_price = slot0[0]
-        current_tick = slot0[1]
 
         from_token_decimals = await self.client.transactions.get_decimals(contract=from_token.address)
         to_token_decimals = await self.client.transactions.get_decimals(contract=to_token.address)

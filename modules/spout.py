@@ -261,8 +261,6 @@ class Spout(Base):
 
         sig65 = self._pack_rsv(signature["signature"])
 
-        issuer_address = signature["issuerAddress"]
-        data_hash = signature["dataHash"]
         topic = signature["topic"]
 
         identity = await self.get_identity()
@@ -323,11 +321,6 @@ class Spout(Base):
 
         if not kyc:
             await self.spout_flow()
-
-        token = [
-            Contracts.USDC,
-            SLQD,
-        ]
 
         from_token = Contracts.USDC
         to_token = SLQD

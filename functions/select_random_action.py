@@ -1,15 +1,11 @@
 import random
 
-from data.settings import Settings
-
 # from zksync_explorer.explorer_api import APIFunctions
 from functions.controller import Controller
 from utils.db_api.models import Wallet
 
 
 async def select_random_action(controller: Controller, wallet: Wallet):
-    settings = Settings()
-
     possible_actions = []
     weights = []
 

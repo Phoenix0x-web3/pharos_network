@@ -167,7 +167,11 @@ class Base:
         receipt = await tx.wait_for_receipt(client=self.client, timeout=300)
 
         if receipt:
+            logger.success(success_text)
             return tx_label
+        else:
+            logger.warning(failed_text)
+            return None
 
     async def unwrap_eth(self, amount: TokenAmount = None):
         if self.client.network == Networks.Ethereum:

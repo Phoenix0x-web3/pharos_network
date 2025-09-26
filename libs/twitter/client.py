@@ -1975,7 +1975,7 @@ class GQLClient:
             payload = kwargs["json"] = kwargs.get("json") or {}
             payload["queryId"] = query_id
         else:
-            params = kwargs["params"] = kwargs.get("params") or {}
+            kwargs["params"] = kwargs.get("params") or {}
             ...
 
         response, data = await self._client.request(method, url, **kwargs)

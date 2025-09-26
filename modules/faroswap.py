@@ -77,7 +77,7 @@ class Faroswap(Base):
                     amount = await self.client.wallet.balance(token=token)
                     if amount.Ether == 0:
                         continue
-                    swap = await self._swap(from_token=token, to_token=Contracts.WPHRS, amount=amount)
+                    await self._swap(from_token=token, to_token=Contracts.WPHRS, amount=amount)
                     result = f"{amount} {token.title}: Success"
                     results.append(result)
                 except Exception as e:
@@ -479,10 +479,6 @@ class FaroswapLiquidity(Faroswap):
         to_token_decimals = int(pool["pair"]["quoteToken"]["decimals"])
 
         price0_in_1 = (reserve1 / 10**to_token_decimals) / (reserve0 / 10**from_token_decimals)
-        price1_in_0 = (reserve0 / 10**from_token_decimals) / (reserve1 / 10**to_token_decimals)
-
-        price_a = TokenAmount(amount=price0_in_1, decimals=6)
-        price_b = TokenAmount(amount=price1_in_0, decimals=6)
 
         c = await self.client.contracts.get(contract_address=POSITION_MANAGER_V2)
         to_token_amount = TokenAmount(amount=float(amount.Ether) * price0_in_1, decimals=to_token_decimals)
@@ -490,7 +486,7 @@ class FaroswapLiquidity(Faroswap):
         to_token_balance = await self.client.wallet.balance(token=to_token)
 
         if to_token_balance.Ether < to_token_amount.Ether:
-            swap = await self._swap(
+            await self._swap(
                 from_token=from_token, to_token=to_token, amount=TokenAmount(amount=float(amount.Ether) * 1.3, decimals=from_token_decimals)
             )
             # logger.debug(swap)

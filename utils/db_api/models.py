@@ -1,4 +1,3 @@
-
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
 
 from data.constants import PROJECT_SHORT_NAME

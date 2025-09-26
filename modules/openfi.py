@@ -342,8 +342,6 @@ class OpenFi(Base):
             Contracts.USDC,
         ]
 
-        o_tokens = [oUSDC, oUSDT, oWPRH]
-
         balance_map = await self.balance_map(tokens)
 
         if not balance_map:

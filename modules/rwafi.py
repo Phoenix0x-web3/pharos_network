@@ -147,7 +147,7 @@ class AquaFlux(Base):
 
     async def twitter_bound(self) -> bool:
         if not self.auth_token:
-            ok = await self._login()
+            await self._login()
 
         r = await self.session.get(
             url=f"{BASE_API}/users/twitter/binding-status",

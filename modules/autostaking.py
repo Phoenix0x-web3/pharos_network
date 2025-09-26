@@ -178,8 +178,6 @@ class AutoStaking(Base):
     async def _payload_recommendation(
         self, usdc_amount: TokenAmount, usdt_amount: TokenAmount, musd_amount: TokenAmount, user_positions: list = None
     ) -> Dict[str, Any]:
-        to_units = lambda v: str(int(v * 10**6))
-
         return {
             "user": self.client.account.address,
             "profile": random.choice(PROMPT),

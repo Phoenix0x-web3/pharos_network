@@ -452,7 +452,7 @@ class Gotchipus(Base):
     async def complete_tasks(self):
         tasks = await self.get_all_tasks()
 
-        user_info = await self.get_tasks_info()
+        await self.get_tasks_info()
 
         for task in tasks:
             status = await self.task_completed(task=task)
