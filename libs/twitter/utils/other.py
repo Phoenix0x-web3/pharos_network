@@ -1,5 +1,6 @@
-from datetime import datetime
 import base64
+from datetime import datetime
+
 
 def encode_x_client_transaction_id(path: str) -> str:
     return base64.b64encode(f"e:{path}".encode()).decode()
@@ -24,9 +25,7 @@ def tweets_data_from_instructions(instructions: dict) -> list[dict]:
         if instruction["type"] == "TimelineAddEntries":
             for entry in instruction["entries"]:
                 if entry["entryId"].startswith("tweet-"):
-                    tweet_data = entry["content"]["itemContent"]["tweet_results"][
-                        "result"
-                    ]
+                    tweet_data = entry["content"]["itemContent"]["tweet_results"]["result"]
                     tweets.append(tweet_data)
     return tweets
 

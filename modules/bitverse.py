@@ -1,25 +1,18 @@
 import asyncio
-import base64
-import json
 import random
-import time
-from tokenize import blank_re
-from typing import Any, Dict, Optional, Tuple, List
+from typing import Optional
 
 from loguru import logger
 from web3 import Web3
 from web3.types import TxParams
 
-from data.settings import Settings
 from libs.base import Base
 from libs.eth_async.client import Client
-from libs.eth_async.data.models import RawContract, TokenAmount, DefaultABIs, TxArgs
-from libs.eth_async.utils.utils import randfloat
+from libs.eth_async.data.models import DefaultABIs, RawContract, TokenAmount, TxArgs
+from utils.browser import Browser
 from utils.db_api.models import Wallet
 from utils.logs_decorator import controller_log
 from utils.retry import async_retry
-from utils.browser import Browser
-
 
 BASE_API = "https://api.bitverse.zone/bitverse"
 
@@ -30,12 +23,20 @@ USDT = RawContract(
 )
 
 ROUTER_IO_ABI = [
-    {"type": "function", "name": "deposit", "stateMutability": "nonpayable",
-     "inputs": [{"name": "token", "type": "address"}, {"name": "amount", "type": "uint256"}],
-     "outputs": []},
-    {"type": "function", "name": "withdraw", "stateMutability": "nonpayable",
-     "inputs": [{"name": "token", "type": "address"}, {"name": "amount", "type": "uint256"}],
-     "outputs": []},
+    {
+        "type": "function",
+        "name": "deposit",
+        "stateMutability": "nonpayable",
+        "inputs": [{"name": "token", "type": "address"}, {"name": "amount", "type": "uint256"}],
+        "outputs": [],
+    },
+    {
+        "type": "function",
+        "name": "withdraw",
+        "stateMutability": "nonpayable",
+        "inputs": [{"name": "token", "type": "address"}, {"name": "amount", "type": "uint256"}],
+        "outputs": [],
+    },
 ]
 
 POSITION_ROUTER = RawContract(
@@ -44,29 +45,33 @@ POSITION_ROUTER = RawContract(
     abi=ROUTER_IO_ABI,
 )
 
-BITVERSE_TRADE_ABI = [{
-    "type": "function", "name": "placeOrder", "stateMutability": "nonpayable",
-    "inputs": [
-        {"type": "string",  "name": "pairId"},
-        {"type": "uint256", "name": "price"},
-        {"type": "uint8",   "name": "orderType"},
-        {"type": "uint64",  "name": "leverageE2"},
-        {"type": "uint8",   "name": "side"},
-        {"type": "uint64",  "name": "slippageE6"},
-        {"type": "tuple[]", "name": "margins", "components": [
-            {"type": "address", "name": "token"},
-            {"type": "uint256", "name": "amount"}
-        ]},
-        {"type": "uint256", "name": "takeProfitPrice"},
-        {"type": "uint256", "name": "stopLossPrice"},
-        {"type": "uint256", "name": "positionLongOI"},
-        {"type": "uint256", "name": "positionShortOI"},
-        {"type": "uint256", "name": "timestamp"},
-        {"type": "bytes",   "name": "signature"},
-        {"type": "bool",    "name": "isExecuteImmediately"}
-    ],
-    "outputs": []
-},
+BITVERSE_TRADE_ABI = [
+    {
+        "type": "function",
+        "name": "placeOrder",
+        "stateMutability": "nonpayable",
+        "inputs": [
+            {"type": "string", "name": "pairId"},
+            {"type": "uint256", "name": "price"},
+            {"type": "uint8", "name": "orderType"},
+            {"type": "uint64", "name": "leverageE2"},
+            {"type": "uint8", "name": "side"},
+            {"type": "uint64", "name": "slippageE6"},
+            {
+                "type": "tuple[]",
+                "name": "margins",
+                "components": [{"type": "address", "name": "token"}, {"type": "uint256", "name": "amount"}],
+            },
+            {"type": "uint256", "name": "takeProfitPrice"},
+            {"type": "uint256", "name": "stopLossPrice"},
+            {"type": "uint256", "name": "positionLongOI"},
+            {"type": "uint256", "name": "positionShortOI"},
+            {"type": "uint256", "name": "timestamp"},
+            {"type": "bytes", "name": "signature"},
+            {"type": "bool", "name": "isExecuteImmediately"},
+        ],
+        "outputs": [],
+    },
     {
         "name": "closePosition",
         "type": "function",
@@ -85,15 +90,15 @@ BITVERSE_TRADE_ABI = [{
                         "type": "tuple[]",
                         "components": [
                             {"internalType": "address", "name": "token", "type": "address"},
-                            {"internalType": "int256", "name": "amount", "type": "int256"}
-                        ]
+                            {"internalType": "int256", "name": "amount", "type": "int256"},
+                        ],
                     }
-                ]
+                ],
             },
             {"internalType": "uint256", "name": "timestamp", "type": "uint256"},
-            {"internalType": "bytes", "name": "signature", "type": "bytes"}
+            {"internalType": "bytes", "name": "signature", "type": "bytes"},
         ],
-        "outputs": []
+        "outputs": [],
     },
     {
         "name": "placeLimitCloseOrder",
@@ -115,15 +120,15 @@ BITVERSE_TRADE_ABI = [{
                         "type": "tuple[]",
                         "components": [
                             {"internalType": "address", "name": "token", "type": "address"},
-                            {"internalType": "int256", "name": "amount", "type": "int256"}
-                        ]
+                            {"internalType": "int256", "name": "amount", "type": "int256"},
+                        ],
                     }
-                ]
+                ],
             },
             {"internalType": "uint256", "name": "timestamp", "type": "uint256"},
-            {"internalType": "bytes", "name": "signature", "type": "bytes"}
+            {"internalType": "bytes", "name": "signature", "type": "bytes"},
         ],
-        "outputs": []
+        "outputs": [],
     },
 ]
 
@@ -200,7 +205,7 @@ class Bitverse(Base):
         r.raise_for_status()
         data = r.json()
         if data.get("retCode") == 0:
-            return data["result"]['position']
+            return data["result"]["position"]
 
     @async_retry()
     async def _close_simulation(self, payload: dict) -> Optional[dict]:
@@ -212,7 +217,6 @@ class Bitverse(Base):
         )
         r.raise_for_status()
         return r.json()
-
 
     def _order_payload(self, pair: str, price: TokenAmount, side: int, amount: TokenAmount, leverage: int = None) -> dict:
         return {
@@ -239,11 +243,13 @@ class Bitverse(Base):
         return r.json()
 
     async def _send(self, to: str, data: str, value: int = 0) -> Optional[str]:
-        tx = await self.client.transactions.sign_and_send(TxParams(
-            to=Web3.to_checksum_address(to),
-            data=data,
-            value=value,
-        ))
+        tx = await self.client.transactions.sign_and_send(
+            TxParams(
+                to=Web3.to_checksum_address(to),
+                data=data,
+                value=value,
+            )
+        )
         await asyncio.sleep(random.randint(2, 4))
         receipt = await tx.wait_for_receipt(client=self.client, timeout=600)
         if receipt:
@@ -251,30 +257,26 @@ class Bitverse(Base):
 
     @controller_log("Deposit")
     async def deposit(self, token: RawContract, amount: TokenAmount) -> str:
-        logger.debug(
-            f"{self.wallet} | {self.__module_name__} | Trying to deposit {amount} {token.title}")
+        logger.debug(f"{self.wallet} | {self.__module_name__} | Trying to deposit {amount} {token.title}")
 
         c = await self.client.contracts.get(contract_address=POSITION_ROUTER)
 
-        amount = TokenAmount(amount=amount.Ether,
-                             decimals=await self.client.transactions.get_decimals(contract=token.address))
+        amount = TokenAmount(amount=amount.Ether, decimals=await self.client.transactions.get_decimals(contract=token.address))
 
         data = c.encode_abi("deposit", args=[Web3.to_checksum_address(token.address), amount.Wei])
 
-        if await self.approve_interface(
-                token_address=token.address,
-                spender=c.address,
-                amount=None
-        ):
+        if await self.approve_interface(token_address=token.address, spender=c.address, amount=None):
             await asyncio.sleep(2)
         else:
-            return f' can not approve'
+            return f" can not approve"
 
-        tx = await self.client.transactions.sign_and_send(TxParams(
-            to=c.address,
-            data=data,
-            value=0,
-        ))
+        tx = await self.client.transactions.sign_and_send(
+            TxParams(
+                to=c.address,
+                data=data,
+                value=0,
+            )
+        )
 
         await asyncio.sleep(random.randint(2, 4))
         receipt = await tx.wait_for_receipt(client=self.client, timeout=300)
@@ -287,16 +289,17 @@ class Bitverse(Base):
     @controller_log("Withdraw")
     async def withdraw(self, token: RawContract, amount: TokenAmount) -> str:
         c = await self.client.contracts.get(contract_address=POSITION_ROUTER)
-        amount = TokenAmount(amount=amount.Ether,
-                             decimals=await self.client.transactions.get_decimals(contract=token.address))
+        amount = TokenAmount(amount=amount.Ether, decimals=await self.client.transactions.get_decimals(contract=token.address))
 
         data = c.encode_abi("withdraw", args=[Web3.to_checksum_address(token.address), amount.Wei])
 
-        tx = await self.client.transactions.sign_and_send(TxParams(
-            to=c.address,
-            data=data,
-            value=0,
-        ))
+        tx = await self.client.transactions.sign_and_send(
+            TxParams(
+                to=c.address,
+                data=data,
+                value=0,
+            )
+        )
 
         await asyncio.sleep(random.randint(2, 4))
         receipt = await tx.wait_for_receipt(client=self.client, timeout=300)
@@ -307,8 +310,9 @@ class Bitverse(Base):
 
     @controller_log("Trade")
     async def place_order(self, pair: str, side: int, amount: TokenAmount, leverage: int = None) -> str:
-
-        logger.debug(f"{self.wallet} | {self.__module_name__} | Trying to open {'LONG' if side==0 else 'SHORT'} position {pair} with {amount.Ether:.0f} USD")
+        logger.debug(
+            f"{self.wallet} | {self.__module_name__} | Trying to open {'LONG' if side == 0 else 'SHORT'} position {pair} with {amount.Ether:.0f} USD"
+        )
         price = await self._get_market_price(pair)
 
         if price is None:
@@ -320,7 +324,7 @@ class Bitverse(Base):
 
         sim = await self._order_simulation(sim_payload)
 
-        #print(json.dumps(sim, indent=4))
+        # print(json.dumps(sim, indent=4))
 
         if not sim or sim.get("retCode") != 0:
             return f"{self.wallet} | {self.__module_name__} | Failed | simulation error"
@@ -345,44 +349,44 @@ class Bitverse(Base):
             positionShortOI=int(res["shortOI"]),
             timestamp=int(res["signTimestamp"]),
             signature=signature,
-            isExecuteImmediately=bool(res["marketOpening"])
+            isExecuteImmediately=bool(res["marketOpening"]),
         )
-
 
         data = c.encode_abi("placeOrder", args=args.tuple())
 
-        tx = await self.client.transactions.sign_and_send(TxParams(
-            to=c.address,
-            data=data,
-            value=0,
-        ))
+        tx = await self.client.transactions.sign_and_send(
+            TxParams(
+                to=c.address,
+                data=data,
+                value=0,
+            )
+        )
 
         await asyncio.sleep(random.randint(2, 4))
         receipt = await tx.wait_for_receipt(client=self.client, timeout=300)
         if receipt:
-            return f"Success Opened {'LONG' if side==0 else 'SHORT'} position {pair} with {amount.Ether:.0f} USD"
+            return f"Success Opened {'LONG' if side == 0 else 'SHORT'} position {pair} with {amount.Ether:.0f} USD"
 
-        raise Exception(f"Failed Open Position {pair} {'LONG' if side==0 else 'SHORT'}")
+        raise Exception(f"Failed Open Position {pair} {'LONG' if side == 0 else 'SHORT'}")
 
-
-    @controller_log('Close Trade')
+    @controller_log("Close Trade")
     async def close_position(self, position: dict):
-        pair = position['symbol']
+        pair = position["symbol"]
         payload = {
-            "address": 'yymm1tnw7ykuee3jcja4wpspxlampp3qadmhy3hdza0',
-            "positionUniqueId": position['positionUniqueId'],
+            "address": "yymm1tnw7ykuee3jcja4wpspxlampp3qadmhy3hdza0",
+            "positionUniqueId": position["positionUniqueId"],
             "isV2": "0",
             "orderType": "2",
             "price": "0",
-            "size": position['totalQty'],
+            "size": position["totalQty"],
         }
 
         close = await self._close_simulation(payload=payload)
 
         res = close["result"]
-        decimals = res['sizeScale']
+        decimals = res["sizeScale"]
 
-        close_qty = TokenAmount(amount=position['totalQty'], decimals=decimals)
+        close_qty = TokenAmount(amount=position["totalQty"], decimals=decimals)
 
         fee_items = []
         items = res.get("item", [])
@@ -398,7 +402,7 @@ class Bitverse(Base):
         signature = bytes.fromhex(signature_hex[2:]) if signature_hex.startswith("0x") else b""
 
         args = TxArgs(
-            positionId=res['positionUniqueId'],
+            positionId=res["positionUniqueId"],
             closeQty=close_qty.Wei,
             fundingFee=funding_fee_tuple,
             timestamp=int(res["fundingFeeSignTimestamp"]),
@@ -408,11 +412,13 @@ class Bitverse(Base):
         c = await self.client.contracts.get(contract_address=CLOSE_TRADE_ROUTER)
         data = c.encode_abi("closePosition", args=args.tuple())
 
-        tx = await self.client.transactions.sign_and_send(TxParams(
-            to=c.address,
-            data=data,
-            value=0,
-        ))
+        tx = await self.client.transactions.sign_and_send(
+            TxParams(
+                to=c.address,
+                data=data,
+                value=0,
+            )
+        )
         await asyncio.sleep(random.randint(2, 4))
         receipt = await tx.wait_for_receipt(client=self.client, timeout=300)
 
@@ -421,15 +427,13 @@ class Bitverse(Base):
 
         raise Exception(f"Failed | Close Position {pair}")
 
-    async def deposit_usdt(self, amount: TokenAmount ):
-
+    async def deposit_usdt(self, amount: TokenAmount):
         return await self.deposit(USDT, amount)
 
     async def bitverse_controller(self, amount: float | TokenAmount) -> str:
-
         TRADE_PAIRS = [
             #'BTC-USD',
-            'ETH-USD',
+            "ETH-USD",
             #'GLXY-USD',
             # 'NVDA-USD',
             # 'BTBT-USD',
@@ -443,22 +447,20 @@ class Bitverse(Base):
 
         leverage = None
 
-        #balance = float(balance[0]['availableBalanceSize'])
+        # balance = float(balance[0]['availableBalanceSize'])
         if isinstance(amount, TokenAmount):
-            amount=amount
+            amount = amount
 
         if isinstance(amount, int):
-            amount = TokenAmount(
-                amount=int(amount), decimals=6)
+            amount = TokenAmount(amount=int(amount), decimals=6)
 
         pair = random.choice(TRADE_PAIRS)
         side = random.choice([0, 1])
 
         positions = await self._get_all_positions()
         if positions:
-            current_positions = [position for position in positions if position['symbol'] == pair]
+            current_positions = [position for position in positions if position["symbol"] == pair]
             if current_positions:
-
                 action = random.choice([0, 1])
 
                 if action == 0:
@@ -471,14 +473,13 @@ class Bitverse(Base):
                 if action == 1:
                     pos = current_positions[0]
                     logger.debug(f"{self.wallet} | {self.__module_name__} | Trying to increase {pos.get('symbol')} position")
-                    pair = pos.get('symbol')
-                    leverage = pos.get('leverageE2')
-                    side = int(pos.get('side'))
+                    pair = pos.get("symbol")
+                    leverage = pos.get("leverageE2")
+                    side = int(pos.get("side"))
                     side = 0 if side == 1 else 1
                     return await self.place_order(pair=pair, side=side, amount=amount, leverage=leverage)
 
         return await self.place_order(pair=pair, side=side, amount=amount, leverage=leverage)
-
 
         if do_withdraw:
             r = await self.withdraw(USDT, TokenAmount(amount=1, decimals=6))

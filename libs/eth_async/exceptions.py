@@ -35,6 +35,7 @@ class HTTPException(Exception):
         status_code (Optional[int]): a request status code.
 
     """
+
     response: dict[str, ...] | None
     status_code: int | None
 

@@ -1,10 +1,8 @@
 # modules/euclid_swap.py
 
 import asyncio
-import json
 import random
-import time
-from typing import Any, Dict, List, Optional, Tuple
+from typing import List, Optional
 
 from loguru import logger
 from web3 import Web3
@@ -15,23 +13,22 @@ from libs.base import Base
 from libs.eth_async.client import Client
 from libs.eth_async.data.models import Networks, TokenAmount
 from libs.eth_async.utils.utils import randfloat
-from utils.logs_decorator import controller_log
-from utils.retry import async_retry
 from utils.browser import Browser
 from utils.db_api.models import Wallet
-
+from utils.logs_decorator import controller_log
+from utils.retry import async_retry
 
 EUCLID_GRAPHQL = "https://testnet.api.euclidprotocol.com/graphql"
-EUCLID_SWAP    = "https://testnet.api.euclidprotocol.com/api/v1/execute/astro/swap"
-EUCLID_ROUTES  = "https://testnet.api.euclidprotocol.com/api/v1/routes"   # ?limit=10
+EUCLID_SWAP = "https://testnet.api.euclidprotocol.com/api/v1/execute/astro/swap"
+EUCLID_ROUTES = "https://testnet.api.euclidprotocol.com/api/v1/routes"  # ?limit=10
 
 
 class EuclidSwap(Base):
     __module_name__ = "EuclidSwap"
 
     def __init__(self, wallet: Wallet):
-        self.client  = Client(private_key=wallet.private_key, proxy=wallet.proxy, network=Networks.MonadTestnet)
-        self.wallet  = wallet
+        self.client = Client(private_key=wallet.private_key, proxy=wallet.proxy, network=Networks.MonadTestnet)
+        self.wallet = wallet
         self.session = Browser(wallet=wallet)
 
         self.base_headers = {
@@ -45,18 +42,19 @@ class EuclidSwap(Base):
 
     @async_retry(retries=3, delay=2, to_raise=True)
     async def build_swap(self, payload: dict) -> dict:
-
-        r = await self.session.post(url=EUCLID_SWAP, headers=self.base_headers, json=payload, )
+        r = await self.session.post(
+            url=EUCLID_SWAP,
+            headers=self.base_headers,
+            json=payload,
+        )
         r.raise_for_status()
 
         return r.json()
 
     @controller_log("Swap")
     async def swap_controller(self) -> str:
-
         settings = Settings()
-        amount = TokenAmount(amount=randfloat(from_=settings.monad_transfer_min,
-                                              to_=settings.monad_transfer_max, step=0.1))
+        amount = TokenAmount(amount=randfloat(from_=settings.monad_transfer_min, to_=settings.monad_transfer_max, step=0.1))
 
         balance = await self.client.wallet.balance()
 
@@ -83,7 +81,6 @@ class EuclidSwap(Base):
         external: bool = True,
         limit: int = 10,
     ) -> dict:
-
         url = f"{EUCLID_ROUTES}?limit={int(limit)}"
         payload = {
             "external": external,
@@ -93,16 +90,11 @@ class EuclidSwap(Base):
             "chain_uids": chain_uids or [],
         }
 
-        r = await self.session.post(
-            url=url,
-            json=payload,
-            headers=self.base_headers
-        )
+        r = await self.session.post(url=url, json=payload, headers=self.base_headers)
 
-        return r.json().get('path')
+        return r.json().get("path")
 
     async def _swap(self, amount: TokenAmount, limit_lte: str) -> str:
-
         sender_addr = self.client.account.address
         recipient_addr = self.client.account.address
 
@@ -139,10 +131,7 @@ class EuclidSwap(Base):
             },
         }
 
-        logger.debug(
-            f"{self.wallet} | {self.__module_name__} | Try swap "
-            f"{amount.Ether:.5f} MON -> PHRS"
-        )
+        logger.debug(f"{self.wallet} | {self.__module_name__} | Try swap {amount.Ether:.5f} MON -> PHRS")
 
         # routes_resp = await self.fetch_routes(
         #     token_in="mon",
@@ -155,17 +144,13 @@ class EuclidSwap(Base):
 
         resp = await self.build_swap(payload)
 
-        resp = resp.get('msgs')[0]
+        resp = resp.get("msgs")[0]
 
-        to = resp.get('to')
-        data = resp.get('data')
-        value = resp.get('value')
+        to = resp.get("to")
+        data = resp.get("data")
+        value = resp.get("value")
 
-        tx_params = TxParams(
-            to=Web3.to_checksum_address(to),
-            data=data,
-            value=value
-        )
+        tx_params = TxParams(to=Web3.to_checksum_address(to), data=data, value=value)
 
         tx = await self.client.transactions.sign_and_send(tx_params=tx_params)
 

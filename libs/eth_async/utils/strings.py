@@ -1,4 +1,4 @@
-def text_between(text: str, begin: str = '', end: str = '') -> str:
+def text_between(text: str, begin: str = "", end: str = "") -> str:
     """
     Extract a text between strings.
 
@@ -25,6 +25,6 @@ def text_between(text: str, begin: str = '', end: str = '') -> str:
 
     excerpt = text[start:end]
     if excerpt == text:
-        return ''
+        return ""
 
     return excerpt

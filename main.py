@@ -5,38 +5,37 @@ import inquirer
 from colorama import Fore
 from inquirer.themes import Default
 from rich.console import Console
-from utils.create_files import create_files
+
+from check_python import check_python_version
+from data.constants import PROJECT_NAME
 from functions.activity import activity
+from utils.create_files import create_files
 from utils.db_api.models import Wallet
 from utils.db_api.wallet_api import db
-from utils.db_import_export_sync import Import, Export, Sync
-from utils.output import show_channel_info
+from utils.db_import_export_sync import Export, Import, Sync
 from utils.git_version import check_for_updates
-from data.constants import PROJECT_NAME
+from utils.output import show_channel_info
 
 console = Console()
 
 
-PROJECT_ACTIONS =   [
-                    "1. Run All Tasks In Random Order",
-                    "2. Twitter Tasks",
-                    "3. Join and Bind Discord",
-                    "4. Update Points",
-                    "5. Mint All Badges",
-                    "6. Transfer from Monad",
-                    "Back"
-                    ]
+PROJECT_ACTIONS = [
+    "1. Run All Tasks In Random Order",
+    "2. Twitter Tasks",
+    "3. Join and Bind Discord",
+    "4. Update Points",
+    "5. Mint All Badges",
+    "6. Transfer from Monad",
+    "Back",
+]
+
 
 async def choose_action():
     cat_question = [
         inquirer.List(
             "category",
-            message=Fore.LIGHTBLACK_EX + 'Choose action',
-            choices=[
-                "DB Actions",
-                PROJECT_NAME,
-                "Exit"
-            ],
+            message=Fore.LIGHTBLACK_EX + "Choose action",
+            choices=["DB Actions", PROJECT_NAME, "Exit"],
         )
     ]
 
@@ -48,10 +47,7 @@ async def choose_action():
         raise SystemExit(0)
 
     if category == "DB Actions":
-        actions = ["Import wallets to Database",
-                   "Sync wallets with tokens and proxies",
-                   "Export wallets to TXT",
-                   "Back"]
+        actions = ["Import wallets to Database", "Sync wallets with tokens and proxies", "Export wallets to TXT", "Back"]
 
     if category == PROJECT_NAME:
         actions = PROJECT_ACTIONS
@@ -77,20 +73,20 @@ async def choose_action():
         console.print(f"[bold blue]Starting Import Wallets to DB[/bold blue]")
         await Export.wallets_to_txt()
 
-    elif '1' in action:
+    elif "1" in action:
         await activity(action=1)
 
-    elif '2' in action:
+    elif "2" in action:
         await activity(action=2)
 
-    elif '3' in action:
+    elif "3" in action:
         await activity(action=3)
-        
-    elif '4' in action:
+
+    elif "4" in action:
         await activity(action=4)
-    elif '5' in action:
+    elif "5" in action:
         await activity(action=5)
-    elif '6' in action:
+    elif "6" in action:
         await activity(action=6)
 
     elif action == "Exit":
@@ -99,14 +95,16 @@ async def choose_action():
 
     await choose_action()
 
+
 async def main():
+    check_python_version()
     create_files()
     await check_for_updates(repo_name=PROJECT_NAME, repo_private=False)
     db.ensure_model_columns(Wallet)
     await choose_action()
 
-if __name__ == '__main__':
 
+if __name__ == "__main__":
     show_channel_info(PROJECT_NAME)
 
     if platform.system() == "Windows":

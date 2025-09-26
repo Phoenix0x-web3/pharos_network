@@ -3,25 +3,21 @@ import base64
 import json
 import random
 import time
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any, Dict, Optional
 
 from loguru import logger
-from requests import session
 from web3 import Web3
 from web3.types import TxParams
-from yaml import add_implicit_resolver
 
-from data.config import ABIS_DIR
 from data.models import Contracts
 from data.settings import Settings
 from libs.base import Base
 from libs.eth_async.client import Client
-from libs.eth_async.data.models import TokenAmount, TxArgs, RawContract, DefaultABIs
-from libs.eth_async.utils.files import read_json
-from utils.db_api.models import Wallet
-from utils.logs_decorator import action_log, controller_log
-from utils.retry import async_retry
+from libs.eth_async.data.models import DefaultABIs, RawContract, TokenAmount
 from utils.browser import Browser
+from utils.db_api.models import Wallet
+from utils.logs_decorator import controller_log
+from utils.retry import async_retry
 
 PUBLIC_KEY_PEM = """
 -----BEGIN PUBLIC KEY-----
@@ -33,31 +29,19 @@ h23cf2WfZ0vwDYzZ8QIDAQAB
 """.strip()
 
 RPC_URL = "https://testnet.dplabs-internal.com/"
-BASE_API = 'https://asia-east2-auto-staking.cloudfunctions.net/auto_staking_pharos_v7'
+BASE_API = "https://asia-east2-auto-staking.cloudfunctions.net/auto_staking_pharos_v7"
 
-USDC = RawContract(
-    title="USDC",
-    address="0x72df0bcd7276f2dFbAc900D1CE63c272C4BCcCED",
-    abi=DefaultABIs.Token
-)
+USDC = RawContract(title="USDC", address="0x72df0bcd7276f2dFbAc900D1CE63c272C4BCcCED", abi=DefaultABIs.Token)
 
-USDT = RawContract(
-    title="USDT",
-    address="0xD4071393f8716661958F766DF660033b3d35fD29",
-    abi=DefaultABIs.Token
-)
+USDT = RawContract(title="USDT", address="0xD4071393f8716661958F766DF660033b3d35fD29", abi=DefaultABIs.Token)
 
 AUTOSTAKING_CONTRACT_ABI = [
     {
         "type": "function",
         "name": "getNextFaucetClaimTime",
         "stateMutability": "view",
-        "inputs": [
-            {"name": "user", "type": "address"}
-        ],
-        "outputs": [
-            {"name": "", "type": "uint256"}
-        ],
+        "inputs": [{"name": "user", "type": "address"}],
+        "outputs": [{"name": "", "type": "uint256"}],
     }
 ]
 
@@ -120,7 +104,7 @@ mvMUSD = RawContract(
 AUTOSTAKING_READ = RawContract(
     title="AutostakingReader",
     address=mvMUSD.address,
-    abi = AUTOSTAKING_CONTRACT_ABI,
+    abi=AUTOSTAKING_CONTRACT_ABI,
 )
 
 STAKING_ROUTER = RawContract(
@@ -140,22 +124,19 @@ BALANCED = (
     "receiving ~33.3% of the investment."
 )
 CONCERVATIVE = (
-    "1. Must: TVL > $1,000,000.\n"""
+    "1. Must: TVL > $1,000,000.\n"
+    ""
     "2. Priority: Highest TVL for max safety.\n"
     "3. Allocation: Select top 3 products by TVL (TVL > $1,000,000), distribute total investment proportionally to TVL (e.g., X/(X+Y+Z), Y/(X+Y+Z), Z/(X+Y+Z)), where X, Y, Z are TVLs, ensuring higher TVL gets larger share."
 )
 AGGRESIVE = (
-"1. Must: TVL > $1,000,000.\n"
-"2. Priority: Highest current APY for max ROI.\n"
-"3. Allocation: Pick top 3 products (TVL > $1,000,000) by APY, distribute investment proportionally to APY (e.g., A/(A+B+C), B/(A+B+C), C/(A+B+C)), where A, B, C are APYs, ensuring higher APY gets larger share."
-
+    "1. Must: TVL > $1,000,000.\n"
+    "2. Priority: Highest current APY for max ROI.\n"
+    "3. Allocation: Pick top 3 products (TVL > $1,000,000) by APY, distribute investment proportionally to APY (e.g., A/(A+B+C), B/(A+B+C), C/(A+B+C)), where A, B, C are APYs, ensuring higher APY gets larger share."
 )
 
-PROMPT = [
-    CONCERVATIVE,
-    BALANCED,
-    AGGRESIVE
-]
+PROMPT = [CONCERVATIVE, BALANCED, AGGRESIVE]
+
 
 class AutoStaking(Base):
     __module_name__ = "AutoStaking"
@@ -173,13 +154,13 @@ class AutoStaking(Base):
             "Referer": "https://autostaking.pro/",
             "Sec-Fetch-Dest": "empty",
             "Sec-Fetch-Mode": "cors",
-            "Sec-Fetch-Site": "same-site"
+            "Sec-Fetch-Site": "same-site",
         }
 
     async def _auth_token(self) -> str:
-        from cryptography.hazmat.primitives.asymmetric import padding
-        from cryptography.hazmat.primitives import hashes, serialization
         from cryptography.hazmat.backends import default_backend
+        from cryptography.hazmat.primitives import hashes, serialization
+        from cryptography.hazmat.primitives.asymmetric import padding
 
         pub = serialization.load_pem_public_key(PUBLIC_KEY_PEM.encode("ascii"), backend=default_backend())
         plaintext = self.client.account.address.encode("ascii")
@@ -195,13 +176,8 @@ class AutoStaking(Base):
         return base64.b64encode(ciphertext).decode("ascii")
 
     async def _payload_recommendation(
-            self, usdc_amount: TokenAmount,
-            usdt_amount: TokenAmount,
-            musd_amount: TokenAmount,
-            user_positions: list = None) -> Dict[str, Any]:
-
-        to_units = lambda v: str(int(v * 10 ** 6))
-
+        self, usdc_amount: TokenAmount, usdt_amount: TokenAmount, musd_amount: TokenAmount, user_positions: list = None
+    ) -> Dict[str, Any]:
         return {
             "user": self.client.account.address,
             "profile": random.choice(PROMPT),
@@ -256,17 +232,12 @@ class AutoStaking(Base):
         next_time = await contract.functions.getNextFaucetClaimTime(self.client.account.address).call()
         return int(next_time)
 
-    @controller_log('Faucet')
+    @controller_log("Faucet")
     async def claim_faucet(self) -> Optional[str]:
-
         contract = await self.client.contracts.get(contract_address=mvMUSD)
         data = contract.encode_abi("claimFaucet", args=[])
 
-        tx_params = TxParams(
-            to=mvMUSD.address,
-            data=data,
-            value=0
-        )
+        tx_params = TxParams(to=mvMUSD.address, data=data, value=0)
         tx = await self.client.transactions.sign_and_send(tx_params=tx_params)
         await asyncio.sleep(random.randint(2, 4))
         receipt = await tx.wait_for_receipt(client=self.client, timeout=300)
@@ -274,24 +245,17 @@ class AutoStaking(Base):
         if receipt:
             return f"{self.wallet} | {self.__module_name__} | Success MocUSD Faucet"
 
-
         return f"{self.wallet} | {self.__module_name__} |Failed MocUSD Faucet"
 
     @async_retry(retries=3, delay=3, to_raise=False)
     async def _financial_portfolio_recommendation(
-        self,
-            usdc_amount: TokenAmount,
-            usdt_amount: TokenAmount,
-            musd_amount: TokenAmount,
-            user_positions: list = None
+        self, usdc_amount: TokenAmount, usdt_amount: TokenAmount, musd_amount: TokenAmount, user_positions: list = None
     ) -> Optional[Dict[str, Any]]:
-
         payload = await self._payload_recommendation(usdc_amount, usdt_amount, musd_amount, user_positions=user_positions)
 
         r = await self.session.post(
             url=f"{BASE_API}/investment/financial-portfolio-recommendation",
             json=payload,
-
             headers=self.base_headers,
             timeout=300,
         )
@@ -328,11 +292,7 @@ class AutoStaking(Base):
     async def stable_coins_balances(self) -> dict:
         settings = Settings()
 
-        stables = [
-            Contracts.USDT,
-            Contracts.USDC,
-            MUSD
-        ]
+        stables = [Contracts.USDT, Contracts.USDC, MUSD]
 
         balance_map = {}
 
@@ -346,7 +306,6 @@ class AutoStaking(Base):
 
     @async_retry(retries=5, delay=3, to_raise=False)
     async def _generate_change_transactions(self, change_tx: Any) -> dict:
-
         payload = await self._payload_change_txs(change_tx)
 
         r = await self.session.post(
@@ -363,7 +322,7 @@ class AutoStaking(Base):
 
         except Exception:
             data = json.loads(r.text or "{}")
-        chain_data = data.get('data')
+        chain_data = data.get("data")
 
         if not chain_data:
             raise Exception(f"No calldata in response: {data}")
@@ -371,12 +330,7 @@ class AutoStaking(Base):
         return chain_data
 
     async def send_raw_tx(self, data):
-
-        tx_params = TxParams(
-            to=Web3.to_checksum_address(data['to']),
-            data=data['data'],
-            value=0
-        )
+        tx_params = TxParams(to=Web3.to_checksum_address(data["to"]), data=data["data"], value=0)
         tx = await self.client.transactions.sign_and_send(tx_params=tx_params)
 
         await asyncio.sleep(random.randint(2, 4))
@@ -385,16 +339,11 @@ class AutoStaking(Base):
         if receipt:
             return tx.hash.hex() if hasattr(tx.hash, "hex") else str(tx.hash)
 
-
     async def autostacking_flow(self):
-
         if not self.auth_token:
             self.auth_token = await self._auth_token()
 
-            self.base_headers = {
-                **self.base_headers,
-                "authorization": self.auth_token
-            }
+            self.base_headers = {**self.base_headers, "authorization": self.auth_token}
 
         next_time = await self.get_next_faucet_claim_time()
         now = int(time.time())
@@ -402,12 +351,12 @@ class AutoStaking(Base):
         if now >= next_time:
             faucet = await self.claim_faucet()
 
-            if 'Failed' not in faucet:
+            if "Failed" not in faucet:
                 logger.success(faucet)
 
         current_position = await self._get_user_positions()
 
-        current_position = current_position.get('positions')
+        current_position = current_position.get("positions")
 
         logger.debug(f"{self.wallet} | {self.__module_name__} | got current_positions")
 
@@ -417,24 +366,24 @@ class AutoStaking(Base):
             usdc_amount=balance_map[Contracts.USDC],
             usdt_amount=balance_map[Contracts.USDT],
             musd_amount=balance_map[MUSD],
-            user_positions=current_position
+            user_positions=current_position,
         )
 
         return await self.prepare_transactions(ai_req=ai_req)
 
     async def prepare_transactions(self, ai_req: dict):
-        changes = ai_req.get('data').get('changes')
+        changes = ai_req.get("data").get("changes")
 
         withdraw_tasks = 0
         deposit_tasks = 0
 
-        withdraw = [task for task in changes if task.get('type') == 'withdraw']
+        withdraw = [task for task in changes if task.get("type") == "withdraw"]
 
         if withdraw:
             result = await self.process_transactions(tx_list=withdraw)
             withdraw_tasks += result
 
-        deposit = [task for task in changes if task.get('type') == 'deposit']
+        deposit = [task for task in changes if task.get("type") == "deposit"]
 
         if deposit:
             result = await self.process_transactions(tx_list=deposit)
@@ -447,8 +396,7 @@ class AutoStaking(Base):
         balance = await self.client.wallet.balance()
 
         if float(balance.Ether) <= 0.0001:
-
-            raise Exception(f'Failed | Low {balance} PHRS balance | waiting for faucet')
+            raise Exception(f"Failed | Low {balance} PHRS balance | waiting for faucet")
 
         changes = await self._generate_change_transactions(change_tx=tx_list)
         last_tx = {}
@@ -458,12 +406,12 @@ class AutoStaking(Base):
         for key, value in changes.items():
             tx = await self.send_raw_tx(data=value)
             last_tx = value
-            logger.debug(f'{self.wallet} | {self.__module_name__} | tx_success: {tx}, start sleeping for {sleep} secs')
+            logger.debug(f"{self.wallet} | {self.__module_name__} | tx_success: {tx}, start sleeping for {sleep} secs")
             tx_count += 1
 
             await asyncio.sleep(sleep)
 
-        if '0x095ea7' in last_tx.get('data'):
+        if "0x095ea7" in last_tx.get("data"):
             return await self.process_transactions(tx_list=tx_list, tx_count=tx_count)
 
         return tx_count

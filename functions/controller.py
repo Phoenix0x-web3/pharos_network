@@ -316,7 +316,7 @@ class Controller:
     async def r2_swap(self):
         return await self.r2.r2_controller(action='swap')
 
-    async_retry()
+    @async_retry(retries=3, delay=3, to_raise=False)
     async def get_onchain_txs(self) -> list:
         url = 'https://api.socialscan.io/pharos-testnet/v1/explorer/transactions?size=12'
 

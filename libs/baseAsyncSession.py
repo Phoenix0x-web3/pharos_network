@@ -1,40 +1,39 @@
 from curl_cffi import requests
 
 FINGERPRINT_DEFAULT = {
-    "impersonate": "chrome136",   
+    "impersonate": "chrome136",
     "user-agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/136.0.0.0 Safari/537.36",
     "sec-ch-ua-platform": "Windows",
     "sec-ch-ua": 'Chromium";v="136", "Google Chrome";v="136", "Not.A/Brand";v="99',
-    "accept-language" : "en-US,en;q=0.9",
+    "accept-language": "en-US,en;q=0.9",
 }
 
 FINGERPRINT_MAC136 = {
     "impersonate": "chrome136",
-    "user-agent": (
-        "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) "
-        "AppleWebKit/537.36 (KHTML, like Gecko) "
-        "Chrome/136.0.0.0 Safari/537.36"
-    ),
+    "user-agent": ("Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/136.0.0.0 Safari/537.36"),
     "sec-ch-ua-platform": "macOS",
     "sec-ch-ua": '"Google Chrome";v="136", "Chromium";v="136", "Not_A Brand";v="24"',
     "accept-language": "en-US,en;q=0.9",
 }
 
+
 class BaseAsyncSession(requests.AsyncSession):
     def __init__(
-            self,
-            proxy: str = None,
-            fingerprint: dict = FINGERPRINT_DEFAULT,
-            **session_kwargs,
+        self,
+        proxy: str = None,
+        fingerprint: dict = FINGERPRINT_DEFAULT,
+        **session_kwargs,
     ):
         headers = session_kwargs.pop("headers", {})
 
-        headers.update({
-            "user-agent": fingerprint.get("user-agent"),
-            "sec-ch-ua-platform": fingerprint.get("sec-ch-ua-platform"),
-            "sec-ch-ua": fingerprint.get("sec-ch-ua"),
-            "accept-language": fingerprint.get("accept-language"),
-        })
+        headers.update(
+            {
+                "user-agent": fingerprint.get("user-agent"),
+                "sec-ch-ua-platform": fingerprint.get("sec-ch-ua-platform"),
+                "sec-ch-ua": fingerprint.get("sec-ch-ua"),
+                "accept-language": fingerprint.get("accept-language"),
+            }
+        )
 
         init_kwargs = {
             "headers": headers,

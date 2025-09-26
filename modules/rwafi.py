@@ -1,7 +1,7 @@
 import asyncio
 import json
 import time
-from typing import Optional, Dict, Any, Tuple
+from typing import Any, Dict, Optional, Tuple
 
 from web3 import Web3
 from web3.types import TxParams
@@ -9,23 +9,52 @@ from web3.types import TxParams
 from libs.base import Base
 from libs.eth_async.client import Client
 from libs.eth_async.data.models import RawContract, TokenAmount
-from libs.twitter.base import BaseAsyncSession
+from utils.browser import Browser
 from utils.db_api.models import Wallet
 from utils.logs_decorator import action_log, controller_log
 from utils.query_json import query_to_json
 from utils.retry import async_retry
-from utils.browser import Browser
 
 AQUAFLUX = RawContract(
     title="AquafluxNFT",
     address="0xCc8cF44E196CaB28DBA2d514dc7353af0eFb370E",
     abi=[
         {"type": "function", "name": "claimTokens", "stateMutability": "nonpayable", "inputs": [], "outputs": []},
-        {"type": "function", "name": "combineCS", "stateMutability": "nonpayable", "inputs": [{"name": "amount", "type": "uint256"}], "outputs": []},
-        {"type": "function", "name": "combinePC", "stateMutability": "nonpayable", "inputs": [{"name": "amount", "type": "uint256"}], "outputs": []},
-        {"type": "function", "name": "combinePS", "stateMutability": "nonpayable", "inputs": [{"name": "amount", "type": "uint256"}], "outputs": []},
-        {"type": "function", "name": "hasClaimedStandardNFT", "stateMutability": "view", "inputs": [{"name": "owner", "type": "address"}], "outputs": [{"type": "bool"}]},
-        {"type": "function", "name": "hasClaimedPremiumNFT",  "stateMutability": "view", "inputs": [{"name": "owner", "type": "address"}], "outputs": [{"type": "bool"}]},
+        {
+            "type": "function",
+            "name": "combineCS",
+            "stateMutability": "nonpayable",
+            "inputs": [{"name": "amount", "type": "uint256"}],
+            "outputs": [],
+        },
+        {
+            "type": "function",
+            "name": "combinePC",
+            "stateMutability": "nonpayable",
+            "inputs": [{"name": "amount", "type": "uint256"}],
+            "outputs": [],
+        },
+        {
+            "type": "function",
+            "name": "combinePS",
+            "stateMutability": "nonpayable",
+            "inputs": [{"name": "amount", "type": "uint256"}],
+            "outputs": [],
+        },
+        {
+            "type": "function",
+            "name": "hasClaimedStandardNFT",
+            "stateMutability": "view",
+            "inputs": [{"name": "owner", "type": "address"}],
+            "outputs": [{"type": "bool"}],
+        },
+        {
+            "type": "function",
+            "name": "hasClaimedPremiumNFT",
+            "stateMutability": "view",
+            "inputs": [{"name": "owner", "type": "address"}],
+            "outputs": [{"type": "bool"}],
+        },
         {
             "type": "function",
             "name": "mint",
@@ -41,6 +70,7 @@ AQUAFLUX = RawContract(
 )
 
 BASE_API = "https://api.aquaflux.pro/api/v1"
+
 
 class AquaFlux(Base):
     __module_name__ = "AquaFlux"
@@ -78,6 +108,7 @@ class AquaFlux(Base):
 
         except Exception:
             import json as _json
+
             data = _json.loads(r.text or "{}")
 
         token = (data.get("data") or {}).get("accessToken")
@@ -87,7 +118,6 @@ class AquaFlux(Base):
         self.auth_token = token
         self.base_headers = {**self.base_headers, "authorization": f"Bearer {self.auth_token}"}
         return True
-
 
     @async_retry(retries=5, delay=3, to_raise=False)
     async def _get_signature(self, nft_type: int) -> Optional[Tuple[int, str]]:
@@ -107,6 +137,7 @@ class AquaFlux(Base):
 
         except Exception:
             import json as _json
+
             data = _json.loads(r.text or "{}")
 
         block = data.get("data") or {}
@@ -114,10 +145,9 @@ class AquaFlux(Base):
             return None
         return int(block["expiresAt"]), str(block["signature"])
 
-
     async def twitter_bound(self) -> bool:
         if not self.auth_token:
-            ok = await self._login()
+            await self._login()
 
         r = await self.session.get(
             url=f"{BASE_API}/users/twitter/binding-status",
@@ -130,12 +160,15 @@ class AquaFlux(Base):
 
         except Exception:
             import json as _json
+
             data = _json.loads(r.text or "{}")
 
-        return data.get('data').get('bound')
+        return data.get("data").get("bound")
 
     @async_retry(retries=5, delay=3, to_raise=False)
-    async def twitter_initiate(self, ) -> Optional[str | Dict[str, Any]]:
+    async def twitter_initiate(
+        self,
+    ) -> Optional[str | Dict[str, Any]]:
         """
         POST /users/twitter/initiate
         Возвращает URL авторизации в Twitter (обычно в data.url / data.authUrl).
@@ -160,23 +193,19 @@ class AquaFlux(Base):
 
         except Exception:
             import json as _json
+
             data = _json.loads(r.text or "{}")
 
         d = data.get("data") or {}
         url = d.get("url") or d.get("authUrl") or d.get("redirectUrl") or r.headers.get("location")
         return url or data
 
-    @controller_log('Bind Twitter')
+    @controller_log("Bind Twitter")
     async def bind_twitter(self, callback_data):
-
         query = query_to_json(callback_data.callback_url)
 
-        redirect_url = 'https://playground.aquaflux.pro/oauthcallback/x'
-        payload = {
-            "code": query["code"],
-            "state": query["state"],
-            "redirectUrl": redirect_url
-        }
+        redirect_url = "https://playground.aquaflux.pro/oauthcallback/x"
+        payload = {"code": query["code"], "state": query["state"], "redirectUrl": redirect_url}
 
         resp = await self.session.post(
             url=f"{BASE_API}/users/twitter/callback",
@@ -191,8 +220,7 @@ class AquaFlux(Base):
         except Exception:
             data = json.loads(resp.text or "{}")
 
-        if data.get('status') == 'success':
-
+        if data.get("status") == "success":
             return f"Success | bounded user {data.get('data').get('user').get('twitterUsername')}"
 
         return f"Failed bind twitter"
@@ -212,8 +240,8 @@ class AquaFlux(Base):
         except Exception:
             data = json.loads(resp.text or "{}")
 
-        if data.get('status') == 'success':
-            return data.get('data').get('isFollowing')
+        if data.get("status") == "success":
+            return data.get("data").get("isFollowing")
 
         return False
 
@@ -226,7 +254,6 @@ class AquaFlux(Base):
         rcpt = await tx.wait_for_receipt(client=self.client, timeout=300)
 
         return "Success | claimTokens" if rcpt else "Failed | claimTokens"
-
 
     @controller_log("Combine")
     async def combine(self, variant: str = "combineCS", amount_ether: float = 100) -> str:
@@ -243,7 +270,6 @@ class AquaFlux(Base):
 
         rcpt = await tx.wait_for_receipt(client=self.client, timeout=300)
         return f"Success | {variant} {amount.Ether} PHRS" if rcpt else f"Failed | {variant}"
-
 
     async def already_minted(self, *, premium: bool) -> bool:
         c = await self.client.contracts.get(contract_address=AQUAFLUX)
@@ -267,15 +293,13 @@ class AquaFlux(Base):
         except Exception:
             data = json.loads(resp.text or "{}")
 
-        if data.get('status') == 'success':
-
-            return data.get('data').get('isHoldingToken')
+        if data.get("status") == "success":
+            return data.get("data").get("isHoldingToken")
 
         return f"Failed bind twitter"
 
     @action_log("Mint")
     async def mint(self, nft_type: str = "premium") -> str:
-
         if not self.auth_token:
             ok = await self._login()
             if not ok:
@@ -291,7 +315,6 @@ class AquaFlux(Base):
         #     return f"Failed | already minted {nft_type}"
         check_holdings = await self.check_token_holdings()
         if check_holdings:
-
             sig = await self._get_signature(1 if premium else 0)
             if not sig:
                 return "Failed | signature"
@@ -304,11 +327,7 @@ class AquaFlux(Base):
 
             calldata = c.encode_abi("mint", args=[1 if premium else 0, int(expires_at), sig_bytes])
 
-            tx = await self.client.transactions.sign_and_send(
-                TxParams(
-                    to=c.address, data=calldata, value=0
-                )
-            )
+            tx = await self.client.transactions.sign_and_send(TxParams(to=c.address, data=calldata, value=0))
 
             await asyncio.sleep(2)
             rcpt = await tx.wait_for_receipt(client=self.client, timeout=300)

@@ -1,42 +1,37 @@
-from typing import Any, Literal, Iterable
-from time import time
 import asyncio
 import base64
 import json
 import re
-import sys
+from time import time
+from typing import Any, Iterable, Literal
 
-from loguru import logger
 from curl_cffi import requests
+from loguru import logger
 from yarl import URL
 
 from ._capsolver.fun_captcha import FunCaptcha, FunCaptchaTypeEnm
-
+from .account import Account, AccountStatus
+from .base import BaseHTTPClient
 from .errors import (
-    TwitterException,
-    FailedToFindDuplicatePost,
-    HTTPException,
+    AccountConsentLocked,
+    AccountLocked,
+    AccountNotFound,
+    AccountSuspended,
+    BadAccount,
+    BadAccountToken,
     BadRequest,
-    Unauthorized,
+    FailedToFindDuplicatePost,
     Forbidden,
+    HTTPException,
     NotFound,
     RateLimited,
     ServerError,
-    BadAccount,
-    BadAccountToken,
-    AccountLocked,
-    AccountConsentLocked,
-    AccountSuspended,
-    AccountNotFound,
+    TwitterException,
+    Unauthorized,
 )
-from .base import BaseHTTPClient
-from .account import Account, AccountStatus
-from .models import User, Tweet, Media, Subtask
-from .utils import parse_oauth_html
-from .utils import parse_unlock_html
-from .utils import tweets_data_from_instructions
-from .utils import encode_x_client_transaction_id
-from .utils import XPFFHeaderGenerator
+from .models import Media, Subtask, Tweet, User
+from .utils import XPFFHeaderGenerator, encode_x_client_transaction_id, parse_oauth_html, parse_unlock_html, tweets_data_from_instructions
+
 
 class Client(BaseHTTPClient):
     _BEARER_TOKEN = "AAAAAAAAAAAAAAAAAAAAANRILgAAAAAAnNwIzUejRCOuH5E6I8xnZz4puTs%3D1Zv7ttfk8LF81IUq16cHjhLTvJu4FA33AGWWjCpTnA"
@@ -116,17 +111,16 @@ class Client(BaseHTTPClient):
 
         url = URL(url)
         headers["x-client-transaction-id"] = encode_x_client_transaction_id(url.path)
-        
+
         guest_id = self._session.cookies.get("guest_id")
-        
+
         if guest_id:
             headers["X-Xp-Forwarded-For"] = self.xpff.generate_xpff(guest_id)
-            
+
         if bearer:
             headers["authorization"] = f"Bearer {self._BEARER_TOKEN}"
 
         if auth:
-
             cookies["auth_token"] = self.account.auth_token
             headers["x-twitter-auth-type"] = "OAuth2Session"
             if self.account.ct0:
@@ -150,10 +144,7 @@ class Client(BaseHTTPClient):
             response = await self._session.request(method, str(url), **kwargs)
         except requests.errors.RequestsError as exc:
             if exc.code == 35:
-                msg = (
-                    "The IP address may have been blocked by Twitter. Blocked countries: Russia. "
-                    + str(exc)
-                )
+                msg = "The IP address may have been blocked by Twitter. Blocked countries: Russia. " + str(exc)
                 raise requests.errors.RequestsError(msg, 35, exc.response)
             raise
 
@@ -192,12 +183,8 @@ class Client(BaseHTTPClient):
                 if 326 in exc.error_codes:
                     for error_data in exc.errors:
                         bounce_location = error_data.get("bounce").get("bounce_location")
-                        
-                        if (
-                            error_data.get("code") == 326
-                            and bounce_location
-                            == "/i/flow/consent_flow"
-                        ):
+
+                        if error_data.get("code") == 326 and bounce_location == "/i/flow/consent_flow":
                             self.account.status = AccountStatus.CONSENT_LOCKED
                             raise AccountConsentLocked(exc, self.account)
 
@@ -234,16 +221,13 @@ class Client(BaseHTTPClient):
 
             if 326 in exc.error_codes:
                 for error_data in exc.errors:
-                    if (
-                        error_data.get("code") == 326
-                        and error_data.get("bounce_location") == "/i/flow/consent_flow"
-                    ):
+                    if error_data.get("code") == 326 and error_data.get("bounce_location") == "/i/flow/consent_flow":
                         self.account.status = AccountStatus.CONSENT_LOCKED
                         raise AccountConsentLocked(exc, self.account)
 
                 self.account.status = AccountStatus.LOCKED
                 raise AccountLocked(exc, self.account)
-            
+
             raise exc
 
         if response.status_code == 404:
@@ -298,25 +282,15 @@ class Client(BaseHTTPClient):
         except BadAccountToken:
             if auto_relogin is None:
                 auto_relogin = self.auto_relogin
-            if (
-                not auto_relogin
-                or not self.account.password
-                or not (self.account.email or self.account.username)
-            ):
+            if not auto_relogin or not self.account.password or not (self.account.email or self.account.username):
                 raise
 
             await self.relogin()
             return await self.request(method, url, auto_relogin=False, **kwargs)
 
         except Forbidden as exc:
-            if (
-                rerequest_on_bad_ct0
-                and 353 in exc.error_codes
-                and "ct0" in exc.response.cookies
-            ):
-                return await self.request(
-                    method, url, rerequest_on_bad_ct0=False, **kwargs
-                )
+            if rerequest_on_bad_ct0 and 353 in exc.error_codes and "ct0" in exc.response.cookies:
+                return await self.request(method, url, rerequest_on_bad_ct0=False, **kwargs)
             else:
                 raise
 
@@ -407,8 +381,7 @@ class Client(BaseHTTPClient):
 
         if response.status_code == 403:
             raise ValueError(
-                "The request token (oauth_token) for this page is invalid."
-                " It may have already been used, or expired because it is too old."
+                "The request token (oauth_token) for this page is invalid. It may have already been used, or expired because it is too old."
             )
 
         return response
@@ -440,17 +413,11 @@ class Client(BaseHTTPClient):
         :return: authenticity_token, redirect_url
         """
         response = await self._oauth(oauth_token, **oauth_params)
-        authenticity_token, redirect_url, redirect_after_login_url = parse_oauth_html(
-            response.text
-        )
+        authenticity_token, redirect_url, redirect_after_login_url = parse_oauth_html(response.text)
 
         # Первая привязка требует подтверждения
-        response = await self._confirm_oauth(
-            oauth_token, authenticity_token, redirect_after_login_url
-        )
-        authenticity_token, redirect_url, redirect_after_login_url = (
-            parse_oauth_html(response.text)
-            )
+        response = await self._confirm_oauth(oauth_token, authenticity_token, redirect_after_login_url)
+        authenticity_token, redirect_url, redirect_after_login_url = parse_oauth_html(response.text)
 
         return authenticity_token, redirect_url
 
@@ -506,9 +473,7 @@ class Client(BaseHTTPClient):
 
         return user
 
-    async def _request_users_by_ids(
-        self, user_ids: Iterable[str | int]
-    ) -> dict[int : User | Account]:
+    async def _request_users_by_ids(self, user_ids: Iterable[str | int]) -> dict[int : User | Account]:
         url, query_id = self._action_to_url("UsersByRestIds")
         variables = {"userIds": list({str(user_id) for user_id in user_ids})}
         features = {
@@ -541,9 +506,7 @@ class Client(BaseHTTPClient):
         user = users[user_id]
         return user
 
-    async def request_users_by_ids(
-        self, user_ids: Iterable[str | int]
-    ) -> dict[int : User | Account]:
+    async def request_users_by_ids(self, user_ids: Iterable[str | int]) -> dict[int : User | Account]:
         """
         :param user_ids: ID пользователей
         :return: Пользователи, если существует, иначе None. Или собственный аккаунт, если совпадает ID.
@@ -574,21 +537,13 @@ class Client(BaseHTTPClient):
         payload = {"media_data": base64.b64encode(image)}
         for attempt in range(attempts):
             try:
-                response, data = await self.request(
-                    "POST", url, data=payload, timeout=timeout
-                )
+                response, data = await self.request("POST", url, data=payload, timeout=timeout)
                 return Media(**data)
             except (HTTPException, requests.errors.RequestsError) as exc:
                 if (
                     attempt < attempts - 1
-                    and (
-                        isinstance(exc, requests.errors.RequestsError)
-                        and exc.code == 28
-                    )
-                    or (
-                        isinstance(exc, HTTPException)
-                        and exc.response.status_code == 408
-                    )
+                    and (isinstance(exc, requests.errors.RequestsError) and exc.code == 28)
+                    or (isinstance(exc, HTTPException) and exc.response.status_code == 408)
                 ):
                     continue
                 else:
@@ -615,9 +570,7 @@ class Client(BaseHTTPClient):
         headers = {
             "content-type": "application/x-www-form-urlencoded",
         }
-        response, response_json = await self.request(
-            "POST", url, params=params, headers=headers
-        )
+        response, response_json = await self.request("POST", url, params=params, headers=headers)
         return bool(response_json)
 
     async def follow(self, user_id: str | int) -> bool:
@@ -650,9 +603,7 @@ class Client(BaseHTTPClient):
             tweet = await self._repost(tweet_id)
         except HTTPException as exc:
             if (
-                search_duplicate
-                and 327
-                in exc.error_codes  # duplicate retweet (You have already retweeted this Tweet)
+                search_duplicate and 327 in exc.error_codes  # duplicate retweet (You have already retweeted this Tweet)
             ):
                 tweets = await self.request_tweets(self.account.id)
                 duplicate_tweet = None
@@ -661,9 +612,7 @@ class Client(BaseHTTPClient):
                         duplicate_tweet = tweet_
 
                 if not duplicate_tweet:
-                    raise FailedToFindDuplicatePost(
-                        f"Couldn't find a post duplicate in the next 20 posts"
-                    )
+                    raise FailedToFindDuplicatePost(f"Couldn't find a post duplicate in the next 20 posts")
 
                 tweet = duplicate_tweet
 
@@ -685,9 +634,7 @@ class Client(BaseHTTPClient):
 
         :return: Tweet
         """
-        return await self._repost_or_search_duplicate(
-            tweet_id, search_duplicate=search_duplicate
-        )
+        return await self._repost_or_search_duplicate(tweet_id, search_duplicate=search_duplicate)
 
     async def like(self, tweet_id: int) -> bool:
         """
@@ -705,10 +652,7 @@ class Client(BaseHTTPClient):
 
     async def unlike(self, tweet_id: int) -> dict:
         response_json = await self._interact_with_tweet("UnfavoriteTweet", tweet_id)
-        is_unliked = (
-            "data" in response_json
-            and response_json["data"]["unfavorite_tweet"] == "Done"
-        )
+        is_unliked = "data" in response_json and response_json["data"]["unfavorite_tweet"] == "Done"
         return is_unliked
 
     async def delete_tweet(self, tweet_id: int | str) -> bool:
@@ -733,9 +677,7 @@ class Client(BaseHTTPClient):
         headers = {
             "content-type": "application/x-www-form-urlencoded",
         }
-        response, response_json = await self.request(
-            "POST", url, headers=headers, data=data
-        )
+        response, response_json = await self.request("POST", url, headers=headers, data=data)
         is_pinned = bool(response_json["pinned_tweets"])
         return is_pinned
 
@@ -762,9 +704,7 @@ class Client(BaseHTTPClient):
                 "exclude_reply_user_ids": [],
             }
         if media_id:
-            variables["media"]["media_entities"].append(
-                {"media_id": str(media_id), "tagged_users": []}
-            )
+            variables["media"]["media_entities"].append({"media_id": str(media_id), "tagged_users": []})
         features = {
             "communities_web_enable_tweet_community_results_fetch": True,
             "c9s_tweet_anatomy_moderator_badge_enabled": True,
@@ -796,9 +736,7 @@ class Client(BaseHTTPClient):
             "queryId": query_id,
         }
         response, response_json = await self.request("POST", url, json=payload)
-        tweet = Tweet.from_raw_data(
-            response_json["data"]["create_tweet"]["tweet_results"]["result"]
-        )
+        tweet = Tweet.from_raw_data(response_json["data"]["create_tweet"]["tweet_results"]["result"])
         return tweet
 
     async def _tweet_or_search_duplicate(
@@ -819,8 +757,7 @@ class Client(BaseHTTPClient):
             )
         except HTTPException as exc:
             if (
-                search_duplicate
-                and 187 in exc.error_codes  # duplicate tweet (Status is a duplicate)
+                search_duplicate and 187 in exc.error_codes  # duplicate tweet (Status is a duplicate)
             ):
                 tweets = await self.request_tweets()
                 duplicate_tweet = None
@@ -829,9 +766,7 @@ class Client(BaseHTTPClient):
                         duplicate_tweet = tweet_
 
                 if not duplicate_tweet:
-                    raise FailedToFindDuplicatePost(
-                        f"Couldn't find a post duplicate in the next 20 posts"
-                    )
+                    raise FailedToFindDuplicatePost(f"Couldn't find a post duplicate in the next 20 posts")
                 tweet = duplicate_tweet
 
             else:
@@ -897,9 +832,7 @@ class Client(BaseHTTPClient):
             search_duplicate=search_duplicate,
         )
 
-    async def vote(
-        self, tweet_id: int | str, card_id: int | str, choice_number: int
-    ) -> dict:
+    async def vote(self, tweet_id: int | str, card_id: int | str, choice_number: int) -> dict:
         """
         :return: Raw vote information
         """
@@ -959,14 +892,10 @@ class Client(BaseHTTPClient):
 
         users = []
         if "result" in response_json["data"]["user"]:
-            entries = response_json["data"]["user"]["result"]["timeline"]["timeline"][
-                "instructions"
-            ][-1]["entries"]
+            entries = response_json["data"]["user"]["result"]["timeline"]["timeline"]["instructions"][-1]["entries"]
             for entry in entries:
                 if entry["entryId"].startswith("user"):
-                    user_data_dict = entry["content"]["itemContent"]["user_results"][
-                        "result"
-                    ]
+                    user_data_dict = entry["content"]["itemContent"]["user_results"]["result"]
                     users.append(User.from_raw_data(user_data_dict))
         return users
 
@@ -981,15 +910,11 @@ class Client(BaseHTTPClient):
         :param count: Количество подписчиков.
         """
         if user_id:
-            return await self._request_users_by_action(
-                "Followers", user_id, count, cursor
-            )
+            return await self._request_users_by_action("Followers", user_id, count, cursor)
         else:
             if not self.account.id:
                 await self.update_account_info()
-            return await self._request_users_by_action(
-                "Followers", self.account.id, count, cursor
-            )
+            return await self._request_users_by_action("Followers", self.account.id, count, cursor)
 
     async def request_followings(
         self,
@@ -1002,15 +927,11 @@ class Client(BaseHTTPClient):
         :param count: Количество подписчиков.
         """
         if user_id:
-            return await self._request_users_by_action(
-                "Following", user_id, count, cursor
-            )
+            return await self._request_users_by_action("Following", user_id, count, cursor)
         else:
             if not self.account.id:
                 await self.update_account_info()
-            return await self._request_users_by_action(
-                "Following", self.account.id, count, cursor
-            )
+            return await self._request_users_by_action("Following", self.account.id, count, cursor)
 
     async def _request_tweet(self, tweet_id: int | str) -> Tweet:
         url, query_id = self._action_to_url("TweetDetail")
@@ -1053,74 +974,68 @@ class Client(BaseHTTPClient):
         tweet_data = tweets_data_from_instructions(instructions)[0]
         return Tweet.from_raw_data(tweet_data)
 
-    async def _request_tweets(
-        self, user_id: int | str, count: int = 20, cursor: str = None
-    ) -> list[Tweet]:
+    async def _request_tweets(self, user_id: int | str, count: int = 20, cursor: str = None) -> list[Tweet]:
         url, query_id = self._action_to_url("UserTweets")
         variables = {
             "userId": str(user_id),
             "count": count,
             "includePromotedContent": True,
             "withQuickPromoteEligibilityTweetFields": True,
-            "withVoice": True
+            "withVoice": True,
         }
         if cursor:
             variables["cursor"] = cursor
-            
+
         features = {
-            "rweb_video_screen_enabled":False,
-            "payments_enabled":False,
-            "rweb_xchat_enabled":False,
-            "profile_label_improvements_pcf_label_in_post_enabled":True,
-            "rweb_tipjar_consumption_enabled":True,
-            "verified_phone_label_enabled":False,
-            "creator_subscriptions_tweet_preview_api_enabled":True,
-            "responsive_web_graphql_timeline_navigation_enabled":True,
-            "responsive_web_graphql_skip_user_profile_image_extensions_enabled":False,
-            "premium_content_api_read_enabled":False,
-            "communities_web_enable_tweet_community_results_fetch":True,
-            "c9s_tweet_anatomy_moderator_badge_enabled":True,
-            "responsive_web_grok_analyze_button_fetch_trends_enabled":False,
-            "responsive_web_grok_analyze_post_followups_enabled":True,
-            "responsive_web_jetfuel_frame":True,
-            "responsive_web_grok_share_attachment_enabled":True,
-            "articles_preview_enabled":True,
-            "responsive_web_edit_tweet_api_enabled":True,
-            "graphql_is_translatable_rweb_tweet_is_translatable_enabled":True,
-            "view_counts_everywhere_api_enabled":True,
-            "longform_notetweets_consumption_enabled":True,
-            "responsive_web_twitter_article_tweet_consumption_enabled":True,
-            "tweet_awards_web_tipping_enabled":False,
-            "responsive_web_grok_show_grok_translated_post":False,
-            "responsive_web_grok_analysis_button_from_backend":True,
-            "creator_subscriptions_quote_tweet_preview_enabled":False,
-            "freedom_of_speech_not_reach_fetch_enabled":True,
-            "standardized_nudges_misinfo":True,
-            "tweet_with_visibility_results_prefer_gql_limited_actions_policy_enabled":True,
-            "longform_notetweets_rich_text_read_enabled":True,
-            "longform_notetweets_inline_media_enabled":True,
-            "responsive_web_grok_image_annotation_enabled":True,
-            "responsive_web_grok_imagine_annotation_enabled":True,
-            "responsive_web_grok_community_note_auto_translation_is_enabled":False,
-            "responsive_web_enhance_cards_enabled":False
-        }    
-        fieldToggles =  {"withArticlePlainText":False}
-        
+            "rweb_video_screen_enabled": False,
+            "payments_enabled": False,
+            "rweb_xchat_enabled": False,
+            "profile_label_improvements_pcf_label_in_post_enabled": True,
+            "rweb_tipjar_consumption_enabled": True,
+            "verified_phone_label_enabled": False,
+            "creator_subscriptions_tweet_preview_api_enabled": True,
+            "responsive_web_graphql_timeline_navigation_enabled": True,
+            "responsive_web_graphql_skip_user_profile_image_extensions_enabled": False,
+            "premium_content_api_read_enabled": False,
+            "communities_web_enable_tweet_community_results_fetch": True,
+            "c9s_tweet_anatomy_moderator_badge_enabled": True,
+            "responsive_web_grok_analyze_button_fetch_trends_enabled": False,
+            "responsive_web_grok_analyze_post_followups_enabled": True,
+            "responsive_web_jetfuel_frame": True,
+            "responsive_web_grok_share_attachment_enabled": True,
+            "articles_preview_enabled": True,
+            "responsive_web_edit_tweet_api_enabled": True,
+            "graphql_is_translatable_rweb_tweet_is_translatable_enabled": True,
+            "view_counts_everywhere_api_enabled": True,
+            "longform_notetweets_consumption_enabled": True,
+            "responsive_web_twitter_article_tweet_consumption_enabled": True,
+            "tweet_awards_web_tipping_enabled": False,
+            "responsive_web_grok_show_grok_translated_post": False,
+            "responsive_web_grok_analysis_button_from_backend": True,
+            "creator_subscriptions_quote_tweet_preview_enabled": False,
+            "freedom_of_speech_not_reach_fetch_enabled": True,
+            "standardized_nudges_misinfo": True,
+            "tweet_with_visibility_results_prefer_gql_limited_actions_policy_enabled": True,
+            "longform_notetweets_rich_text_read_enabled": True,
+            "longform_notetweets_inline_media_enabled": True,
+            "responsive_web_grok_image_annotation_enabled": True,
+            "responsive_web_grok_imagine_annotation_enabled": True,
+            "responsive_web_grok_community_note_auto_translation_is_enabled": False,
+            "responsive_web_enhance_cards_enabled": False,
+        }
+        fieldToggles = {"withArticlePlainText": False}
+
         params = {"variables": variables, "features": features, "fieldToggles": fieldToggles}
         response, data = await self.request("GET", url, params=params)
 
-        instructions = data["data"]["user"]["result"]["timeline"]["timeline"][
-            "instructions"
-        ]
+        instructions = data["data"]["user"]["result"]["timeline"]["timeline"]["instructions"]
         tweets_data = tweets_data_from_instructions(instructions)
         return [Tweet.from_raw_data(tweet_data) for tweet_data in tweets_data]
 
     async def request_tweet(self, tweet_id: int | str) -> Tweet:
         return await self._request_tweet(tweet_id)
 
-    async def request_tweets(
-        self, user_id: int | str = None, count: int = 20, cursor: str = None
-    ) -> list[Tweet]:
+    async def request_tweets(self, user_id: int | str = None, count: int = 20, cursor: str = None) -> list[Tweet]:
         if not user_id:
             if not self.account.id:
                 await self.update_account_info()
@@ -1128,9 +1043,7 @@ class Client(BaseHTTPClient):
 
         return await self._request_tweets(user_id, count, cursor)
 
-    async def _update_profile_image(
-        self, type: Literal["banner", "image"], media_id: str | int
-    ) -> str:
+    async def _update_profile_image(self, type: Literal["banner", "image"], media_id: str | int) -> str:
         """
         :return: Image URL
         """
@@ -1222,13 +1135,9 @@ class Client(BaseHTTPClient):
         }
         response, data = await self.request("POST", url, data=payload)
         # Проверяем, что все переданные параметры соответствуют полученным
-        updated = all(
-            data.get(key) == value for key, value in payload.items() if key != "url"
-        )
+        updated = all(data.get(key) == value for key, value in payload.items() if key != "url")
         if website:
-            updated &= URL(website) == URL(
-                data["entities"]["url"]["urls"][0]["expanded_url"]
-            )
+            updated &= URL(website) == URL(data["entities"]["url"]["urls"][0]["expanded_url"])
         await self.update_account_info()
         return updated
 
@@ -1256,10 +1165,9 @@ class Client(BaseHTTPClient):
             "birthdate_visibility": visibility,
             "birthdate_year_visibility": year_visibility,
             # "displayNameMaxLength": 50,
-            # "name": self.account.name,  
-            # "description": self.account.description,  
-            # "location": "" 
-     
+            # "name": self.account.name,
+            # "description": self.account.description,
+            # "location": ""
         }
         response, response_json = await self.request("POST", url, data=payload)
         birthdate_data = response_json["extended_profile"]["birthdate"]
@@ -1292,9 +1200,7 @@ class Client(BaseHTTPClient):
         event_data = data["event"]
         return event_data  # TODO Возвращать модель, а не словарь
 
-    async def send_message_to_conversation(
-        self, conversation_id: int | str, text: str
-    ) -> dict:
+    async def send_message_to_conversation(self, conversation_id: int | str, text: str) -> dict:
         """
         requires OAuth1 or OAuth2
 
@@ -1348,11 +1254,7 @@ class Client(BaseHTTPClient):
             "ext": "mediaColor,altText,mediaStats,highlightedLabel,hasNftAvatar,voiceInfo,birdwatchPivot,superFollowMetadata,unmentionInfo,editControl",
         }
         response, response_json = await self.request("GET", url, params=params)
-        messages = [
-            entry["message"]
-            for entry in response_json["inbox_initial_state"]["entries"]
-            if "message" in entry
-        ]
+        messages = [entry["message"] for entry in response_json["inbox_initial_state"]["entries"] if "message" in entry]
         return messages  # TODO Возвращать модели, а не словари
 
     async def _confirm_unlock(
@@ -1391,9 +1293,7 @@ class Client(BaseHTTPClient):
         attempt = 1
 
         if delete_button:
-            response, html = await self._confirm_unlock(
-                authenticity_token, assignment_token
-            )
+            response, html = await self._confirm_unlock(authenticity_token, assignment_token)
             (
                 authenticity_token,
                 assignment_token,
@@ -1404,9 +1304,7 @@ class Client(BaseHTTPClient):
             ) = parse_unlock_html(html)
 
         if start_button or finish_button:
-            response, html = await self._confirm_unlock(
-                authenticity_token, assignment_token
-            )
+            response, html = await self._confirm_unlock(authenticity_token, assignment_token)
             (
                 authenticity_token,
                 assignment_token,
@@ -1465,9 +1363,7 @@ class Client(BaseHTTPClient):
             ) = parse_unlock_html(html)
 
             if finish_button:
-                response, html = await self._confirm_unlock(
-                    authenticity_token, assignment_token
-                )
+                response, html = await self._confirm_unlock(authenticity_token, assignment_token)
                 (
                     authenticity_token,
                     assignment_token,
@@ -1492,12 +1388,9 @@ class Client(BaseHTTPClient):
         """
         url = "https://api.x.com/1.1/onboarding/task.json"
         response, data = await self.request("POST", url, **request_kwargs)
-        subtasks = [
-            Subtask.from_raw_data(subtask_data) for subtask_data in data["subtasks"]
-        ]
+        subtasks = [Subtask.from_raw_data(subtask_data) for subtask_data in data["subtasks"]]
         log_message = (
-            f"(auth_token={self.account.hidden_auth_token}, id={self.account.id}, username={self.account.username})"
-            f" Requested subtasks:"
+            f"(auth_token={self.account.hidden_auth_token}, id={self.account.id}, username={self.account.username}) Requested subtasks:"
         )
         for subtask in subtasks:
             log_message += f"\n\t{subtask.id}"
@@ -1591,32 +1484,25 @@ class Client(BaseHTTPClient):
                     "setting_responses": [
                         {
                             "key": "user_identifier",
-                            "response_data": {
-                                "text_data": {
-                                    "result": self.account.username
-                                    or self.account.email
-                                }
-                            },
+                            "response_data": {"text_data": {"result": self.account.username or self.account.email}},
                         }
                     ],
                 },
             }
         ]
         return await self._complete_subtask(flow_token, inputs, auth=False)
-    
-    
+
     async def _login_enter_alternate_identifier(self, flow_token: str):
         inputs = [
             {
-                'subtask_id': 'LoginEnterAlternateIdentifierSubtask',
-                'enter_text': {
-                    'link': 'next_link',
-                    'text':  self.account.email,
+                "subtask_id": "LoginEnterAlternateIdentifierSubtask",
+                "enter_text": {
+                    "link": "next_link",
+                    "text": self.account.email,
                 },
             }
         ]
         return await self._complete_subtask(flow_token, inputs, auth=False)
-
 
     async def _login_enter_password(self, flow_token: str):
         inputs = [
@@ -1651,9 +1537,7 @@ class Client(BaseHTTPClient):
         ]
         return await self._complete_subtask(flow_token, inputs, auth=False)
 
-    async def _login_two_factor_auth_choose_method(
-        self, flow_token: str, choices: Iterable[int] = (0,)
-    ):
+    async def _login_two_factor_auth_choose_method(self, flow_token: str, choices: Iterable[int] = (0,)):
         inputs = [
             {
                 "subtask_id": "LoginTwoFactorAuthChooseMethod",
@@ -1730,20 +1614,16 @@ class Client(BaseHTTPClient):
             flow_token, subtasks = await self._login_enter_alternate_identifier(flow_token)
 
         flow_token, subtasks = await self._login_enter_password(flow_token)
-       # flow_token, subtasks = await self._account_duplication_check(flow_token)
+        # flow_token, subtasks = await self._account_duplication_check(flow_token)
 
         for subtask in subtasks:
             if subtask.id == "LoginAcid":
                 if not self.account.email:
-                    raise TwitterException(
-                        f"Failed to login. Task id: LoginAcid." f" No email!"
-                    )
+                    raise TwitterException(f"Failed to login. Task id: LoginAcid. No email!")
 
                 if subtask.primary_text == "Check your email":
                     raise TwitterException(
-                        f"Failed to login. Task id: LoginAcid."
-                        f" Email verification required!"
-                        f" No IMAP handler for this version of library :<"
+                        f"Failed to login. Task id: LoginAcid. Email verification required! No IMAP handler for this version of library :<"
                     )
 
                 try:
@@ -1756,9 +1636,7 @@ class Client(BaseHTTPClient):
                             f"(auth_token={self.account.hidden_auth_token}, id={self.account.id}, username={self.account.username})"
                             f" Bad email!"
                         )
-                        raise TwitterException(
-                            f"Failed to login. Task id: LoginAcid. Bad email!"
-                        )
+                        raise TwitterException(f"Failed to login. Task id: LoginAcid. Bad email!")
                     else:
                         raise
 
@@ -1766,9 +1644,7 @@ class Client(BaseHTTPClient):
 
         if "LoginTwoFactorAuthChallenge" in subtask_ids:
             if not self.account.totp_secret:
-                raise TwitterException(
-                    f"Failed to login. Task id: LoginTwoFactorAuthChallenge. No totp_secret!"
-                )
+                raise TwitterException(f"Failed to login. Task id: LoginTwoFactorAuthChallenge. No totp_secret!")
 
             try:
                 # fmt: off
@@ -1781,9 +1657,7 @@ class Client(BaseHTTPClient):
                         f" Bad TOTP secret!"
                     )
                     if not self.account.backup_code:
-                        raise TwitterException(
-                            f"Failed to login. Task id: LoginTwoFactorAuthChallenge. No backup code!"
-                        )
+                        raise TwitterException(f"Failed to login. Task id: LoginTwoFactorAuthChallenge. No backup code!")
 
                     # Enter backup code
                     # fmt: off
@@ -1914,9 +1788,7 @@ class Client(BaseHTTPClient):
         }
         return await self._send_raw_subtask(params=query, json=payload)
 
-    async def _two_factor_enrollment_verify_password_subtask(
-        self, flow_token: str
-    ) -> tuple[str, list[Subtask]]:
+    async def _two_factor_enrollment_verify_password_subtask(self, flow_token: str) -> tuple[str, list[Subtask]]:
         inputs = [
             {
                 "subtask_id": "TwoFactorEnrollmentVerifyPasswordSubtask",
@@ -1928,9 +1800,7 @@ class Client(BaseHTTPClient):
         ]
         return await self._complete_subtask(flow_token, inputs)
 
-    async def _two_factor_enrollment_authentication_app_begin_subtask(
-        self, flow_token: str
-    ) -> tuple[str, list[Subtask]]:
+    async def _two_factor_enrollment_authentication_app_begin_subtask(self, flow_token: str) -> tuple[str, list[Subtask]]:
         inputs = [
             {
                 "subtask_id": "TwoFactorEnrollmentAuthenticationAppBeginSubtask",
@@ -2098,16 +1968,14 @@ class GQLClient:
     def __init__(self, client: Client):
         self._client = client
 
-    async def gql_request(
-        self, method, operation, **kwargs
-    ) -> tuple[requests.Response, dict]:
+    async def gql_request(self, method, operation, **kwargs) -> tuple[requests.Response, dict]:
         url, query_id = self._operation_to_url(operation)
 
         if method == "POST":
             payload = kwargs["json"] = kwargs.get("json") or {}
             payload["queryId"] = query_id
         else:
-            params = kwargs["params"] = kwargs.get("params") or {}
+            kwargs["params"] = kwargs.get("params") or {}
             ...
 
         response, data = await self._client.request(method, url, **kwargs)
@@ -2121,14 +1989,10 @@ class GQLClient:
             "variables": variables,
             "features": features,
         }
-        response, data = await self.gql_request(
-            "GET", "UserByScreenName", params=params
-        )
+        response, data = await self.gql_request("GET", "UserByScreenName", params=params)
         return User.from_raw_data(data["user"]["result"]) if data else None
 
-    async def users_by_ids(
-        self, user_ids: Iterable[str | int]
-    ) -> dict[int : User | Account]:
+    async def users_by_ids(self, user_ids: Iterable[str | int]) -> dict[int : User | Account]:
         features = self._DEFAULT_FEATURES
         variables = self._DEFAULT_VARIABLES
         variables["userIds"] = list({str(user_id) for user_id in user_ids})

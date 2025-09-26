@@ -6,13 +6,13 @@ from loguru import logger
 
 from data.settings import Settings
 
+
 def async_retry(
     retries: int = Settings().retry,
     delay: int = 3,
     to_raise: bool = True,
     exceptions: Tuple[Type[BaseException], ...] = (Exception,),
 ):
-
     def decorator(func):
         @wraps(func)
         async def wrapper(self, *args, **kwargs):
@@ -37,9 +37,7 @@ def async_retry(
                     attempt += 1
                     msg = f"{wallet_name} | {module} | {func.__name__} | Failed | attempt {attempt}/{retries}: {e}"
                     last_msg = f"{func.__name__} | attempt {attempt}/{retries}: {e}"
-                    logger.warning(
-                        msg
-                    )
+                    logger.warning(msg)
                     if attempt < retries:
                         await asyncio.sleep(delay)
 
@@ -49,4 +47,5 @@ def async_retry(
             raise Exception(last_msg)
 
         return wrapper
+
     return decorator

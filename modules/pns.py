@@ -1,23 +1,20 @@
 import asyncio
-import json
 import os
 import random
-import string
 
+from hexbytes import HexBytes
 from loguru import logger
-from requests import session
 from web3 import Web3
 from web3.types import TxParams
-from hexbytes import HexBytes
 
 from data.config import ABIS_DIR
 from libs.base import Base
-from utils.browser import Browser
 from libs.eth_async.client import Client
 from libs.eth_async.data.models import RawContract, TokenAmount, TxArgs
 from libs.eth_async.utils.files import read_json
+from utils.browser import Browser
 from utils.db_api.models import Wallet
-from utils.logs_decorator import action_log, controller_log
+from utils.logs_decorator import controller_log
 
 PNS_CONTROLLER = RawContract(
     title="PNS_Controller",
@@ -34,6 +31,7 @@ RESOLVER = RawContract(
 
 ONE_MONTH_DURATION = 2_592_000
 
+
 class PNS(Base):
     __module_name__ = "Pharos Name Service"
 
@@ -42,14 +40,14 @@ class PNS(Base):
         self.wallet = wallet
         self.session = Browser(wallet=wallet)
 
-
     @staticmethod
     async def _rand_domain(length: int = 9) -> str:
         from faker import Faker
+
         prefix = random.randint(3, 5)
         name = Faker().user_name()
 
-        symbols = ['-', '_', '|']
+        symbols = ["-", "_", "|"]
 
         new_nickname = name + random.choice(symbols) + Faker().word()[:prefix]
 
@@ -61,8 +59,8 @@ class PNS(Base):
         name = await self._rand_domain()
         owner = self.client.account.address
         secret = HexBytes(os.urandom(32))
-        duration = random.randint(ONE_MONTH_DURATION, ONE_MONTH_DURATION * 3) # 1 to 3 months
-        
+        duration = random.randint(ONE_MONTH_DURATION, ONE_MONTH_DURATION * 3)  # 1 to 3 months
+
         price = await contract.functions.rentPrice(name, duration).call()
         value = int(price[0]) + int(price[1])
         amount = TokenAmount(amount=value, wei=True)
@@ -70,27 +68,13 @@ class PNS(Base):
         balance = await self.client.wallet.balance()
 
         if float(balance.Ether) < float(amount.Ether):
-            return f'Failed | Not enough balance {balance.Ether} PNS for mint PNS domain - {amount.Ether}'
+            return f"Failed | Not enough balance {balance.Ether} PNS for mint PNS domain - {amount.Ether}"
 
         # 1) makeCommitment (view)
-        commitment = await contract.functions.makeCommitment(
-            name,
-            owner,
-            duration,
-            secret,
-            RESOLVER.address,
-            [],
-            True,
-            0
-        ).call()
-
+        commitment = await contract.functions.makeCommitment(name, owner, duration, secret, RESOLVER.address, [], True, 0).call()
 
         commit_data = contract.encode_abi("commit", args=[commitment])
-        tx_commit = TxParams(
-            to=contract.address,
-            data=commit_data,
-            value=0
-        )
+        tx_commit = TxParams(to=contract.address, data=commit_data, value=0)
 
         tx1 = await self.client.transactions.sign_and_send(tx_params=tx_commit)
         await asyncio.sleep(random.randint(2, 4))
@@ -101,29 +85,22 @@ class PNS(Base):
 
         delay = random.randint(60, 90)
 
-        logger.debug(f'{self.wallet} | {self.__module_name__} | Awaiting {delay} secs for commintment applying ')
+        logger.debug(f"{self.wallet} | {self.__module_name__} | Awaiting {delay} secs for commintment applying ")
         await asyncio.sleep(delay)
 
         price = await contract.functions.rentPrice(name, duration).call()
         value = int(price[0]) + int(price[1])
         amount = TokenAmount(amount=value, wei=True)
 
-        reg_data = contract.encode_abi(
-            "register",
-            args=[name, owner, duration, secret, RESOLVER.address, [], True, 0]
-        )
+        reg_data = contract.encode_abi("register", args=[name, owner, duration, secret, RESOLVER.address, [], True, 0])
 
-        tx_register = TxParams(
-            to=contract.address,
-            data=reg_data,
-            value=amount.Wei
-        )
+        tx_register = TxParams(to=contract.address, data=reg_data, value=amount.Wei)
         tx2 = await self.client.transactions.sign_and_send(tx_params=tx_register)
         await asyncio.sleep(random.randint(2, 4))
         rcpt2 = await tx2.wait_for_receipt(client=self.client, timeout=300)
 
         if rcpt2:
-            logger.success(f'{self.wallet} | {self.__module_name__} | Domain Minted | Awaiting {delay} secs for set PNS ')
+            logger.success(f"{self.wallet} | {self.__module_name__} | Domain Minted | Awaiting {delay} secs for set PNS ")
             await asyncio.sleep(delay)
             return await self.set_address()
 
@@ -131,88 +108,77 @@ class PNS(Base):
 
     async def check_pns_domain(self):
         headers = {
-            'content-type': 'application/json',
-            'origin': 'https://test.pharosname.com',
-            'referer': 'https://test.pharosname.com/',
+            "content-type": "application/json",
+            "origin": "https://test.pharosname.com",
+            "referer": "https://test.pharosname.com/",
         }
         payload = {
-            'query': 'query getNamesForAddress($orderBy: Domain_orderBy, $orderDirection: OrderDirection, $first: Int, $whereFilter: Domain_filter) {\n  domains(\n    orderBy: $orderBy\n    orderDirection: $orderDirection\n    first: $first\n    where: $whereFilter\n  ) {\n    ...DomainDetails\n    registration {\n      ...RegistrationDetails\n    }\n    wrappedDomain {\n      ...WrappedDomainDetails\n    }\n  }\n}\n\nfragment DomainDetails on Domain {\n  ...DomainDetailsWithoutParent\n  parent {\n    name\n    id\n  }\n}\n\nfragment DomainDetailsWithoutParent on Domain {\n  id\n  labelName\n  labelhash\n  name\n  isMigrated\n  createdAt\n  resolvedAddress {\n    id\n  }\n  owner {\n    id\n  }\n  registrant {\n    id\n  }\n  wrappedOwner {\n    id\n  }\n}\n\nfragment RegistrationDetails on Registration {\n  registrationDate\n  expiryDate\n}\n\nfragment WrappedDomainDetails on WrappedDomain {\n  expiryDate\n  fuses\n}',
-            'variables': {
-                'orderBy': 'createdAt',
-                'orderDirection': 'asc',
-                'first': 20,
-                'whereFilter': {
-                    'and': [
+            "query": "query getNamesForAddress($orderBy: Domain_orderBy, $orderDirection: OrderDirection, $first: Int, $whereFilter: Domain_filter) {\n  domains(\n    orderBy: $orderBy\n    orderDirection: $orderDirection\n    first: $first\n    where: $whereFilter\n  ) {\n    ...DomainDetails\n    registration {\n      ...RegistrationDetails\n    }\n    wrappedDomain {\n      ...WrappedDomainDetails\n    }\n  }\n}\n\nfragment DomainDetails on Domain {\n  ...DomainDetailsWithoutParent\n  parent {\n    name\n    id\n  }\n}\n\nfragment DomainDetailsWithoutParent on Domain {\n  id\n  labelName\n  labelhash\n  name\n  isMigrated\n  createdAt\n  resolvedAddress {\n    id\n  }\n  owner {\n    id\n  }\n  registrant {\n    id\n  }\n  wrappedOwner {\n    id\n  }\n}\n\nfragment RegistrationDetails on Registration {\n  registrationDate\n  expiryDate\n}\n\nfragment WrappedDomainDetails on WrappedDomain {\n  expiryDate\n  fuses\n}",
+            "variables": {
+                "orderBy": "createdAt",
+                "orderDirection": "asc",
+                "first": 20,
+                "whereFilter": {
+                    "and": [
                         {
-                            'or': [
+                            "or": [
                                 {
-                                    'owner': self.client.account.address.lower(),
+                                    "owner": self.client.account.address.lower(),
                                 },
                                 {
-                                    'registrant': self.client.account.address.lower(),
+                                    "registrant": self.client.account.address.lower(),
                                 },
                                 {
-                                    'wrappedOwner': self.client.account.address.lower(),
+                                    "wrappedOwner": self.client.account.address.lower(),
                                 },
                             ],
                         },
                         {
-                            'or': [
+                            "or": [
                                 {
-                                    'owner_not': '0x0000000000000000000000000000000000000000',
+                                    "owner_not": "0x0000000000000000000000000000000000000000",
                                 },
                                 {
-                                    'resolver_not': None,
+                                    "resolver_not": None,
                                 },
                                 {
-                                    'and': [
+                                    "and": [
                                         {
-                                            'registrant_not': '0x0000000000000000000000000000000000000000',
+                                            "registrant_not": "0x0000000000000000000000000000000000000000",
                                         },
                                         {
-                                            'registrant_not': None,
+                                            "registrant_not": None,
                                         },
                                     ],
                                 },
                             ],
-                            },
-                            ],
                         },
-                    },
-                    'operationName': 'getNamesForAddress',
-                }
+                    ],
+                },
+            },
+            "operationName": "getNamesForAddress",
+        }
 
-        r = await self.session.post(
-            url='https://graphql.pharosname.com/',
-            json=payload,
-            headers=headers
-        )
+        r = await self.session.post(url="https://graphql.pharosname.com/", json=payload, headers=headers)
 
         r.raise_for_status()
-        return r.json().get('data').get('domains')
+        return r.json().get("data").get("domains")
 
     async def set_address(self):
-
         contract = await self.client.contracts.get(contract_address=RESOLVER)
 
         req = await self.check_pns_domain()
 
-        node = req[0].get('id')
-        name = req[0].get('labelName')
+        node = req[0].get("id")
+        name = req[0].get("labelName")
 
         data = TxArgs(
-            node = Web3.to_bytes(hexstr=node),
-            coin_type = int("0x800a8230", 16),
-            a = Web3.to_bytes(hexstr=self.client.account.address)
+            node=Web3.to_bytes(hexstr=node), coin_type=int("0x800a8230", 16), a=Web3.to_bytes(hexstr=self.client.account.address)
         ).tuple()
 
         data = contract.encode_abi("setAddr", args=data)
 
-        tx_register = TxParams(
-            to=contract.address,
-            data=data,
-            value=0
-        )
+        tx_register = TxParams(to=contract.address, data=data, value=0)
 
         tx2 = await self.client.transactions.sign_and_send(tx_params=tx_register)
         await asyncio.sleep(random.randint(2, 4))

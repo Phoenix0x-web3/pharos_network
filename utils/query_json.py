@@ -1,4 +1,5 @@
-from urllib.parse import urlparse, parse_qs, unquote, urlencode, quote, urlunparse
+from urllib.parse import parse_qs, unquote, urlencode, urlparse, urlunparse
+
 
 def query_to_json(url):
     parsed = urlparse(url)
@@ -8,16 +9,19 @@ def query_to_json(url):
 
     return query
 
+
 def json_to_query(url: str, params: dict) -> str:
     parsed = urlparse(url)
 
     query = urlencode(params)
 
-    return urlunparse((
-        parsed.scheme,
-        parsed.netloc,
-        parsed.path,
-        parsed.params,
-        query,
-        parsed.fragment,
-    ))
+    return urlunparse(
+        (
+            parsed.scheme,
+            parsed.netloc,
+            parsed.path,
+            parsed.params,
+            query,
+            parsed.fragment,
+        )
+    )
