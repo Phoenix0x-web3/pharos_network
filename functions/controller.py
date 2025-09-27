@@ -374,21 +374,24 @@ class Controller:
 
         spout_count = random.randint(settings.spout_count_min, settings.spout_count_max)
 
-        wallet_balance = await self.client.wallet.balance()
+        async with activity_step("wallet_balance"):
+            wallet_balance = await self.client.wallet.balance()
 
         if wallet_balance.Ether == 0:
-            register = await self.faucet_task(registration=True)
-            logger.success(register)
+            async with activity_step("register"):
+                register = await self.faucet_task(registration=True)
+                logger.success(register)
 
             await asyncio.sleep(9, 12)
-            wallet_balance = await self.client.wallet.balance()
+            async with activity_step("wallet_balance"):
+                wallet_balance = await self.client.wallet.balance()
 
             if wallet_balance.Ether == 0:
                 raise Exception(f'{self.wallet} | Failed Faucet | Got 0 PHRS after registration task')
 
         if wallet_balance:
-
-            wphrs = await self.client.wallet.balance(token=Contracts.WPHRS)
+            async with activity_step("wphrs_balance"):
+                wphrs = await self.client.wallet.balance(token=Contracts.WPHRS)
 
             async with activity_step("prepare_twitter"):
                 if float(wphrs.Ether) > 0:
@@ -440,7 +443,8 @@ class Controller:
                     build_array.append(lambda: self.twitter_tasks(tasks_to_do=twitter_tasks))
 
             if wallet_balance.Ether > 1:
-                nft_badges = await self.nfts.check_badges()
+                async with activity_step("nft_badges_check"):
+                    nft_badges = await self.nfts.check_badges()
 
                 if len(nft_badges) > 0:
                     final_actions.append(lambda: self.nfts.nfts_controller(not_minted=nft_badges))
@@ -476,7 +480,8 @@ class Controller:
             if float(usdc_balance.Ether) > 1:
                 build_array += await self.form_actions(user_tasks.get("118", 0), self.spout.swap_controller, spout_count)
 
-            zenith_current_lp = await self.zenith_liq.check_any_positions()
+            async with activity_step("zenith_get_current_lp"):
+                zenith_current_lp = await self.zenith_liq.check_any_positions()
 
             if zenith_current_lp:
                 build_array += [self.zenith_liq.remove_liquidity for _ in range(random.randint(2, 5))]
@@ -503,7 +508,8 @@ class Controller:
                     if can_pet:
                         build_array.append(lambda: self.gotchipus.pet())
 
-                    tasks_completed = await self.gotchipus.check_tasks_completed()
+                    async with activity_step("gotchipus.tasks_completed"):
+                        tasks_completed = await self.gotchipus.check_tasks_completed()
 
                     if not tasks_completed:
                         build_array.append(lambda: self.gotchipus.complete_tasks())
