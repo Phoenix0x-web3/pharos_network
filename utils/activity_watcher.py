@@ -80,24 +80,27 @@ _REG = _ActivityRegistry()
 
 
 def _wallet_hint_from_args(args: tuple, kwargs: dict, wallet_kw: str | None = "wallet") -> str:
-    """Аккуратно формируем понятную подпись кошелька для логов."""
-    w: Any = None
+    """Формируем человекочитаемую подпись кошелька для логов."""
+    w = None
+
+    # сначала пробуем достать по имени
     if wallet_kw and wallet_kw in kwargs:
         w = kwargs.get(wallet_kw)
     elif args:
-        # у тебя wallet — первый позиционный аргумент
         w = args[0]
 
     if w is None:
         return "-"
 
-    # пробуем самые частые поля, но не ломаемся
-    for attr in ("id", "address", "public_key"):
-        if hasattr(w, attr):
-            return f"{getattr(w, attr)}"
-    # дефолтно — repr(wallet)
-    return str(w)
+    # если это Controller — забираем wallet.id
+    if hasattr(w, "wallet") and hasattr(w.wallet, "id"):
+        return str(w.wallet.id)
 
+    # если это Wallet напрямую
+    if hasattr(w, "id"):
+        return str(w.id)
+
+    return str(w)
 
 def debug_activity(wallet_kw: str | None = "wallet"):
     """
@@ -161,14 +164,42 @@ async def start_activity_watcher(interval: int = 30, stall_threshold: int = 120)
             logger.debug("=== End Activities ===")
         await asyncio.sleep(interval)
 
+import types, functools
+def _action_to_str(action):
+    import inspect, types
+    import re
 
-def _action_to_str(action: Union[str, Callable[..., Any], Any]) -> str:
+
+    if isinstance(action, functools.partial):
+        return _action_to_str(action.func)
+
+    # bound method
+    if isinstance(action, types.MethodType):
+        return f"{action.__self__.__class__.__name__}.{action.__func__.__name__}"
+
+
     if hasattr(action, "__name__") and action.__name__ != "<lambda>":
         return action.__name__
-    if hasattr(action, "__qualname__"):
-        return action.__qualname__
-    return repr(action)
 
+
+    if hasattr(action, "__name__") and action.__name__ == "<lambda>" and action.__closure__:
+        for c in action.__closure__:
+            try:
+                val = c.cell_contents
+                if callable(val):
+                    return _action_to_str(val)
+            except Exception:
+                pass
+
+
+    try:
+        src = inspect.getsource(action).strip()
+        m = re.search(r"self\.([a-zA-Z0-9_\.]+)", src)
+        if m:
+            return m.group(1)
+        return f"<lambda:{src}>"
+    except Exception:
+        return repr(action)
 
 def mark_action(action: Union[str, Callable[..., Any], Any]) -> None:
     """

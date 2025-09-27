@@ -36,6 +36,7 @@ from utils.query_json import query_to_json
 from utils.twitter.twitter_client import TwitterClient
 from utils.db_update import update_points_invites
 from utils.retry import async_retry
+from utils.activity_watcher import debug_activity, mark_action, activity_step
 
 
 class Controller:
@@ -345,6 +346,7 @@ class Controller:
 
         return await self.pharos_portal.send_verify(tx=tx)
 
+    @debug_activity(wallet_kw="wallet")
     async def build_actions(self):
 
         final_actions = []
@@ -388,16 +390,20 @@ class Controller:
 
             wphrs = await self.client.wallet.balance(token=Contracts.WPHRS)
 
-            if float(wphrs.Ether) > 0:
-                await self.base.unwrap_eth(amount=wphrs)
+            async with activity_step("prepare_twitter"):
+                if float(wphrs.Ether) > 0:
+                    wphrs = await self.base.unwrap_eth(amount=wphrs)
+
 
             await asyncio.sleep(3, 5)
+            async with activity_step("user_tasks"):
+                user_tasks = await self.user_tasks()
 
-            user_tasks = await self.user_tasks()
 
             wallet_balance = await self.client.wallet.balance()
 
-            faucet_status = await self.pharos_portal.get_faucet_status()
+            async with activity_step("faucet_status"):
+                faucet_status = await self.pharos_portal.get_faucet_status()
 
             if faucet_status.get('data').get('is_able_to_faucet'):
                 final_actions.append(lambda: self.faucet_task())
@@ -406,23 +412,28 @@ class Controller:
                 if len(final_actions) == 0:
                     return f"{self.wallet} | Not enought balance for actions | Awaiting for next faucet"
 
-            usdc_r2_balance = await self.client.wallet.balance(token=USDC_R2)
+            async with activity_step("usdc_r2_balance"):
+                usdc_r2_balance = await self.client.wallet.balance(token=USDC_R2)
 
             if float(usdc_r2_balance.Ether) < 0.3:
-                await self.zenith.swap_to_r2_usdc()
-                await asyncio.sleep(3, 7)
+                async with activity_step("swap_to_r2_usdc"):
+                    await self.zenith.swap_to_r2_usdc()
+                    await asyncio.sleep(3, 7)
 
                 usdc_r2_balance = await self.client.wallet.balance(token=USDC_R2)
                 wallet_balance = await self.client.wallet.balance()
+            async with activity_step("twitter_tasks"):
+                twitter_tasks, discord_tasks = await self.pharos_portal.tasks_flow()
+                twitter_tasks = await self.pharos_portal.prepare_twitter_tasks(twitter_tasks=twitter_tasks, user_tasks=user_tasks)
 
-            twitter_tasks, discord_tasks = await self.pharos_portal.tasks_flow()
-            twitter_tasks = await self.pharos_portal.prepare_twitter_tasks(twitter_tasks=twitter_tasks, user_tasks=user_tasks)
+            async with activity_step("aquaflux_nft"):
+                aquaflux_nft = await self.aquaflux.already_minted(premium=True)
 
-            aquaflux_nft = await self.aquaflux.already_minted(premium=True)
+            async with activity_step("brokex_faucet"):
+                brokex_faucet = await self.brokex.has_claimed()
 
-            brokex_faucet = await self.brokex.has_claimed()
-
-            user_data = await self.pharos_portal.get_user_info()
+            async with activity_step("pharos_portal.get_user_info()"):
+                user_data = await self.pharos_portal.get_user_info()
 
             if user_data.get('XId') != "":
                 if len(twitter_tasks) > 0:
@@ -475,28 +486,30 @@ class Controller:
                 if random.randint(1, 6) == 1:
                     build_array.append(lambda: self.zenith_faucet())
 
-            gotchipus_ids = await self.gotchipus.get_gotchipus_tokens()
+            async with activity_step("get_gotchipus_tokens()"):
+                gotchipus_ids = await self.gotchipus.get_gotchipus_tokens()
 
             if not gotchipus_ids:
                 build_array.append(lambda: self.gotchipus.flow())
 
             if gotchipus_ids:
 
-                can_check_in = await self.gotchipus.check_in()
-                if can_check_in:
-                    build_array.append(lambda: self.gotchipus.check_in())
+                async with activity_step("gotchipus.check_in()"):
+                    can_check_in = await self.gotchipus.check_in()
+                    if can_check_in:
+                        build_array.append(lambda: self.gotchipus.check_in())
 
-                can_pet = await self.gotchipus.can_check_pet()
-                if can_pet:
-                    build_array.append(lambda: self.gotchipus.pet())
+                    can_pet = await self.gotchipus.can_check_pet()
+                    if can_pet:
+                        build_array.append(lambda: self.gotchipus.pet())
 
-                tasks_completed = await self.gotchipus.check_tasks_completed()
+                    tasks_completed = await self.gotchipus.check_tasks_completed()
 
-                if not tasks_completed:
-                    build_array.append(lambda: self.gotchipus.complete_tasks())
-
-                gotchipus_address = await self.gotchipus.get_tokenid_wallet()
-                gotchipus_balance = await self.client.wallet.balance(address=gotchipus_address)
+                    if not tasks_completed:
+                        build_array.append(lambda: self.gotchipus.complete_tasks())
+                async with activity_step("gotchipus.get_tokenid_wallet()"):
+                    gotchipus_address = await self.gotchipus.get_tokenid_wallet()
+                    gotchipus_balance = await self.client.wallet.balance(address=gotchipus_address)
 
                 if gotchipus_balance.Ether <= 0.001:
                     final_actions.append(lambda: self.gotchipus.popup_gotchipus(address=gotchipus_address, amount=TokenAmount(
