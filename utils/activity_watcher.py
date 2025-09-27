@@ -1,35 +1,22 @@
 # -*- coding: utf-8 -*-
 """
 Activity Watcher — дебаг-декоратор и вотчер для асинхронных задач.
-Стиль: минимальные зависимости, loguru, совместимо с архитектурой проекта.
-
-Использование:
-    from utils.activity_watcher import debug_activity, start_activity_watcher, mark_action
-
-    @debug_activity()                   # повесь на random_activity_task
-    async def random_activity_task(...):
-        ...
-        for action in actions:
-            mark_action(action)         # помечаем какой экшен сейчас исполняем
-            await action()              # дальше как обычно
-        ...
-
-    # запусти вотчер один раз при старте приложения:
-    asyncio.create_task(start_activity_watcher(interval=30, stall_threshold=180))
+Логирует активные таски и вложенные шаги (stack).
 """
 
 from __future__ import annotations
 
 import asyncio
-import time
-import threading
-import inspect
 import functools
+import inspect
+import threading
+import time
 import weakref
 from dataclasses import dataclass, field
-from typing import Any, Optional, Callable, Union, Dict
-
+from typing import Any, Callable, Dict, Optional, Union
 from loguru import logger
+import types
+import functools as ft
 
 
 @dataclass
@@ -38,7 +25,7 @@ class ActivityState:
     wallet_hint: str
     thread_name: str
     started_at: float = field(default_factory=time.time)
-    action: str = "-"
+    stack: list[str] = field(default_factory=list)
     action_since: float = field(default_factory=time.time)
 
     def age(self) -> int:
@@ -47,9 +34,13 @@ class ActivityState:
     def action_age(self) -> int:
         return int(time.time() - self.action_since)
 
+    @property
+    def current_action(self) -> str:
+        return " > ".join(self.stack) if self.stack else "-"
+
 
 class _ActivityRegistry:
-    """Глобальный реестр активных задач (safe к отменам/GC)."""
+    """Глобальный реестр активных задач."""
     def __init__(self) -> None:
         self._by_task: "weakref.WeakKeyDictionary[asyncio.Task, ActivityState]" = weakref.WeakKeyDictionary()
         self._lock = asyncio.Lock()
@@ -63,15 +54,7 @@ class _ActivityRegistry:
         async with self._lock:
             self._by_task.pop(task, None)
 
-    async def set_action(self, task: asyncio.Task, action: str) -> None:
-        async with self._lock:
-            st = self._by_task.get(task)
-            if st:
-                st.action = action
-                st.action_since = time.time()
-
     async def snapshot(self) -> Dict[int, ActivityState]:
-        # возвращаем копию (id(task) -> state)
         async with self._lock:
             return {id(t): s for t, s in list(self._by_task.items())}
 
@@ -80,10 +63,8 @@ _REG = _ActivityRegistry()
 
 
 def _wallet_hint_from_args(args: tuple, kwargs: dict, wallet_kw: str | None = "wallet") -> str:
-    """Формируем человекочитаемую подпись кошелька для логов."""
+    """Формируем человекочитаемую подпись кошелька."""
     w = None
-
-    # сначала пробуем достать по имени
     if wallet_kw and wallet_kw in kwargs:
         w = kwargs.get(wallet_kw)
     elif args:
@@ -92,22 +73,23 @@ def _wallet_hint_from_args(args: tuple, kwargs: dict, wallet_kw: str | None = "w
     if w is None:
         return "-"
 
-    # если это Controller — забираем wallet.id
-    if hasattr(w, "wallet") and hasattr(w.wallet, "id"):
-        return str(w.wallet.id)
+    # Controller → достаем wallet.id
+    if hasattr(w, "wallet"):
+        inner = getattr(w, "wallet")
+        if hasattr(inner, "id"):
+            return str(inner.id)
+        return str(inner)
 
-    # если это Wallet напрямую
+    # Wallet напрямую
     if hasattr(w, "id"):
         return str(w.id)
 
     return str(w)
 
+
 def debug_activity(wallet_kw: str | None = "wallet"):
-    """
-    Декоратор для async-функций: регистрирует задачу в реестре, чтобы вотчер видел её состояние.
-    По умолчанию wallet берётся из первого позиционного аргумента, либо kwargs['wallet'].
-    """
-    def _decorator(func: Callable[..., Any]):
+    """Декоратор: регистрирует задачу и ведёт stack действий."""
+    def _decorator(func):
         if not inspect.iscoroutinefunction(func):
             raise TypeError("@debug_activity работает только с async функциями")
 
@@ -115,40 +97,101 @@ def debug_activity(wallet_kw: str | None = "wallet"):
         async def _wrapper(*args, **kwargs):
             task = asyncio.current_task()
             if task is None:
-                # крайне маловероятно, но на всякий случай
                 return await func(*args, **kwargs)
 
-            state = ActivityState(
-                func_name=func.__name__,
-                wallet_hint=_wallet_hint_from_args(args, kwargs, wallet_kw),
-                thread_name=threading.current_thread().name,
-            )
-            await _REG.register(task, state)
-            try:
-                return await func(*args, **kwargs)
-            finally:
-                await _REG.unregister(task)
+            snap = await _REG.snapshot()
+            st = snap.get(id(task))
+
+            if st:
+                # вложенный вызов — пушим имя в стек
+                st.stack.append(func.__name__)
+                st.action_since = time.time()
+                try:
+                    return await func(*args, **kwargs)
+                finally:
+                    if st.stack:
+                        st.stack.pop()
+            else:
+                # верхний уровень
+                wallet_hint = _wallet_hint_from_args(args, kwargs, wallet_kw)
+                st = ActivityState(func_name=func.__name__,
+                                   wallet_hint=wallet_hint,
+                                   thread_name=threading.current_thread().name)
+                st.stack.append(func.__name__)
+                await _REG.register(task, st)
+                try:
+                    return await func(*args, **kwargs)
+                finally:
+                    await _REG.unregister(task)
 
         return _wrapper
     return _decorator
 
 
+def _action_to_str(action: Union[str, Callable[..., Any], Any]) -> str:
+    """Превращает action в читаемое имя."""
+    # partial
+    if isinstance(action, ft.partial):
+        return _action_to_str(action.func)
+
+    # bound method
+    if isinstance(action, types.MethodType):
+        return f"{action.__self__.__class__.__name__}.{action.__func__.__name__}"
+
+    # нормальные функции
+    if hasattr(action, "__name__") and action.__name__ != "<lambda>":
+        return action.__name__
+
+    if hasattr(action, "__qualname__") and action.__qualname__ != "<lambda>":
+        return action.__qualname__
+
+    # лямбды с замыканием → достаём из __closure__
+    if hasattr(action, "__name__") and action.__name__ == "<lambda>" and getattr(action, "__closure__", None):
+        for c in action.__closure__:
+            try:
+                val = c.cell_contents
+                if callable(val):
+                    return _action_to_str(val)
+            except Exception:
+                pass
+
+    return repr(action)
+
+
+def mark_action(action: Union[str, Callable[..., Any], Any]) -> None:
+    """Помечаем текущий action."""
+    task = asyncio.current_task()
+    if not task:
+        return
+
+    async def _set():
+        snap = await _REG.snapshot()
+        st = snap.get(id(task))
+        if st:
+            label = _action_to_str(action)
+            if st.stack:
+                st.stack[-1] = label
+            else:
+                st.stack.append(label)
+            st.action_since = time.time()
+
+    asyncio.create_task(_set())
+
+
 def _fmt_state(task_id: int, st: ActivityState, stall_threshold: int) -> str:
     stalled = "  [STALLED]" if st.action_age() >= stall_threshold else ""
     return (
-        f"task={task_id} | thread={st.thread_name} | func={st.func_name} | wallet={st.wallet_hint} | "
-        f"age={st.age()}s | action='{st.action}' ({st.action_age()}s){stalled}"
+        f"task={task_id} | thread={st.thread_name} | func={st.func_name} "
+        f"| wallet={st.wallet_hint} | age={st.age()}s | "
+        f"action='{st.current_action}' ({st.action_age()}s){stalled}"
     )
 
 
-async def start_activity_watcher(interval: int = 30, stall_threshold: int = 120) -> None:
+async def start_activity_watcher(interval: int = 30, stall_threshold: int = 2700) -> None:
     """
-    Фоновая корутина: каждые `interval` секунд логирует активные задачи.
-    `stall_threshold` — сколько секунд без смены action считаем «подвисло».
-    Вешай один раз на всё приложение: asyncio.create_task(start_activity_watcher(...))
+    Вотчер: каждые interval секунд логирует активные таски.
+    stall_threshold — сколько секунд без смены action считаем подвисанием (по умолчанию 45 мин).
     """
-    # Сделаем вотчер идемпотентным: если уже запущен — просто крутим цикл.
-    # Это защищает от повторных create_task(...) в сложной инициализации.
     if getattr(_REG, "_watcher_started", False):
         logger.debug("ActivityWatcher: already running")
     else:
@@ -163,77 +206,33 @@ async def start_activity_watcher(interval: int = 30, stall_threshold: int = 120)
                 logger.debug(_fmt_state(tid, st, stall_threshold))
             logger.debug("=== End Activities ===")
         await asyncio.sleep(interval)
-
-import types, functools
-def _action_to_str(action):
-    import inspect, types
-    import re
-
-
-    if isinstance(action, functools.partial):
-        return _action_to_str(action.func)
-
-    # bound method
-    if isinstance(action, types.MethodType):
-        return f"{action.__self__.__class__.__name__}.{action.__func__.__name__}"
-
-
-    if hasattr(action, "__name__") and action.__name__ != "<lambda>":
-        return action.__name__
-
-
-    if hasattr(action, "__name__") and action.__name__ == "<lambda>" and action.__closure__:
-        for c in action.__closure__:
-            try:
-                val = c.cell_contents
-                if callable(val):
-                    return _action_to_str(val)
-            except Exception:
-                pass
-
-
-    try:
-        src = inspect.getsource(action).strip()
-        m = re.search(r"self\.([a-zA-Z0-9_\.]+)", src)
-        if m:
-            return m.group(1)
-        return f"<lambda:{src}>"
-    except Exception:
-        return repr(action)
-
-def mark_action(action: Union[str, Callable[..., Any], Any]) -> None:
-    """
-    Помечает текущий экшен для *текущей* корутины (изнутри декорированной функции).
-    Вызов перед `await action()`: mark_action(action)
-    """
-    task = asyncio.current_task()
-    if task is None:
-        return
-    label = _action_to_str(action)
-    # fire-and-forget: не блокируем текущий поток
-    asyncio.create_task(_REG.set_action(task, label))
-
-
-# (опционально) контекст-менеджер, если удобнее в сложных местах:
 class activity_step:
     """
-    with activity_step("prepare_swap"):
-        ...
+    Контекстный менеджер: временно помечает action.
+    Пример:
+        async with activity_step("prepare_twitter"):
+            twitter_tasks, discord_tasks = await self.pharos_portal.tasks_flow()
     """
+
     def __init__(self, label: str) -> None:
         self.label = label
         self._task: Optional[asyncio.Task] = None
-        self._prev: Optional[str] = None
 
     async def __aenter__(self):
         self._task = asyncio.current_task()
-        if self._task:
-            snap = await _REG.snapshot()
-            st = snap.get(id(self._task))
-            if st:
-                self._prev = st.action
-        mark_action(self.label)
+        if not self._task:
+            return
+        snap = await _REG.snapshot()
+        st = snap.get(id(self._task))
+        if st:
+            st.stack.append(self.label)
+            st.action_since = time.time()
 
     async def __aexit__(self, exc_type, exc, tb):
-        if self._prev:
-            mark_action(self._prev)
+        if not self._task:
+            return
+        snap = await _REG.snapshot()
+        st = snap.get(id(self._task))
+        if st and st.stack:
+            st.stack.pop()
+            st.action_since = time.time()
