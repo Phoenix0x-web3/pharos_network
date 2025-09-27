@@ -17,6 +17,8 @@ from utils.db_api.wallet_api import db
 from utils.discord.discord import DiscordStatus
 from utils.encryption import check_encrypt_param
 
+from utils.activity_watcher import debug_activity, mark_action
+
 
 async def random_sleep_before_start(wallet):
     random_sleep = random.randint(Settings().random_pause_start_wallet_min, Settings().random_pause_start_wallet_max)
@@ -25,7 +27,7 @@ async def random_sleep_before_start(wallet):
     logger.info(f"{wallet} Start at {now + timedelta(seconds=random_sleep)} sleep {random_sleep} seconds before start actions")
     await asyncio.sleep(random_sleep)
 
-
+@debug_activity()
 async def random_activity_task(wallet):
     try:
         await random_sleep_before_start(wallet=wallet)
@@ -44,6 +46,7 @@ async def random_activity_task(wallet):
             for action in actions:
                 sleep = random.randint(Settings().random_pause_between_actions_min, Settings().random_pause_between_actions_max)
                 try:
+                    mark_action(action)
                     status = await action()
 
                     if "Failed" not in status:

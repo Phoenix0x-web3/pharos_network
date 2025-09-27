@@ -1,4 +1,5 @@
 import asyncio
+import contextlib
 import platform
 
 import inquirer
@@ -15,6 +16,8 @@ from utils.db_api.wallet_api import db
 from utils.db_import_export_sync import Export, Import, Sync
 from utils.git_version import check_for_updates
 from utils.output import show_channel_info
+
+from utils.activity_watcher import start_activity_watcher
 
 console = Console()
 
@@ -101,7 +104,14 @@ async def main():
     create_files()
     await check_for_updates(repo_name=PROJECT_NAME, repo_private=False)
     db.ensure_model_columns(Wallet)
-    await choose_action()
+
+    watcher_task = asyncio.create_task(start_activity_watcher(interval=30, stall_threshold=180))
+    try:
+        await choose_action()
+    finally:
+        watcher_task.cancel()
+        with contextlib.suppress(asyncio.CancelledError):
+            await watcher_task
 
 
 if __name__ == "__main__":
