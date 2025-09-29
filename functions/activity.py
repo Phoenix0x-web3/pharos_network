@@ -46,8 +46,9 @@ async def random_activity_task(wallet):
             for action in actions:
                 sleep = random.randint(Settings().random_pause_between_actions_min, Settings().random_pause_between_actions_max)
                 try:
-                    mark_action(action)
-                    status = await action()
+                    coro = action()
+                    mark_action(coro)
+                    status = await coro
 
                     if "Failed" not in status:
                         logger.success(status)

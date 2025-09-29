@@ -17,7 +17,9 @@ from typing import Any, Callable, Dict, Optional, Union
 from loguru import logger
 import types
 import functools as ft
-
+import types
+import dis
+import re
 
 @dataclass
 class ActivityState:
@@ -128,38 +130,112 @@ def debug_activity(wallet_kw: str | None = "wallet"):
     return _decorator
 
 
-def _action_to_str(action: Union[str, Callable[..., Any], Any]) -> str:
-    """Превращает action в читаемое имя."""
-    # partial
+
+def _action_to_str(action):
+    """Возвращает человекочитаемое имя экшена, включая лямбды вида `lambda: self.foo.bar(...)`."""
+    # 1) partial → к исходной функции
     if isinstance(action, ft.partial):
         return _action_to_str(action.func)
 
-    # bound method
+    # 2) bound method
     if isinstance(action, types.MethodType):
-        return f"{action.__self__.__class__.__name__}.{action.__func__.__name__}"
+        try:
+            return f"{action.__self__.__class__.__name__}.{action.__func__.__name__}"
+        except Exception:
+            return getattr(action, "__qualname__", getattr(action, "__name__", repr(action)))
 
-    # нормальные функции
-    if hasattr(action, "__name__") and action.__name__ != "<lambda>":
-        return action.__name__
+    # 3) нормальные функции
+    name = getattr(action, "__name__", None)
+    qname = getattr(action, "__qualname__", None)
+    if name and name != "<lambda>":
+        return name
+    if qname and qname != "<lambda>":
+        return qname
 
-    if hasattr(action, "__qualname__") and action.__qualname__ != "<lambda>":
-        return action.__qualname__
+    # 4) лямбда: разбираем путь self.xxx.yyy через байткод
+    if callable(action) and getattr(action, "__name__", "") == "<lambda>":
+        try:
+            code = action.__code__
+            freevars = code.co_freevars or ()
+            closure = action.__closure__ or ()
+            env = {n: c.cell_contents for n, c in zip(freevars, closure)}
+            self_obj = env.get("self", None)
 
-    # лямбды с замыканием → достаём из __closure__
-    if hasattr(action, "__name__") and action.__name__ == "<lambda>" and getattr(action, "__closure__", None):
-        for c in action.__closure__:
+            # Собираем последовательность LOAD_ATTR/LOAD_METHOD до первого вызова
+            attrs = []
+            for ins in dis.get_instructions(action):
+                op = ins.opname
+                if op in ("LOAD_ATTR", "LOAD_METHOD"):
+                    attrs.append(ins.argval)
+                elif op in ("CALL_FUNCTION", "CALL_METHOD", "CALL", "PRECALL", "RETURN_VALUE"):
+                    break
+
+            if self_obj is not None and attrs:
+                # Пример: self.pns.mint → "PNS.mint"
+                return f"{self_obj.__class__.__name__}." + ".".join(attrs)
+
+            # Иногда в замыкании лежит сразу bound-callable (редко, но бывает)
+            if closure:
+                for cell in closure:
+                    try:
+                        val = cell.cell_contents
+                        if callable(val):
+                            return _action_to_str(val)
+                    except Exception:
+                        pass
+
+            # fallback: попытка вытащить имя из исходника лямбды
             try:
-                val = c.cell_contents
-                if callable(val):
-                    return _action_to_str(val)
+                src = inspect.getsource(action).strip().splitlines()[0]
+                m = re.search(r"self\.([A-Za-z_][A-Za-z0-9_\.]*)", src)
+                if m:
+                    if self_obj is not None:
+                        return f"{self_obj.__class__.__name__}.{m.group(1)}"
+                    return m.group(1)
+                return "<lambda>"
             except Exception:
-                pass
+                return "<lambda>"
 
+        except Exception:
+            return "<lambda>"
+
+    # 5) на крайний случай
     return repr(action)
 
+def _name_from_coro(coro) -> str:
+    """
+    Пытаемся получить Class.method из корутины:
+    - coro.cr_code.co_name → имя функции (method)
+    - coro.cr_frame.f_locals.get('self') → экземпляр класса
+    """
+    try:
+        code = getattr(coro, "cr_code", None)
+        frame = getattr(coro, "cr_frame", None)
+        if code is None and hasattr(coro, "gi_code"):     # резерв для генераторов
+            code = coro.gi_code
+        if frame is None and hasattr(coro, "gi_frame"):
+            frame = coro.gi_frame
 
-def mark_action(action: Union[str, Callable[..., Any], Any]) -> None:
-    """Помечаем текущий action."""
+        fn_name = code.co_name if code else None
+        cls_name = None
+        if frame and "self" in frame.f_locals:
+            cls_name = frame.f_locals["self"].__class__.__name__
+
+        if fn_name and cls_name:
+            return f"{cls_name}.{fn_name}"
+        if fn_name:
+            return fn_name
+    except Exception:
+        pass
+    return repr(coro)
+
+def mark_action(action_or_coro) -> None:
+    """
+    Помечаем текущий action.
+    Поддерживает:
+      - корутины (предпочтительно: точное имя через cr_code/cr_frame)
+      - функции/лямбды/partial/методы (фоллбек)
+    """
     task = asyncio.current_task()
     if not task:
         return
@@ -167,15 +243,22 @@ def mark_action(action: Union[str, Callable[..., Any], Any]) -> None:
     async def _set():
         snap = await _REG.snapshot()
         st = snap.get(id(task))
-        if st:
-            label = _action_to_str(action)
-            if st.stack:
-                st.stack[-1] = label
-            else:
-                st.stack.append(label)
-            st.action_since = time.time()
+        if not st:
+            return
+
+        if inspect.iscoroutine(action_or_coro):
+            label = _name_from_coro(action_or_coro)
+        else:
+            label = _action_to_str(action_or_coro)
+
+        if st.stack:
+            st.stack[-1] = label
+        else:
+            st.stack.append(label)
+        st.action_since = time.time()
 
     asyncio.create_task(_set())
+
 
 
 def _fmt_state(task_id: int, st: ActivityState, stall_threshold: int) -> str:
