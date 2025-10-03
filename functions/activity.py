@@ -51,7 +51,6 @@ async def random_activity_task(wallet):
                     else:
                         logger.error(status)
 
-
                 except Exception as e:
                     logger.error(e)
                     continue
