@@ -388,6 +388,7 @@ class AutoStaking(Base):
         if deposit:
             result = await self.process_transactions(tx_list=deposit)
             deposit_tasks += result
+            Web3.to_checksum_address()
 
         return f"Autostake Completed [Withdrawls: {withdraw_tasks}, Deposits: {deposit_tasks}]"
 
