@@ -97,6 +97,12 @@ OPENFI = RawContract(
     abi=NFT_ABI,
 )
 
+ZENITH = RawContract(
+    title="ZENITH",
+    address="0xf4535d0781d973a26b48c617410419ec66b2af1c",
+    abi=NFT_ABI,
+)
+
 
 class NFTS(Base):
     __module_name__ = "Mint NFTs"
@@ -144,7 +150,7 @@ class NFTS(Base):
         return f"Success | Minted {contract.title}" if rcpt else f"Failed | Mint {contract.title}"
 
     async def check_badges(self):
-        nfts = [PHAROSWAP_BADGE, PTB, ASTB, ZENTRA, SPOUT, GOTCHIPUS, PNS, BROKEX, OPENFI]
+        nfts = [PHAROSWAP_BADGE, PTB, ASTB, ZENTRA, SPOUT, GOTCHIPUS, PNS, BROKEX, OPENFI, ZENITH]
 
         not_minted = []
 
