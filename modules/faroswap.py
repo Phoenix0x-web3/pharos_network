@@ -443,7 +443,7 @@ class FaroswapLiquidity(Faroswap):
 
         tokens.remove(from_token)
 
-        to_token = random.choice(to_tokens)
+        to_token = random.choice(tokens)
 
         return await self.add_liquidity_v2(
             from_token=from_token,

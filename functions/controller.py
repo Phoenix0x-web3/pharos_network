@@ -196,7 +196,7 @@ class Controller:
                     result = await self.twitter.follow_account(account_name='AquaFluxPro')
                     if result:
                         # await asyncio.sleep(random.randint(3, 7)
-                        return await self.aquaflux_flow(next_try=True)
+                        return await self.aquaflux_flow(check_again=True)
 
                 except Exception as e:
                     raise Exception(f'Cannot follow @AquaFluxPro | {e}')
