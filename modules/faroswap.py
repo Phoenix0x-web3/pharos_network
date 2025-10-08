@@ -424,11 +424,6 @@ class FaroswapLiquidity(Faroswap):
             Contracts.USDC,
         ]
 
-        to_tokens = [
-            Contracts.USDT,
-            Contracts.USDC,
-        ]
-
         balance_map = await self.balance_map(tokens)
 
         if not balance_map:
