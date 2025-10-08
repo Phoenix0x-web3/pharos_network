@@ -128,6 +128,7 @@ class R2(Base):
                 to_token=to_token,
                 amount=TokenAmount(amount=amount, decimals=await self.client.transactions.get_decimals(contract=from_token.address)),
             )
+
         if action == "stake":
             token = R2USD
 

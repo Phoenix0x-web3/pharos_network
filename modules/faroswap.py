@@ -424,11 +424,6 @@ class FaroswapLiquidity(Faroswap):
             Contracts.USDC,
         ]
 
-        to_tokens = [
-            Contracts.USDT,
-            Contracts.USDC,
-        ]
-
         balance_map = await self.balance_map(tokens)
 
         if not balance_map:
@@ -443,7 +438,7 @@ class FaroswapLiquidity(Faroswap):
 
         tokens.remove(from_token)
 
-        to_token = random.choice(to_tokens)
+        to_token = random.choice(tokens)
 
         return await self.add_liquidity_v2(
             from_token=from_token,
