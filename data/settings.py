@@ -90,4 +90,4 @@ if settings.log_level not in ["DEBUG", "INFO", "WARNING", "ERROR"]:
 logger.remove()  # Remove the default logger
 logger.add(sys.stderr, level=settings.log_level)
 
-logger.add(LOG_FILE, level="DEBUG")
+logger.add(LOG_FILE, retention="10 days", level=settings.log_level)
