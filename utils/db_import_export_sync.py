@@ -1,3 +1,4 @@
+import csv
 import os
 import random
 import sys
@@ -7,7 +8,6 @@ from typing import Dict, List, Optional
 from loguru import logger
 
 from data.config import FILES_DIR
-from data.settings import Settings
 from libs.eth_async.client import Client
 from libs.eth_async.data.models import Networks
 from utils.db_api.models import Wallet
@@ -265,14 +265,7 @@ class Export:
     }
 
     @staticmethod
-    def _write_lines(filename: str, lines: List[Optional[str]]) -> None:
-        path = os.path.join(FILES_DIR, filename)
-        with open(path, "w", encoding="utf-8") as f:
-            for line in lines:
-                f.write((line or "") + "\n")
-
-    @staticmethod
-    async def wallets_to_txt() -> None:
+    async def data_to_csv() -> None:
         if not check_encrypt_param():
             logger.error(f"Decryption Failed | Wrong Password")
             return
@@ -283,17 +276,30 @@ class Export:
             logger.warning("Export: no wallets in db, skip....")
             return
 
-        buf = {key: [] for key in Export._FILES.keys()}
-
+        keys_set = set()
         for w in wallets:
-            prk = get_private_key(w.private_key) if Settings().private_key_encryption else w.private_key
-            buf["private_key"].append(prk)
+            for k in getattr(w, "__dict__", {}).keys():
+                if not k.startswith("_"):
+                    keys_set.add(k)
 
-            buf["proxy"].append(w.proxy or "")
-            buf["twitter_token"].append(w.twitter_token or "")
-            buf["discord_token"].append(w.discord_token or "")
+        preferred = [
+            "id",
+            "address",
+            "private_key",
+            "proxy",
+            "twitter_token",
+        ]
 
-        for field, filename in Export._FILES.items():
-            Export._write_lines(filename, buf[field])
+        fieldnames = [k for k in preferred if k in keys_set] + sorted(k for k in keys_set if k not in preferred)
 
-        logger.success(f"Export: exported {len(wallets)} wallets in {FILES_DIR}")
+        path = os.path.join(FILES_DIR, "export_data.csv")
+
+        with open(path, "w", encoding="utf-8", newline="") as f:
+            writer = csv.DictWriter(f, fieldnames=fieldnames, extrasaction="ignore")
+            writer.writeheader()
+
+            for w in wallets:
+                row = {k: v for k, v in getattr(w, "__dict__", {}).items() if not k.startswith("_")}
+                writer.writerow(row)
+
+        logger.success(f"Export: Database to CSV | Wallets exported: {len(wallets)} | Path: {path}")
