@@ -13,8 +13,8 @@ from data.settings import Settings
 from libs.base import Base
 from libs.eth_async.client import Client
 from libs.eth_async.data.models import DefaultABIs, RawContract, TokenAmount, TxArgs
-from libs.eth_async.wallet import Wallet
 from utils.browser import Browser
+from utils.db_api.models import Wallet
 from utils.logs_decorator import controller_log
 from utils.retry import async_retry
 
