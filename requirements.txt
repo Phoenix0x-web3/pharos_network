@@ -25,3 +25,4 @@ ruamel.yaml==0.18.14
 pyaml==25.7.0
 lxml==6.0.0
 GitPython==3.1.45
+eth_abi==5.2.0
