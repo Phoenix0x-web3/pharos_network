@@ -462,12 +462,10 @@ class Controller:
             if wallet_balance.Ether > 0.20:               
                 build_array += await self.form_actions(user_tasks.get("104", 0),self.pns.mint, domains_count)
             if wallet_balance.Ether > 0.25:
-                try:
-                    sig = await self.watchoor.get_contract_mint_signature()
-                    if sig:
-                        build_array.append(lambda: self.watchoor.contract_mint(sig))
-                except Exception:
-                    pass
+                sig = await self.watchoor.get_contract_mint_signature()
+                if sig:
+                    build_array.append(lambda: self.watchoor.contract_mint(sig))
+        
  
             usdc_balance = await self.client.wallet.balance(token=USDC_R2)
 
