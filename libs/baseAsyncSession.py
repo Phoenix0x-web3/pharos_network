@@ -22,24 +22,17 @@ FINGERPRINT_MAC136 = {
 class BaseAsyncSession(requests.AsyncSession):
     def __init__(
         self,
-        proxy: str = None,
+        proxy: str | None = None,
         fingerprint: dict = FINGERPRINT_DEFAULT,
         **session_kwargs,
     ):
         headers = session_kwargs.pop("headers", {})
 
-        headers.update(
-            {
-                "user-agent": fingerprint.get("user-agent"),
-                "sec-ch-ua-platform": fingerprint.get("sec-ch-ua-platform"),
-                "sec-ch-ua": fingerprint.get("sec-ch-ua"),
-                "accept-language": fingerprint.get("accept-language"),
-            }
-        )
+        headers.update(fingerprint.get("headers", {}))
 
         init_kwargs = {
             "headers": headers,
-            "impersonate": getattr(requests.BrowserType, fingerprint.get("impersonate")),
+            "impersonate": fingerprint.get("impersonate"),
             **session_kwargs,
         }
 

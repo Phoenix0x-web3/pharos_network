@@ -465,6 +465,7 @@ class Controller:
                 sig = await self.watchoor.get_contract_mint_signature()
                 if sig:
                     build_array.append(lambda: self.watchoor.contract_mint(sig))
+        
  
             usdc_balance = await self.client.wallet.balance(token=USDC_R2)
 
