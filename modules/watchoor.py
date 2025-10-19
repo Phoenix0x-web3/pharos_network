@@ -5,6 +5,7 @@ from eth_abi import encode
 from faker import Faker
 from web3.types import TxParams
 
+from data.rpc import RPC_MAP
 from libs.base import Base
 from libs.eth_async.client import Client
 from libs.eth_async.data.models import TokenAmount
@@ -48,7 +49,7 @@ class Watchoor(Base):
                 "latest",
             ],
         }
-        response = await self.browser.post(url="https://testnet.dplabs-internal.com/", json=json_data)
+        response = await self.browser.post(url=f"{RPC_MAP['pharos']}", json=json_data)
         data = response.json()
         if data["result"] == "0x0000000000000000000000000000000000000000000000000000000000000000":
             return False
