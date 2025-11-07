@@ -28,6 +28,7 @@ from modules.rwafi import AquaFlux
 from modules.spout import Spout
 from modules.zenith import Zenith, ZenithLiquidity
 from modules.watchoor import Watchoor
+from modules.asseto import Asseto
 
 from utils.db_api.models import Wallet
 from utils.db_api.wallet_api import db
@@ -65,6 +66,7 @@ class Controller:
         self.spout = Spout(client=client, wallet=wallet)
         self.gotchipus = Gotchipus(client=client, wallet=wallet)
         self.watchoor = Watchoor(client=client, wallet=wallet)
+        self.asseto = Asseto(client=client, wallet=wallet)
 
     @controller_log('CheckIn')
     async def check_in_task(self):
@@ -271,6 +273,29 @@ class Controller:
         n = count if have < limit else random.randint(1, 2)
         return [factory for _ in range(n)]
 
+    @async_retry()
+    async def asseto_position(self):
+        balance = await self.asseto.check_cash_balance()
+        logger.debug(balance)
+        settings = Settings()
+        percent = randfloat(
+            from_=settings.asseto_percent_min,
+            to_=settings.asseto_percent_max,
+            step=0.001
+        ) / 100
+
+        if int(balance) > 0 and random.randint(1, 100) > 50:
+            balance = TokenAmount(amount=balance, wei=True)
+            amount = round(random.uniform(float(balance.Ether) / 5, float(balance.Ether)) / 2, 2)
+            return await self.asseto.unstake(TokenAmount(amount=amount))
+
+        usdt_balance = await self.client.wallet.balance(token=Contracts.USDT.address)
+        if usdt_balance.Ether < 1:
+            await self.faroswap._swap(amount=TokenAmount(amount=random.uniform(0.002, 0.008)), from_token=Contracts.PHRS, to_token=Contracts.USDT)
+            return await self.asseto_position()
+        amount = max(int(float(usdt_balance.Ether) * percent), 1)
+        return await self.asseto.stake(TokenAmount(amount=amount, decimals=6))
+
     async def bitverse_positions(self, refill=None):
 
         balance = await self.bitverse.get_all_balance()
@@ -286,26 +311,30 @@ class Controller:
         if not balance or refill:
             usdt_balance = await self.client.wallet.balance(token=Contracts.USDT.address)
 
-            if float(usdt_balance.Ether) < 10:
-
-                swap = await self.zenith_liq.process_back_swap_from_natve(token=Contracts.USDT, amount=TokenAmount(
-                    amount=random.randint(30, 50),
-                    decimals=6)
-                                                                          )
+            if float(usdt_balance.Ether) < 2.5:
+                res = await self.faroswap._swap(amount=TokenAmount(amount=random.uniform(0.005, 0.01)), from_token=Contracts.PHRS, to_token=Contracts.USDT)
+                if "Failed" in res:
+                    logger.error(res)
+                else:
+                    logger.success(res)
+                # swap = await self.zenith_liq.process_back_swap_from_natve(token=Contracts.USDT, amount=TokenAmount(
+                #     amount=random.randint(30, 50),
+                #     decimals=6))
                 return await self.bitverse_positions()
 
             else:
+                amount_deposit = max(float(usdt_balance.Ether) * percent, random.uniform(2,2.5))
                 deposit = await self.bitverse.deposit(
                     token=Contracts.USDT,
                     amount=TokenAmount(
-                        amount=float(usdt_balance.Ether) * percent, decimals=6)
+                        amount=amount_deposit, decimals=6)
                 )
                 logger.success(deposit)
                 return await self.bitverse_positions()
 
-        balance = float(balance[0]['availableBalanceSize'])
+        balance = float(balance[1]['availableBalanceSize'])
 
-        if balance < 10:
+        if balance < 2:
             return await self.bitverse_positions(refill=True)
 
         amount = max(int(float(balance) * percent), 2)
@@ -339,8 +368,11 @@ class Controller:
         random.shuffle(addresses)
         to_address = random.choice(addresses)
 
-        amount = randfloat(from_=0.00001, to_=0.005, step=0.00001)
+        amount = randfloat(from_=0.00001, to_=0.0005, step=0.00001)
         amount = TokenAmount(amount=amount)
+        balance = await self.client.wallet.balance()
+        if float(amount.Ether) > float(balance.Ether):
+            return "Failed Wallet balance to small"
 
         tx = await self.base.send_eth(to_address=to_checksum_address(to_address), amount=amount)
         tx = tx['transactionHash'].hex()
@@ -349,30 +381,35 @@ class Controller:
 
     async def build_actions(self):
 
+        user_tasks = await self.user_tasks()
+
         final_actions = []
 
         settings = Settings()
 
         build_array = []
 
-        swaps_count = random.randint(settings.swaps_count_min, settings.swaps_count_max)
-        swaps_faroswap = random.randint(settings.swaps_count_min, settings.swaps_count_max)
-        tips_count = random.randint(settings.tips_count_min, settings.tips_count_max)
-        domains_count = random.randint(settings.domains_count_min, settings.domains_count_max)
-        autostake_count = random.randint(settings.autostake_count_min, settings.autostake_count_max)
-        brokex_count = random.randint(settings.brokex_count_min, settings.brokex_count_max)
+
+        # swaps_count = random.randint(settings.swaps_count_min, settings.swaps_count_max)
+        # domains_count = random.randint(settings.domains_count_min, settings.domains_count_max)
+        # autostake_count = random.randint(settings.autostake_count_min, settings.autostake_count_max)
+        # brokex_count = random.randint(settings.brokex_count_min, settings.brokex_count_max)
 
         # todo check TX in brokex and zentih for liq
-        lp_count = random.randint(settings.liquidity_count_min, settings.liquidity_count_max)
-        defi_lp_count = random.randint(settings.liquidity_count_min, settings.liquidity_count_max)
+        # lp_count = random.randint(settings.liquidity_count_min, settings.liquidity_count_max)
+        # defi_lp_count = random.randint(settings.liquidity_count_min, settings.liquidity_count_max)
+        # lending_count = random.randint(settings.lending_count_min, settings.lending_count_max)
+
+        # r2_swap_count = random.randint(settings.r2_count_min, settings.r2_count_max)
+        # r2_stake_count = random.randint(settings.r2_count_min, settings.r2_count_max)
+
+        # spout_count = random.randint(settings.spout_count_min, settings.spout_count_max)
+
+        swaps_faroswap = random.randint(settings.swaps_count_min, settings.swaps_count_max)
         faro_lp_count = random.randint(settings.liquidity_count_min, settings.liquidity_count_max)
-        lending_count = random.randint(settings.lending_count_min, settings.lending_count_max)
+        tips_count = random.randint(settings.tips_count_min, settings.tips_count_max)
         bitverse_count = random.randint(settings.bitverse_count_min, settings.bitverse_count_max)
-
-        r2_swap_count = random.randint(settings.r2_count_min, settings.r2_count_max)
-        r2_stake_count = random.randint(settings.r2_count_min, settings.r2_count_max)
-
-        spout_count = random.randint(settings.spout_count_min, settings.spout_count_max)
+        asseto_count = random.randint(settings.asseto_count_min, settings.asseto_count_max)
 
         wallet_balance = await self.client.wallet.balance()
 
@@ -404,25 +441,25 @@ class Controller:
             if faucet_status.get('data').get('is_able_to_faucet'):
                 final_actions.append(lambda: self.faucet_task())
 
-            if float(wallet_balance.Ether) <= 0.0001:
+            if float(wallet_balance.Ether) <= 0.0005:
                 if len(final_actions) == 0:
                     return f"{self.wallet} | Not enought balance for actions | Awaiting for next faucet"
 
-            usdc_r2_balance = await self.client.wallet.balance(token=USDC_R2)
+            # usdc_r2_balance = await self.client.wallet.balance(token=USDC_R2)
+            #
+            # if float(usdc_r2_balance.Ether) < 0.3:
+            #     await self.zenith.swap_to_r2_usdc()
+            #     await asyncio.sleep(3, 7)
 
-            if float(usdc_r2_balance.Ether) < 0.3:
-                await self.zenith.swap_to_r2_usdc()
-                await asyncio.sleep(3, 7)
-
-                usdc_r2_balance = await self.client.wallet.balance(token=USDC_R2)
-                wallet_balance = await self.client.wallet.balance()
+                # usdc_r2_balance = await self.client.wallet.balance(token=USDC_R2)
+                # wallet_balance = await self.client.wallet.balance()
 
             twitter_tasks, discord_tasks = await self.pharos_portal.tasks_flow()
             twitter_tasks = await self.pharos_portal.prepare_twitter_tasks(twitter_tasks=twitter_tasks, user_tasks=user_tasks)
 
-            aquaflux_nft = await self.aquaflux.already_minted(premium=True)
+            # aquaflux_nft = await self.aquaflux.already_minted(premium=True)
 
-            brokex_faucet = await self.brokex.has_claimed()
+            # brokex_faucet = await self.brokex.has_claimed()
 
             user_data = await self.pharos_portal.get_user_info()
 
@@ -430,98 +467,100 @@ class Controller:
                 if len(twitter_tasks) > 0:
                     build_array.append(lambda: self.twitter_tasks(tasks_to_do=twitter_tasks))
 
-            if wallet_balance.Ether > 1:
+            if wallet_balance.Ether > 0.1:
                 nft_badges = await self.nfts.check_badges()
 
                 if len(nft_badges) > 0:
                     final_actions.append(lambda: self.nfts.nfts_controller(not_minted=nft_badges))
 
-            if not aquaflux_nft:
-                build_array.append(lambda: self.aquaflux_flow())
-            if not brokex_faucet:
-                build_array.append(lambda: self.brokex_faucet())
+            # if not aquaflux_nft:
+            #     build_array.append(lambda: self.aquaflux_flow())
+            # if not brokex_faucet:
+            #     build_array.append(lambda: self.brokex_faucet())
 
-            build_array += await self.form_actions(user_tasks.get("101", 0), self.zenith.swaps_controller, swaps_count)
-            build_array += await self.form_actions(user_tasks.get("107", 0), self.faroswap.swap_controller,
+            # build_array += await self.form_actions(user_tasks.get("101", 0), self.zenith.swaps_controller, swaps_count)
+            # build_array += await self.form_actions(user_tasks.get("102", 0), self.random_liquidity, defi_lp_count)
+            # build_array += await self.form_actions(user_tasks.get("108", 0), self.primus.tip, tips_count)
+            # build_array += await self.form_actions(user_tasks.get("110", 0), self.autostaking_task, autostake_count)
+            # build_array += await self.form_actions(user_tasks.get("111", 0), self.brokex.deposit_liquidity,
+            #                                        lp_count // 2)
+            # build_array += await self.form_actions(user_tasks.get("111", 0), self.brokex_positions, brokex_count)
+            # build_array += await self.form_actions(user_tasks.get("114", 0), self.openfi.lending_controller,
+            #                                        lending_count)
+            
+            build_array += await self.form_actions(user_tasks.get("125", 0), self.faroswap.swap_controller,
                                                    swaps_faroswap)
-            build_array += await self.form_actions(user_tasks.get("102", 0), self.random_liquidity, defi_lp_count)
-            build_array += await self.form_actions(user_tasks.get("108", 0), self.primus.tip, tips_count)
-            build_array += await self.form_actions(user_tasks.get("110", 0), self.autostaking_task, autostake_count)
-            build_array += await self.form_actions(user_tasks.get("111", 0), self.brokex.deposit_liquidity,
-                                                   lp_count // 2)
-            build_array += await self.form_actions(user_tasks.get("111", 0), self.brokex_positions, brokex_count)
-            build_array += await self.form_actions(user_tasks.get("106", 0),
+            build_array += await self.form_actions(user_tasks.get("124", 0),
                                                    self.faroswap_liqudity.liquidity_controller, faro_lp_count)
-            build_array += await self.form_actions(user_tasks.get("114", 0), self.openfi.lending_controller,
-                                                   lending_count)
-            build_array += await self.form_actions(user_tasks.get("119", 0), self.bitverse_positions, bitverse_count)
 
-            build_array += await self.form_actions(user_tasks.get("103", 0), self.send_tokens, tips_count)
+            build_array += await self.form_actions(user_tasks.get("126", 0), self.bitverse_positions, bitverse_count)
+            build_array += await self.form_actions(user_tasks.get("121",0), self.asseto_position, asseto_count)
+
+            build_array += await self.form_actions(user_tasks.get("401", 0), self.send_tokens, tips_count)
             
-            
-            if wallet_balance.Ether > 0.20:               
-                build_array += await self.form_actions(user_tasks.get("104", 0),self.pns.mint, domains_count)
-            if wallet_balance.Ether > 0.25:
-                sig = await self.watchoor.get_contract_mint_signature()
-                if sig:
-                    build_array.append(lambda: self.watchoor.contract_mint(sig))
+            # if wallet_balance.Ether > 0.20:               
+            #     build_array += await self.form_actions(user_tasks.get("104", 0),self.pns.mint, domains_count)
+            # if wallet_balance.Ether > 0.25:
+            #     sig = await self.watchoor.get_contract_mint_signature()
+                # if sig:
+                #     build_array.append(lambda: self.watchoor.contract_mint(sig))
         
  
-            usdc_balance = await self.client.wallet.balance(token=USDC_R2)
+            # usdc_balance = await self.client.wallet.balance(token=USDC_R2)
 
-            if float(usdc_balance.Ether) > 1:
-                build_array += await self.form_actions(user_tasks.get("118", 0), self.spout.swap_controller, spout_count)
+            # if float(usdc_balance.Ether) > 1:
+            #     build_array += await self.form_actions(user_tasks.get("118", 0), self.spout.swap_controller, spout_count)
 
-            zenith_current_lp = await self.zenith_liq.check_any_positions()
+            # zenith_current_lp = await self.zenith_liq.check_any_positions()
+            #
+            # if zenith_current_lp:
+            #     build_array += [self.zenith_liq.remove_liquidity for _ in range(random.randint(2, 5))]
 
-            if zenith_current_lp:
-                build_array += [self.zenith_liq.remove_liquidity for _ in range(random.randint(2, 5))]
+            # if settings.capmonster_api_key != '':
+            #
+            #     if random.randint(1, 6) == 1:
+            #         build_array.append(lambda: self.zenith_faucet())
 
-            if settings.capmonster_api_key != '':
+            # gotchipus_ids = await self.gotchipus.get_gotchipus_tokens()
 
-                if random.randint(1, 6) == 1:
-                    build_array.append(lambda: self.zenith_faucet())
+            # if not gotchipus_ids:
+            #     build_array.append(lambda: self.gotchipus.flow())
 
-            gotchipus_ids = await self.gotchipus.get_gotchipus_tokens()
+            # if gotchipus_ids:
+            #
+            #     can_check_in = await self.gotchipus.check_in()
+            #     if can_check_in:
+            #         build_array.append(lambda: self.gotchipus.check_in())
+            #
+            #     can_pet = await self.gotchipus.can_check_pet()
+            #     if can_pet:
+            #         build_array.append(lambda: self.gotchipus.pet())
+            #
+            #     tasks_completed = await self.gotchipus.check_tasks_completed()
+            #
+            #     if not tasks_completed:
+            #         build_array.append(lambda: self.gotchipus.complete_tasks())
+            #
+            #     gotchipus_address = await self.gotchipus.get_tokenid_wallet()
+            #     gotchipus_balance = await self.client.wallet.balance(address=gotchipus_address)
+            #
+            #     if gotchipus_balance.Ether <= 0.001:
+            #         final_actions.append(lambda: self.gotchipus.popup_gotchipus(address=gotchipus_address, amount=TokenAmount(
+            #             amount=randfloat(from_=0.001, to_=0.01, step=0.001)
+            #         )))
+            #
+            #     gotchipus_count = random.randint(
+            #         settings.gotchipus_count_min,
+            #         settings.gotchipus_count_max
+            #     )
+            #
+            #     build_array.extend([lambda: self.gotchipus.transfer_from_gotchipus() for _ in range(gotchipus_count)])
 
-            if not gotchipus_ids:
-                build_array.append(lambda: self.gotchipus.flow())
-
-            if gotchipus_ids:
-
-                can_check_in = await self.gotchipus.check_in()
-                if can_check_in:
-                    build_array.append(lambda: self.gotchipus.check_in())
-
-                can_pet = await self.gotchipus.can_check_pet()
-                if can_pet:
-                    build_array.append(lambda: self.gotchipus.pet())
-
-                tasks_completed = await self.gotchipus.check_tasks_completed()
-
-                if not tasks_completed:
-                    build_array.append(lambda: self.gotchipus.complete_tasks())
-
-                gotchipus_address = await self.gotchipus.get_tokenid_wallet()
-                gotchipus_balance = await self.client.wallet.balance(address=gotchipus_address)
-
-                if gotchipus_balance.Ether <= 0.001:
-                    final_actions.append(lambda: self.gotchipus.popup_gotchipus(address=gotchipus_address, amount=TokenAmount(
-                        amount=randfloat(from_=0.001, to_=0.01, step=0.001)
-                    )))
-
-                gotchipus_count = random.randint(
-                    settings.gotchipus_count_min,
-                    settings.gotchipus_count_max
-                )
-
-                build_array.extend([lambda: self.gotchipus.transfer_from_gotchipus() for _ in range(gotchipus_count)])
-
-            if float(usdc_r2_balance.Ether) > 0:
-                build_array += await self.form_actions(user_tasks.get("117", 0),
-                                                       self.r2_swap, r2_swap_count)
-                build_array += await self.form_actions(user_tasks.get("116", 0),
-                                                       self.r2_stake, r2_stake_count)
+            # if float(usdc_r2_balance.Ether) > 0:
+            #     build_array += await self.form_actions(user_tasks.get("117", 0),
+            #                                            self.r2_swap, r2_swap_count)
+            #     build_array += await self.form_actions(user_tasks.get("116", 0),
+            #                                            self.r2_stake, r2_stake_count)
 
             random.shuffle(build_array)
 

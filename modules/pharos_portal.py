@@ -65,7 +65,7 @@ class PharosPortal(Base):
                 "",
                 "Version: 1",
                 "",
-                "Chain ID: 688688",
+                "Chain ID: 688689",
                 "",
                 f"Nonce: {nonce}",
                 "",
@@ -94,7 +94,7 @@ class PharosPortal(Base):
             "signature": sig,
             "wallet": self.wallet.wallet_type,
             "nonce": str(nonce),
-            "chain_id": "688688",
+            "chain_id": "688689",
             "timestamp": timestamp,
             "domain": "testnet.pharosnetwork.xyz",
         }
@@ -143,7 +143,7 @@ class PharosPortal(Base):
             "authorization": f"Bearer {self.jwt}",
         }
 
-        payload = {"address": self.client.account.address, "task_id": 103, "tx_hash": tx.lower()}
+        payload = {"address": self.client.account.address, "task_id": 401, "tx_hash": tx.lower()}
 
         r = await self.session.post(
             url=f"{self.BASE}/task/verify",

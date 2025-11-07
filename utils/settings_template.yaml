@@ -152,5 +152,15 @@ monad_transfer:
   min: 0.02
   max: 1
   
+# Asseto activity count
+asseto_count:
+  min: 4
+  max: 8
+
+# Asseto USDT deposit percent
+asseto_percent:
+  min: 35
+  max: 60
+
 # Invite Codes for pharos network, example [invite_code1, invite_code2]
 invite_codes: [] 
