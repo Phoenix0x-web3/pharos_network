@@ -279,8 +279,8 @@ class Controller:
         logger.debug(balance)
         settings = Settings()
         percent = randfloat(
-            from_=settings.bitverse_percent_min,
-            to_=settings.bitverse_percent_max,
+            from_=settings.asseto_percent_min,
+            to_=settings.asseto_percent_max,
             step=0.001
         ) / 100
 
