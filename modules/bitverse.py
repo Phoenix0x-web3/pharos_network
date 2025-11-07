@@ -18,7 +18,7 @@ BASE_API = "https://api.bitverse.zone/bitverse"
 
 USDT = RawContract(
     title="USDT",
-    address="0xD4071393f8716661958F766DF660033b3d35fD29",
+    address="0xE7E84B8B4f39C507499c40B4ac199B050e2882d5",
     abi=DefaultABIs.Token,
 )
 
@@ -41,7 +41,7 @@ ROUTER_IO_ABI = [
 
 POSITION_ROUTER = RawContract(
     title="PositionRouter",
-    address="0xA307cE75Bc6eF22794410D783e5D4265dEd1A24f",
+    address="0xEcbAc797f28f412ddF0D38B50f5B4a6904d46e0A",
     abi=ROUTER_IO_ABI,
 )
 
@@ -69,6 +69,7 @@ BITVERSE_TRADE_ABI = [
             {"type": "uint256", "name": "timestamp"},
             {"type": "bytes", "name": "signature"},
             {"type": "bool", "name": "isExecuteImmediately"},
+            {"type": "bool", "name": "somenewparam"},
         ],
         "outputs": [],
     },
@@ -134,13 +135,13 @@ BITVERSE_TRADE_ABI = [
 
 TRADE_ROUTER = RawContract(
     title="TradeRouter",
-    address="0xbf428011d76eFbfaEE35a20dD6a0cA589B539c54",
+    address="0xeA2fC1300ac31Afd77Cf5d5D240B69e38308a90C",
     abi=BITVERSE_TRADE_ABI,
 )
 
 CLOSE_TRADE_ROUTER = RawContract(
     title="ClosePositionRouter",
-    address="0x37769421b882845dc80b54d8Be62D34836f59c8b",
+    address="0x5D522C6D2833c7Dc42C747460C05C81BA323375d",
     abi=BITVERSE_TRADE_ABI,
 )
 
@@ -160,7 +161,7 @@ class Bitverse(Base):
             "Chain-Id": str(self.client.network.chain_id),
             "Origin": "https://testnet.bitverse.zone",
             "Referer": "https://testnet.bitverse.zone/",
-            "Tenant-Id": "PHAROS",
+            "Tenant-Id": "ATLANTIC",
         }
 
     @async_retry()
@@ -220,15 +221,15 @@ class Bitverse(Base):
 
     def _order_payload(self, pair: str, price: TokenAmount, side: int, amount: TokenAmount, leverage: int = None) -> dict:
         return {
-            "address": TRADE_PROVIDER,
+            "address": self.wallet.address,
+            "pair": "ETH-USD",
+            "price": str(price.Ether),
+            "orderType": 1,
+            "leverageE2": random.randint(2, 10) * 100 if not leverage else leverage,
+            "side": side,
+            "margin": [{"denom": "USDT", "amount": str(amount.Ether)}],
             "allowedSlippage": "10",
             "isV2": "0",
-            "leverageE2": random.randint(1, 10) * 100 if not leverage else leverage,
-            "margin": [{"denom": "USDT", "amount": str(amount.Ether)}],
-            "orderType": 1,
-            "pair": pair,
-            "price": str(price.Ether),
-            "side": side,
         }
 
     @async_retry()
@@ -311,7 +312,7 @@ class Bitverse(Base):
     @controller_log("Trade")
     async def place_order(self, pair: str, side: int, amount: TokenAmount, leverage: int = None) -> str:
         logger.debug(
-            f"{self.wallet} | {self.__module_name__} | Trying to open {'LONG' if side == 0 else 'SHORT'} position {pair} with {amount.Ether:.0f} USD"
+            f"{self.wallet} | {self.__module_name__} | Trying to open {'LONG' if side == 1 else 'SHORT'} position {pair} with {amount.Ether:.0f} USD"
         )
         price = await self._get_market_price(pair)
 
@@ -333,14 +334,12 @@ class Bitverse(Base):
 
         c = await self.client.contracts.get(contract_address=TRADE_ROUTER)
 
-        signature = bytes.fromhex(res["sign"][2:])
-
         args = TxArgs(
             pairId=res["pair"],
             price=price.Wei,
             orderType=1,
             leverageE2=int(res["leverageE2"]),
-            side=int(res["side"]),
+            side=int(res["side"]) - 1,
             slippageE6=int(res["allowedSlippage"]) * 10000,
             margins=[(Web3.to_checksum_address(USDT.address), amount.Wei)],
             takeProfitPrice=0,
@@ -348,11 +347,13 @@ class Bitverse(Base):
             positionLongOI=int(res["longOI"]),
             positionShortOI=int(res["shortOI"]),
             timestamp=int(res["signTimestamp"]),
-            signature=signature,
+            signature=res["sign"],
             isExecuteImmediately=bool(res["marketOpening"]),
+            somenewparam=False,
         )
 
         data = c.encode_abi("placeOrder", args=args.tuple())
+        data = "0x12f10a18" + data[10:]
 
         tx = await self.client.transactions.sign_and_send(
             TxParams(
@@ -365,7 +366,7 @@ class Bitverse(Base):
         await asyncio.sleep(random.randint(2, 4))
         receipt = await tx.wait_for_receipt(client=self.client, timeout=300)
         if receipt:
-            return f"Success Opened {'LONG' if side == 0 else 'SHORT'} position {pair} with {amount.Ether:.0f} USD"
+            return f"Success Opened {'LONG' if side == 1 else 'SHORT'} position {pair} with {amount.Ether:.0f} USD"
 
         raise Exception(f"Failed Open Position {pair} {'LONG' if side == 0 else 'SHORT'}")
 
@@ -455,7 +456,7 @@ class Bitverse(Base):
             amount = TokenAmount(amount=int(amount), decimals=6)
 
         pair = random.choice(TRADE_PAIRS)
-        side = random.choice([0, 1])
+        side = random.choice([1, 2])
 
         positions = await self._get_all_positions()
         if positions:
@@ -476,7 +477,7 @@ class Bitverse(Base):
                     pair = pos.get("symbol")
                     leverage = pos.get("leverageE2")
                     side = int(pos.get("side"))
-                    side = 0 if side == 1 else 1
+                    side = 1 if side == 2 else 2
                     return await self.place_order(pair=pair, side=side, amount=amount, leverage=leverage)
 
         return await self.place_order(pair=pair, side=side, amount=amount, leverage=leverage)

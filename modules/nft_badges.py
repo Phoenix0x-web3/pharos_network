@@ -44,62 +44,9 @@ NFT_ABI = [
     },
 ]
 
-PHAROSWAP_BADGE = RawContract(
-    title="Pharoswap Badge",
-    address="0x2a469a4073480596b9deb19f52aa89891ccff5ce",
-    abi=NFT_ABI,
-)
-
-
-GOTCHIPUS = RawContract(
-    title="GotChipus",
-    address="0xb2ac4f09735007562c513ebbe152a8d7fa682bef",
-    abi=NFT_ABI,
-)
-
-SPOUT = RawContract(
-    title="Spout",
-    address="0x96381ed3fcfb385cbacfe6908159f0905b19767a",
-    abi=NFT_ABI,
-)
-
-ZENTRA = RawContract(
-    title="Zentra",
-    address="0xe71188df7be6321ffd5aaa6e52e6c96375e62793",
-    abi=NFT_ABI,
-)
-
-PTB = RawContract(
-    title="PTB",
-    address="0x1Da9f40036beE3Fda37ddd9Bff624E1125d8991D",
-    abi=NFT_ABI,
-)
-
-ASTB = RawContract(
-    title="ASTB",
-    address="0x0d00314d006e70ca08ac37c3469b4bf958a7580b",
-    abi=NFT_ABI,
-)
-PNS = RawContract(
-    title="PNS",
-    address="0x4af366c7269DC9a0335Bd055Af979729c20e0F5F",
-    abi=NFT_ABI,
-)
-BROKEX = RawContract(
-    title="BROKEX ",
-    address="0x9979b7fedf761c2989642f63ba6ed580dbdfc46f",
-    abi=NFT_ABI,
-)
-
-OPENFI = RawContract(
-    title="OPENFI",
-    address="0x822483f6cf39b7dad66fec5f4feecbfd72172626",
-    abi=NFT_ABI,
-)
-
-ZENITH = RawContract(
-    title="ZENITH",
-    address="0xf4535d0781d973a26b48c617410419ec66b2af1c",
+PHAROS_ATLANTIC_BADGE = RawContract(
+    title="PHAROS",
+    address="0x22614Ca3393E83DA6411A45f012239Bafc258ABD",
     abi=NFT_ABI,
 )
 
@@ -123,7 +70,7 @@ class NFTS(Base):
 
     async def mint_nft(self, contract: RawContract = None):
         c = await self.client.contracts.get(contract_address=contract)
-        amount = TokenAmount(amount=1)
+        amount = TokenAmount(amount=0.1)
         allowlist_proof = TxArgs(
             proof=[],
             quantityLimitPerWallet=0,
@@ -150,7 +97,7 @@ class NFTS(Base):
         return f"Success | Minted {contract.title}" if rcpt else f"Failed | Mint {contract.title}"
 
     async def check_badges(self):
-        nfts = [PHAROSWAP_BADGE, PTB, ASTB, ZENTRA, SPOUT, GOTCHIPUS, PNS, BROKEX, OPENFI, ZENITH]
+        nfts = [PHAROS_ATLANTIC_BADGE]
 
         not_minted = []
 

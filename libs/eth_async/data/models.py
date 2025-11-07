@@ -455,7 +455,14 @@ class Networks:
     )
 
     PharosTestnet = Network(
-        name="pharos testnet", rpc=RPC_MAP["pharos"], chain_id=688688, tx_type=2, coin_symbol="PHRS", decimals=18, explorer="", api=None
+        name="pharos testnet",
+        rpc=RPC_MAP["pharos"],
+        chain_id=688689,
+        tx_type=2,
+        coin_symbol="PHRS",
+        decimals=18,
+        explorer="https://atlantic.pharosscan.xyz/",
+        api=None,
     )
 
     MonadTestnet = Network(

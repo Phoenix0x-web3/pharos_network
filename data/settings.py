@@ -81,6 +81,11 @@ class Settings(Singleton):
         self.monad_transfer_min = json_data.get("monad_transfer", {}).get("min")
         self.monad_transfer_max = json_data.get("monad_transfer", {}).get("max")
 
+        self.asseto_count_min = json_data.get("asseto_count", {}).get("min")
+        self.asseto_count_max = json_data.get("asseto_count", {}).get("max")
+        self.asseto_percent_min = json_data.get("asseto_percent", {}).get("min")
+        self.asseto_percent_max = json_data.get("asseto_percent", {}).get("max")
+
 
 # Configure the logger based on the settings
 settings = Settings()

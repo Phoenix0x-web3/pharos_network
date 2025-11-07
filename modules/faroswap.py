@@ -23,7 +23,7 @@ from utils.retry import async_retry
 
 DODO_ROUTER = RawContract(
     title="DodoRouter",
-    address="0x73CAfc894dBfC181398264934f7Be4e482fc9d40",
+    address="0x819829e5CF6e19F9fED92F6b4CC1edF45a2cC4A2",
     abi=[],
 )
 
@@ -62,7 +62,7 @@ class Faroswap(Base):
 
         tokens = [
             Contracts.PHRS,
-            # Contracts.USDT,
+            Contracts.USDT,
             Contracts.USDC,
             Contracts.WBTC,
         ]
@@ -295,15 +295,10 @@ POSITION_MANAGER_ABI = [
     },
 ]
 
-POSITION_MANAGER = RawContract(
-    title="NonfungiblePositionManager",
-    address="0x4b177aded3b8bd1d5d747f91b9e853513838cd49",
-    abi=POSITION_MANAGER_ABI,
-)
 
 POSITION_MANAGER_V2 = RawContract(
     title="NonfungiblePositionManager",
-    address="0xf05af5e9dc3b1dd3ad0c087bd80d7391283775e0",
+    address="0xb93Cd1E38809607a00FF9CaB633db5CAA6130dD0",
     abi=POSITION_MANAGER_ABI,
 )
 
@@ -320,12 +315,6 @@ GET_RESERVES_ABI = [
         ],
     },
 ]
-
-POOL = RawContract(
-    title="POOL",
-    address="0x3b6253ce8dac4b87cf43e02de3a2a9b02dce1be1",
-    abi=GET_RESERVES_ABI,
-)
 
 
 class FaroswapLiquidity(Faroswap):
@@ -347,7 +336,7 @@ class FaroswapLiquidity(Faroswap):
     async def fetch_liquidity_list(
         self,
         *,
-        chain_ids: list[int] | tuple[int, ...] = (688688,),
+        chain_ids: list[int] | tuple[int, ...] = [688689],
         page_size: int = 8,
         current_page: int = 1,
         filter_types: list[str] | tuple[str, ...] = ("CLASSICAL", "DVM", "DSP", "GSP", "AMMV2", "AMMV3"),
@@ -427,9 +416,13 @@ class FaroswapLiquidity(Faroswap):
         balance_map = await self.balance_map(tokens)
 
         if not balance_map:
+            await self.swap_controller()
+            return await self.liquidity_controller()
             return f"{self.wallet} | {self.__module_name__} | No balances try to faucet first"
 
         if all(float(value) == 0 for value in balance_map.values()):
+            await self.swap_controller()
+            return await self.liquidity_controller()
             return "Failed | No balance in all tokens, try to faucet first"
 
         from_token = random.choice(list(balance_map.keys()))
@@ -446,6 +439,7 @@ class FaroswapLiquidity(Faroswap):
             amount=a_amt,
         )
 
+    @async_retry()
     async def add_liquidity_v2(self, from_token: RawContract, to_token: RawContract, amount: TokenAmount):
         pools = await self.fetch_liquidity_list(filter_types=["AMMV2"])
 
