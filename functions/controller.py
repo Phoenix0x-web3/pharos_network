@@ -325,6 +325,7 @@ class Controller:
                     amount=TokenAmount(amount=amount_deposit, decimals=6)
                 )
                 logger.success(deposit)
+                refill = False
                 continue  
 
             balance = float(balance[1]['availableBalanceSize'])
