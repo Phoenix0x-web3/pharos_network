@@ -297,49 +297,45 @@ class Controller:
         return await self.asseto.stake(TokenAmount(amount=amount, decimals=6))
 
     async def bitverse_positions(self, refill=None):
+        for _ in range(5):
+            balance = await self.bitverse.get_all_balance()
+            logger.debug(balance)
+            settings = Settings()
 
-        balance = await self.bitverse.get_all_balance()
+            percent = randfloat(
+                from_=settings.bitverse_percent_min,
+                to_=settings.bitverse_percent_max,
+                step=0.001
+            ) / 100
 
-        settings = Settings()
+            if not balance or refill:
+                usdt_balance = await self.client.wallet.balance(token=Contracts.USDT.address)
 
-        percent = randfloat(
-            from_=settings.bitverse_percent_min,
-            to_=settings.bitverse_percent_max,
-            step=0.001
-        ) / 100
+                if float(usdt_balance.Ether) < 2.5:
+                    res = await self.faroswap._swap(amount=TokenAmount(amount=random.uniform(0.005, 0.01)), from_token=Contracts.PHRS, to_token=Contracts.USDT)
+                    if "Failed" in res:
+                        logger.error(res)
+                    else:
+                        logger.success(res)
+                    continue
 
-        if not balance or refill:
-            usdt_balance = await self.client.wallet.balance(token=Contracts.USDT.address)
-
-            if float(usdt_balance.Ether) < 2.5:
-                res = await self.faroswap._swap(amount=TokenAmount(amount=random.uniform(0.005, 0.01)), from_token=Contracts.PHRS, to_token=Contracts.USDT)
-                if "Failed" in res:
-                    logger.error(res)
-                else:
-                    logger.success(res)
-                # swap = await self.zenith_liq.process_back_swap_from_natve(token=Contracts.USDT, amount=TokenAmount(
-                #     amount=random.randint(30, 50),
-                #     decimals=6))
-                return await self.bitverse_positions()
-
-            else:
-                amount_deposit = max(float(usdt_balance.Ether) * percent, random.uniform(2,2.5))
+                amount_deposit = max(float(usdt_balance.Ether) * percent, random.uniform(2, 2.5))
                 deposit = await self.bitverse.deposit(
                     token=Contracts.USDT,
-                    amount=TokenAmount(
-                        amount=amount_deposit, decimals=6)
+                    amount=TokenAmount(amount=amount_deposit, decimals=6)
                 )
                 logger.success(deposit)
-                return await self.bitverse_positions()
+                continue  
 
-        balance = float(balance[1]['availableBalanceSize'])
+            balance = float(balance[1]['availableBalanceSize'])
+            logger.info(f"{self.wallet} Bitverse balance: {balance}")
 
-        if balance < 2:
-            return await self.bitverse_positions(refill=True)
+            if balance < 2:
+                refill = True
+                continue 
 
-        amount = max(int(float(balance) * percent), 2)
-
-        return await self.bitverse.bitverse_controller(amount=amount)
+            amount = max(int(float(balance) * percent), 2)
+            return await self.bitverse.bitverse_controller(amount=amount)
 
     async def r2_stake(self):
         return await self.r2.r2_controller(action='stake')
