@@ -337,6 +337,7 @@ class Controller:
 
             amount = max(int(float(balance) * percent), 2)
             return await self.bitverse.bitverse_controller(amount=amount)
+        return "Failed Deposit to Bitverse"
 
     async def r2_stake(self):
         return await self.r2.r2_controller(action='stake')
