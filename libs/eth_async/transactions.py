@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import random
 from typing import TYPE_CHECKING, Any
 
 from eth_account.datastructures import SignedTransaction
@@ -193,8 +194,6 @@ class Transactions:
                 base_fee = int(block.get("baseFeePerGas") or 0)
             except Exception:
                 base_fee = 0
-
-            import random
 
             tip = int((await self.max_priority_fee()).Wei * random.uniform(1.1, 1.5))
 
