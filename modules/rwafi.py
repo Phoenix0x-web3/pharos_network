@@ -19,7 +19,7 @@ from utils.retry import async_retry
 
 AQUAFLUX = RawContract(
     title="AquafluxNFT",
-    address="0x0D3E024c6F3Dd667AC1Dbf7f278eC865396fb323",
+    address="0x69ea30AB859ff2a51e41a85426e4C0Ea10c2D9f5",
     abi=[
         {
             "name": "faucet",
@@ -153,7 +153,7 @@ class AquaFlux(Base):
             return False
 
         self.auth_token = token
-        self.base_headers = {**self.base_headers, "authorization": f"Bearer {self.auth_token}"}
+        self.base_headers = {**self.base_headers, "Authorization": f"Bearer {self.auth_token}"}
         return True
 
     @async_retry(retries=5, delay=3, to_raise=False)
@@ -389,7 +389,11 @@ class AquaFlux(Base):
 
     @controller_log("Claim tokens")
     @async_retry()
-    async def claim_tokens(self, token_claim: RawContract) -> str:
+    async def claim_tokens(self, token_claim: RawContract | None = None) -> str:
+        tokens_claim = [AquaContracts.UST, AquaContracts.CONTOSO, AquaContracts.PRIVATE_CREDIT]
+        if not token_claim:
+            token_claim = random.choice(tokens_claim)
+            token_claim = AquaContracts.UST
         get_faucet_data = await self.get_faucet_data(token_claim.address)
         if not get_faucet_data:
             raise Exception(f"{self.wallet} can't get faucet data for claim tokens")
@@ -402,7 +406,8 @@ class AquaFlux(Base):
         )
         data = c.encode_abi("faucet", args=params.tuple())
         data = "0xc564e9ce" + data[10:]
-        tx = await self.client.transactions.sign_and_send(TxParams(to=c.address, data=data, value=0))
+        contract_address = Web3.to_checksum_address(get_faucet_data.get("contractAddress"))
+        tx = await self.client.transactions.sign_and_send(TxParams(to=contract_address, data=data))
         await asyncio.sleep(3)
         rcpt = await tx.wait_for_receipt(client=self.client, timeout=300)
         if rcpt:
