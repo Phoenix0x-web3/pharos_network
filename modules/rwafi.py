@@ -285,7 +285,7 @@ class AquaFlux(Base):
     @async_retry()
     async def earn(self, token_earn: RawContract | None = None):
         balance = await self.client.wallet.balance()
-        if balance.Ether < 0.0006:
+        if balance.Ether < 0.0003:
             return f"Failed {self.wallet} don't have enough PHRS for transaction. PHRS balance: {balance.Ether}"
         tokens_earn = [AquaContracts.S_CORP, AquaContracts.S_UST, AquaContracts.S_PCT]
         if not token_earn:
@@ -336,7 +336,7 @@ class AquaFlux(Base):
     @async_retry()
     async def deposit(self, token_structure: RawContract | None = None):
         balance = await self.client.wallet.balance()
-        if balance.Ether < 0.0006:
+        if balance.Ether < 0.0003:
             return f"Failed {self.wallet} don't have enough PHRS for transaction. PHRS balance: {balance.Ether}"
         tokens_structure = [AquaContracts.UST, AquaContracts.CONTOSO, AquaContracts.PRIVATE_CREDIT]
         if not token_structure:

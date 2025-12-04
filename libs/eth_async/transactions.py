@@ -196,9 +196,6 @@ class Transactions:
                 base_fee = int(TokenAmount(amount=1).Gwei)
 
             tip = int((await self.max_priority_fee()).Wei * random.uniform(1.2, 1.5))
-            if not tip:
-                tip = int(TokenAmount(amount=2).Gwei)
-
             min_required = base_fee + tip
 
             # add ~10% buffer on base fee (optional)
