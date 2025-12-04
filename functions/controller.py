@@ -27,6 +27,7 @@ from modules.primus import Primus
 from modules.rwafi import AquaFlux
 from modules.spout import Spout
 from modules.zenith import Zenith, ZenithLiquidity
+from modules.zenith_new import ZenithNew
 from modules.watchoor import Watchoor
 from modules.asseto import Asseto
 
@@ -52,6 +53,7 @@ class Controller:
         self.twitter = TwitterClient(user=wallet)
         self.zenith = Zenith(client=client, wallet=wallet)
         self.zenith_liq = ZenithLiquidity(client=client, wallet=wallet)
+        self.zenith_new = ZenithNew(client=client, wallet=wallet)
         self.primus = Primus(client=client, wallet=wallet)
         self.pns = PNS(client=client, wallet=wallet)
         self.autostaking = AutoStaking(client=client, wallet=wallet)
@@ -402,6 +404,9 @@ class Controller:
         # r2_stake_count = random.randint(settings.r2_count_min, settings.r2_count_max)
 
         # spout_count = random.randint(settings.spout_count_min, settings.spout_count_max)
+        zenith_liq = random.randint(settings.zenith_liq_min, settings.zenith_liq_max)
+        aquaflux_deposit = random.randint(settings.aquaflux_deposit_min, settings.aquaflux_deposit_max)
+        aquaflux_earn = random.randint(settings.aquaflux_earn_min, settings.aquaflux_earn_max)
 
         swaps_faroswap = random.randint(settings.swaps_count_min, settings.swaps_count_max)
         faro_lp_count = random.randint(settings.liquidity_count_min, settings.liquidity_count_max)
@@ -495,6 +500,12 @@ class Controller:
             build_array += await self.form_actions(user_tasks.get("121",0), self.asseto_position, asseto_count)
 
             build_array += await self.form_actions(user_tasks.get("401", 0), self.send_tokens, tips_count)
+
+            build_array += await self.form_actions(user_tasks.get("131", 0), self.zenith_new.liquidity_controller, zenith_liq)
+
+            build_array += await self.form_actions(user_tasks.get("127", 0), self.aquaflux.deposit, aquaflux_deposit)
+
+            build_array += await self.form_actions(user_tasks.get("128", 0), self.aquaflux.earn, aquaflux_earn)
             
             # if wallet_balance.Ether > 0.20:               
             #     build_array += await self.form_actions(user_tasks.get("104", 0),self.pns.mint, domains_count)

@@ -162,5 +162,20 @@ asseto_percent:
   min: 35
   max: 60
 
+# Zenit Liquidity for new season
+zenith_liq:
+  min: 41
+  max: 50
+
+# Aquaflux Deposit/Structure for new season
+aquaflux_deposit:
+  min: 41
+  max: 50
+
+# Aquaflux Earn for new season
+aquaflux_earn:
+  min: 41
+  max: 50
+
 # Invite Codes for pharos network, example [invite_code1, invite_code2]
 invite_codes: [] 

@@ -86,6 +86,15 @@ class Settings(Singleton):
         self.asseto_percent_min = json_data.get("asseto_percent", {}).get("min")
         self.asseto_percent_max = json_data.get("asseto_percent", {}).get("max")
 
+        self.zenith_liq_min = json_data.get("zenith_liq", {}).get("min")
+        self.zenith_liq_max = json_data.get("zenith_liq", {}).get("max")
+
+        self.aquaflux_deposit_min = json_data.get("aquaflux_deposit", {}).get("min")
+        self.aquaflux_deposit_max = json_data.get("aquaflux_deposit", {}).get("max")
+
+        self.aquaflux_earn_min = json_data.get("aquaflux_earn", {}).get("min")
+        self.aquaflux_earn_max = json_data.get("aquaflux_earn", {}).get("max")
+
 
 # Configure the logger based on the settings
 settings = Settings()

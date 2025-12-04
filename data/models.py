@@ -14,3 +14,5 @@ class Contracts(Singleton):
     WBTC = RawContract(title="WBTC", address="0x0c64f03eea5c30946d5c55b4b532d08ad74638a4", abi=DefaultABIs.Token)
 
     WPHRS = RawContract(title="WPHRS", address="0x838800b758277cc111b2d48ab01e5e164f8e9471", abi=read_json(path=(ABIS_DIR, "weth.json")))
+
+    WETH = RawContract(title="WETH", address="0x7d211F77525ea39A0592794f793cC1036eEaccD5", abi=read_json(path=(ABIS_DIR, "weth.json")))
