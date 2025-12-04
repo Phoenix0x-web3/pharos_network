@@ -188,19 +188,18 @@ class Transactions:
         elif "gasPrice" in tx_params and not int(tx_params["gasPrice"]):
             tx_params["gasPrice"] = (await self.gas_price()).Wei
 
-        if "maxFeePerGas" in tx_params and "maxPriorityFeePerGas" not in tx_params:
+        if "maxFeePerGas" in tx_params and "maxPriorityFeePerGas" not in tx_params or not tx_params.get("maxPriorityFeePerGas", 0):
             try:
                 block = await self.client.w3.eth.get_block("latest")
                 base_fee = int(block.get("baseFeePerGas") or 0)
             except Exception:
-                base_fee = 0
+                base_fee = int(TokenAmount(amount=1).Gwei)
 
-            tip = int((await self.max_priority_fee()).Wei * random.uniform(1.1, 1.5))
-
+            tip = int((await self.max_priority_fee()).Wei * random.uniform(1.2, 1.5))
             min_required = base_fee + tip
 
             # add ~10% buffer on base fee (optional)
-            buffer = int(base_fee * 0.10)
+            buffer = int(base_fee * 0.30)
             target_max_fee = min_required + buffer
 
             current_max = int(tx_params.get("maxFeePerGas") or 0)

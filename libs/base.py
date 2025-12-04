@@ -64,18 +64,19 @@ class Base:
         if balance.Wei <= 0:
             return False
 
-        if not amount or amount.Wei > balance.Wei:
+        if amount and amount.Wei > balance.Wei:
             amount = balance
 
         approved = await self.client.transactions.approved_amount(token=token_address, spender=spender, owner=self.client.account.address)
 
-        if amount.Wei <= approved.Wei:
+        if balance.Wei <= approved.Wei:
             return True
 
         # print(f'Trying to approve: {token_address} {amount.Ether} - {amount.Wei}')
 
         tx = await self.client.transactions.approve(token=token_address, spender=spender, amount=amount)
 
+        await asyncio.sleep(2)
         receipt = await tx.wait_for_receipt(client=self.client, timeout=300)
         if receipt:
             return True

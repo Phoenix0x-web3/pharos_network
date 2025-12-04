@@ -56,7 +56,7 @@ class Faroswap(Base):
         }
 
     @controller_log("Swap")
-    async def swap_controller(self, to_native=False):
+    async def swap_controller(self, to_native=False, from_token: RawContract | None = None, to_token: RawContract | None = None):
         settings = Settings()
         percent_to_swap = randfloat(from_=settings.swap_percent_from, to_=settings.swap_percent_to, step=0.001) / 100
 
@@ -65,6 +65,7 @@ class Faroswap(Base):
             Contracts.USDT,
             Contracts.USDC,
             Contracts.WBTC,
+            Contracts.WETH,
         ]
 
         if to_native:
@@ -94,10 +95,13 @@ class Faroswap(Base):
         if all(float(value) == 0 for value in balance_map.values()):
             return "Failed | No balance in all tokens, try to faucet first"
 
-        from_token = random.choice(list(balance_map.keys()))
+        if not from_token:
+            from_token = random.choice(list(balance_map.keys()))
 
         tokens.remove(from_token)
-        to_token = random.choice(tokens)
+
+        if not to_token:
+            to_token = random.choice(tokens)
 
         amount = float((balance_map[from_token])) * percent_to_swap
 
@@ -159,7 +163,7 @@ class Faroswap(Base):
 
         node = (data or {}).get("data", {}).get("erc20_extend_erc20ExtendV2")
         if not node:
-            logger.warning(f"{self.wallet} | DODO forecast: empty node")
+            logger.debug(f"{self.wallet} | DODO forecast: empty node")
             return None
 
         return node  # внутри будет forecastSlippageList
@@ -171,7 +175,7 @@ class Faroswap(Base):
         from_token: RawContract,
         to_token: RawContract,
         from_amount_wei: TokenAmount,
-        slippage: str = 3.24,
+        slippage: str | float = 3.24,
         estimate_gas=True,
         ttl_sec: int = 600,
         timeout=120,
@@ -212,8 +216,10 @@ class Faroswap(Base):
             to_token = PHRS
 
         slippage = await self.fetch_forecast_slippage(from_token=from_token, to_token=to_token)
-
-        slippage = slippage.get("forecastSlippageList")[-1].get("forecastSlippage") * 100
+        if not slippage:
+            slippage = 3.24
+        else:
+            slippage = slippage.get("forecastSlippageList")[-1].get("forecastSlippage") * 100
 
         route = await self.get_route(
             from_token=from_token,
