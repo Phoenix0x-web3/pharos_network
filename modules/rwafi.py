@@ -120,8 +120,8 @@ class AquaFlux(Base):
         self.auth_token: Optional[str] = None
         self.base_headers = {
             "Accept": "application/json, text/plain, */*",
-            "Origin": "https://playground.aquaflux.pro",
-            "Referer": "https://playground.aquaflux.pro/",
+            "Referer": "https://testnet.aquaflux.pro/",
+            "Origin": "https://testnet.aquaflux.pro",
             "Content-Type": "application/json",
         }
 
@@ -389,7 +389,10 @@ class AquaFlux(Base):
 
     @controller_log("Claim tokens")
     @async_retry()
-    async def claim_tokens(self, token_claim: RawContract) -> str:
+    async def claim_tokens(self, token_claim: RawContract | None = None) -> str:
+        tokens_claim = [AquaContracts.UST, AquaContracts.CONTOSO, AquaContracts.PRIVATE_CREDIT]
+        if not token_claim:
+            token_claim = random.choice(tokens_claim)
         get_faucet_data = await self.get_faucet_data(token_claim.address)
         if not get_faucet_data:
             raise Exception(f"{self.wallet} can't get faucet data for claim tokens")
