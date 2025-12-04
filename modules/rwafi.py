@@ -120,8 +120,8 @@ class AquaFlux(Base):
         self.auth_token: Optional[str] = None
         self.base_headers = {
             "Accept": "application/json, text/plain, */*",
-            "Origin": "https://playground.aquaflux.pro",
-            "Referer": "https://playground.aquaflux.pro/",
+            "Referer": "https://testnet.aquaflux.pro/",
+            "Origin": "https://testnet.aquaflux.pro",
             "Content-Type": "application/json",
         }
 
