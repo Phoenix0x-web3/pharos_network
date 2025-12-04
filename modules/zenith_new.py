@@ -1,12 +1,12 @@
 import asyncio
 import random
-from modules.faroswap import Faroswap
 
 from web3.types import TxParams
 
 from data.models import Contracts
 from libs.eth_async.client import Client
 from libs.eth_async.data.models import RawContract, TokenAmount, TxArgs
+from modules.faroswap import Faroswap
 from utils.browser import Browser
 from utils.db_api.models import Wallet
 from utils.retry import async_retry

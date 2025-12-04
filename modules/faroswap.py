@@ -14,7 +14,6 @@ from data.settings import Settings
 from libs.base import Base
 from libs.eth_async.client import Client
 from libs.eth_async.data.models import RawContract, TokenAmount, TxArgs
-from libs.eth_async.data.types import Contract
 from libs.eth_async.utils.files import read_json
 from libs.eth_async.utils.utils import randfloat
 from utils.browser import Browser

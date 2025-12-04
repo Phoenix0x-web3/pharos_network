@@ -1,9 +1,10 @@
 import asyncio
 import json
-import time
 import random
+import time
 from typing import Any, Dict, Optional, Tuple
 
+from loguru import logger
 from web3 import Web3
 from web3.types import TxParams
 
@@ -15,7 +16,6 @@ from utils.db_api.models import Wallet
 from utils.logs_decorator import action_log, controller_log
 from utils.query_json import query_to_json
 from utils.retry import async_retry
-from loguru import logger
 
 AQUAFLUX = RawContract(
     title="AquafluxNFT",
