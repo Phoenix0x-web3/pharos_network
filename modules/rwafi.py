@@ -322,7 +322,12 @@ class AquaFlux(Base):
                 }
             ],
         )
-        amount = TokenAmount(random.randint(1, int(int(balance.Ether) / 2)))
+
+        if int(balance.Ether) > 10:
+            max_deposit = 10
+        else:
+            max_deposit = int(balance.Ether)
+        amount = TokenAmount(random.randint(1, max_deposit))
         params = TxArgs(amount=amount.Wei)
         data = c.encode_abi("stake", args=params.tuple())
         data = "0xa694fc3a" + data[10:]
@@ -345,7 +350,7 @@ class AquaFlux(Base):
         if int(balance.Ether) < 2:
             logger.info(f"{self.wallet} balance too small {balance.Ether} {token_structure.title} for token deposit. Try token faucet")
             claim = await self.claim_tokens(token_structure)
-            if not "Failed" in claim:
+            if "Failed" in claim:
                 return claim
             return await self.deposit(token_structure)
         await self.approve_interface(token_address=token_structure.address, spender=AQUAFLUX_STRUCTURE.address, amount=None)
@@ -357,7 +362,11 @@ class AquaFlux(Base):
             id = "0x8b79ddf5ff2f0db54884b06a0b748a687abe7eb723e676eac22a5a811e9312ae"
         else:
             return f"Failed {self.wallet} token {token_structure.title} don't have id for structure"
-        amount = TokenAmount(random.randint(1, int(int(balance.Ether) / 2)))
+        if int(balance.Ether) > 10:
+            max_deposit = 10
+        else:
+            max_deposit = int(balance.Ether)
+        amount = TokenAmount(random.randint(1, max_deposit))
 
         c = await self.client.contracts.get(contract_address=AQUAFLUX_STRUCTURE)
         params = TxArgs(id=id, amount=amount.Wei)
@@ -387,17 +396,39 @@ class AquaFlux(Base):
 
         return False
 
+    @async_retry()
+    async def get_cooldown(self, token_claim: RawContract):
+        json_data = {
+            "jsonrpc": "2.0",
+            "id": random.randint(1, 1000),
+            "method": "eth_call",
+            "params": [
+                {
+                    "data": f"0x915f6765000000000000000000000000{self.client.account.address[2:]}000000000000000000000000{token_claim.address[2:]}",
+                    "to": "0x69ea30AB859ff2a51e41a85426e4C0Ea10c2D9f5",
+                },
+                "latest",
+            ],
+        }
+        response = await self.session.post(url="https://atlantic.dplabs-internal.com/", json=json_data)
+        data = response.json()
+        result = int(data["result"], 16)
+        return result
+
     @controller_log("Claim tokens")
     @async_retry()
     async def claim_tokens(self, token_claim: RawContract | None = None) -> str:
+        c = await self.client.contracts.get(contract_address=AQUAFLUX)
         tokens_claim = [AquaContracts.UST, AquaContracts.CONTOSO, AquaContracts.PRIVATE_CREDIT]
         if not token_claim:
             token_claim = random.choice(tokens_claim)
             token_claim = AquaContracts.UST
+        cooldown = await self.get_cooldown(token_claim=token_claim)
+        if cooldown:
+            return f"Failed Faucet {token_claim.title} have faucet cooldown {int(cooldown / 60)}m"
         get_faucet_data = await self.get_faucet_data(token_claim.address)
         if not get_faucet_data:
             raise Exception(f"{self.wallet} can't get faucet data for claim tokens")
-        c = await self.client.contracts.get(contract_address=AQUAFLUX)
         params = TxArgs(
             token=token_claim.address,
             amount=int(get_faucet_data.get("baseAmount")),
