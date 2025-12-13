@@ -440,11 +440,9 @@ class FaroswapLiquidity(Faroswap):
         to_token = random.choice(tokens)
         logger.debug(f"{self.wallet} | Trying to add liq {from_token.title} <--> {to_token.title}")
 
-        from_token, to_token, amount, b_amt, reverse = await self._order_tokens(from_token=from_token, to_token=to_token,
-                                                                   a_amt=a_amt)
+        from_token, to_token, amount, b_amt, reverse = await self._order_tokens(from_token=from_token, to_token=to_token, a_amt=a_amt)
         if reverse:
-            a_amt = TokenAmount(amount=float((balance_map[from_token])) * percent_to_liq,
-                                decimals=18 if from_token.title == "PHRS" else 6)
+            a_amt = TokenAmount(amount=float((balance_map[from_token])) * percent_to_liq, decimals=18 if from_token.title == "PHRS" else 6)
 
         return await self.add_liquidity_v2(
             from_token=from_token,
@@ -460,7 +458,6 @@ class FaroswapLiquidity(Faroswap):
 
     @async_retry()
     async def add_liquidity_v2(self, from_token: RawContract, to_token: RawContract, amount: TokenAmount):
-
         pools = await self.fetch_liquidity_list(filter_types=["AMMV2"])
 
         pool = [
