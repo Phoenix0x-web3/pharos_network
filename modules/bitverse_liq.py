@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import asyncio
 import math
-import random
 import time
 from dataclasses import dataclass
 from decimal import Decimal
@@ -349,8 +348,7 @@ class BitverseLiquidity(BitverseSpot):
         b = Web3.to_checksum_address(b)
         return (a, b) if int(a, 16) < int(b, 16) else (b, a)
 
-    def _build_pool_key_tuple_liquidity(self, token_a: str, token_b: str, *, fee: int, tick_spacing: int,
-                                        hooks: str) -> tuple:
+    def _build_pool_key_tuple_liquidity(self, token_a: str, token_b: str, *, fee: int, tick_spacing: int, hooks: str) -> tuple:
         c0, c1 = self._sorted_currencies(token_a, token_b)
         return (c0, c1, _to_uint24(int(fee)), _to_int24(int(tick_spacing)), Web3.to_checksum_address(hooks))
 
@@ -689,8 +687,7 @@ class BitverseLiquidity(BitverseSpot):
     async def liquidity_controller(self) -> str:
         settings = Settings()
 
-        percent = randfloat(from_=settings.bitverse_liquidity_percent_min,
-                            to_=settings.bitverse_liquidity_percent_max, step=0.011) / 100
+        percent = randfloat(from_=settings.bitverse_liquidity_percent_min, to_=settings.bitverse_liquidity_percent_max, step=0.011) / 100
 
         # tokens = [Contracts.USDT, Contracts.WETH]
         #
@@ -734,7 +731,6 @@ class BitverseLiquidity(BitverseSpot):
             bal_b = await self.client.wallet.balance(token_b.address)
 
         if float(bal_b.Ether) <= 0.000001 and bal_a.Wei > 0:
-
             swap_amt = TokenAmount(
                 amount=float(bal_a.Ether) * float(Decimal("0.2")),
                 decimals=await self.client.transactions.get_decimals(contract=token_a.address),
