@@ -550,8 +550,6 @@ class BitverseLiquidity(BitverseSpot):
         if slippage_bps < 0 or slippage_bps > 10_000:
             raise ValueError("slippage_bps must be in [0..10000]")
 
-        print(token_a.title, amount_a, token_b.title, amount_b)
-
         pools = await self.fetch_spot_liquidity_pools(address=self.client.account.address, tab_type=1, tenant_id=tenant_id)
         pool = self._pick_pool(pools, token_a=token_a, token_b=token_b)
 
@@ -593,9 +591,9 @@ class BitverseLiquidity(BitverseSpot):
             int(amount0_desired),
             int(amount1_desired),
         )
-        print(token_a.title, amount_a, token_b.title, amount_b, liquidity)
-        # if liquidity <= 0:
-        #     raise RuntimeError("liquidity computed as 0")
+
+        if liquidity <= 0:
+            raise RuntimeError("liquidity computed as 0")
 
         amount0_max = (int(amount0_desired) * (10_000 + int(slippage_bps))) // 10_000
         amount1_max = (int(amount1_desired) * (10_000 + int(slippage_bps))) // 10_000
