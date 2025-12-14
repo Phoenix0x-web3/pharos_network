@@ -276,7 +276,7 @@ class Controller:
     async def form_actions(have: int, factory, count: int):
         limit = 91
 
-        n = count if have < limit else random.randint(1, 2)
+        n = count if have < limit else 0
         return [factory for _ in range(n)]
 
     @async_retry()
