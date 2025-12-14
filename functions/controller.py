@@ -16,6 +16,7 @@ from modules.autostaking import AutoStaking
 from libs.eth_async.client import Client
 from libs.base import Base
 from modules.bitverse import Bitverse
+from modules.bitverse_liq import BitverseLiquidity
 from modules.bitwerse_swap import BitverseSpot
 from modules.brokex import Brokex
 from modules.faroswap import Faroswap, FaroswapLiquidity
@@ -70,7 +71,8 @@ class Controller:
         self.gotchipus = Gotchipus(client=client, wallet=wallet)
         self.watchoor = Watchoor(client=client, wallet=wallet)
         self.asseto = Asseto(client=client, wallet=wallet)
-        self.bitverseSpot = BitverseSpot(client=client, wallet=wallet)
+        self.bitverse_spot_swap = BitverseSpot(client=client, wallet=wallet)
+        self.bitverse_spot_liquidity = BitverseLiquidity(client=client, wallet=wallet)
 
     @controller_log('CheckIn')
     async def check_in_task(self):
@@ -301,8 +303,10 @@ class Controller:
         return await self.asseto.stake(TokenAmount(amount=amount, decimals=6))
 
     async def bitverse_spot(self):
-        return await self.bitverseSpot.swap_controller()
+        return await self.bitverse_spot_swap.swap_controller()
 
+    async def bitverser_liquidity_controller(self):
+        return await self.bitverse_spot_liquidity.liquidity_controller()
 
     async def bitverse_positions(self, refill=None):
         for _ in range(1):
@@ -423,6 +427,7 @@ class Controller:
         asseto_count = random.randint(settings.asseto_count_min, settings.asseto_count_max)
 
         bitverse_spot = random.randint(settings.bitverse_spot_count_min, settings.bitverse_spot_count_max)
+        bitverse_spot_liq = random.randint(settings.bitverse_liquidity_count_min, settings.bitverse_liquidity_count_max)
 
         wallet_balance = await self.client.wallet.balance()
 
@@ -510,6 +515,7 @@ class Controller:
             #129 BITWERSE SWAPS
             #130 BITWESE LIQ
             build_array += await self.form_actions(user_tasks.get("129", 0), self.bitverse_spot, bitverse_spot)
+            build_array += await self.form_actions(user_tasks.get("130", 0), self.bitverser_liquidity_controller, bitverse_spot_liq)
 
             build_array += await self.form_actions(user_tasks.get("126", 0), self.bitverse_positions, bitverse_count)
             build_array += await self.form_actions(user_tasks.get("121",0), self.asseto_position, asseto_count)

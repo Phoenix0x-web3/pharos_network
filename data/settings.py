@@ -61,6 +61,12 @@ class Settings(Singleton):
         self.bitverse_spot_count_min = json_data.get("bitverse_spot", {}).get("min")
         self.bitverse_spot_count_max = json_data.get("bitverse_spot", {}).get("max")
 
+        self.bitverse_liquidity_count_min = json_data.get("bitverse_liquidity", {}).get("min")
+        self.bitverse_liquidity_count_max = json_data.get("bitverse_liquidity", {}).get("max")
+
+        self.bitverse_liquidity_percent_min = json_data.get("bitverse_liquidity_percent", {}).get("min")
+        self.bitverse_liquidity_percent_max = json_data.get("bitverse_liquidity_percent", {}).get("max")
+
         self.bitverse_percent_min = json_data.get("bitverse_percent", {}).get("min")
         self.bitverse_percent_max = json_data.get("bitverse_percent", {}).get("max")
 

@@ -182,5 +182,15 @@ bitverse_spot:
   min: 30
   max: 50
 
+# Bitverse Liquidity Count for new season
+bitverse_liquidity:
+  min: 30
+  max: 50
+
+# Bitverse Liquidity Percent for new season
+bitverse_liquidity_percent:
+  min: 2
+  max: 5
+
 # Invite Codes for pharos network, example [invite_code1, invite_code2]
 invite_codes: [] 
