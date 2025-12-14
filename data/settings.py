@@ -57,6 +57,10 @@ class Settings(Singleton):
         self.capmonster_api_key = json_data.get("capmonster_api_key", {})
         self.bitverse_count_min = json_data.get("bitverse_count", {}).get("min")
         self.bitverse_count_max = json_data.get("bitverse_count", {}).get("max")
+
+        self.bitverse_spot_count_min = json_data.get("bitverse_spot", {}).get("min")
+        self.bitverse_spot_count_max = json_data.get("bitverse_spot", {}).get("max")
+
         self.bitverse_percent_min = json_data.get("bitverse_percent", {}).get("min")
         self.bitverse_percent_max = json_data.get("bitverse_percent", {}).get("max")
 

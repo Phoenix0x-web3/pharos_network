@@ -177,5 +177,10 @@ aquaflux_earn:
   min: 41
   max: 50
 
+# Bitverse Swap Count for new season
+bitverse_spot:
+  min: 30
+  max: 50
+
 # Invite Codes for pharos network, example [invite_code1, invite_code2]
 invite_codes: [] 

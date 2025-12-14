@@ -433,7 +433,7 @@ class Bitverse(Base):
 
     async def bitverse_controller(self, amount: float | TokenAmount) -> str:
         TRADE_PAIRS = [
-            #'BTC-USD',
+            "BTC-USD",
             "ETH-USD",
             #'GLXY-USD',
             # 'NVDA-USD',
