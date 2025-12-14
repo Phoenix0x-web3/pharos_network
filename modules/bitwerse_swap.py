@@ -484,7 +484,6 @@ class BitverseSpot(Bitverse):
         tokens = [Contracts.USDT, Contracts.WETH]
 
         balance_map = await self.balance_map(tokens)
-        print(balance_map)
         if not balance_map:
             return f"{self.wallet} | {self.__module_name__} | No balances try to faucet first"
 
