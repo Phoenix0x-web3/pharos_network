@@ -16,6 +16,7 @@ from modules.autostaking import AutoStaking
 from libs.eth_async.client import Client
 from libs.base import Base
 from modules.bitverse import Bitverse
+from modules.bitwerse_swap import BitverseSpot
 from modules.brokex import Brokex
 from modules.faroswap import Faroswap, FaroswapLiquidity
 from modules.gotchipus import Gotchipus
@@ -69,6 +70,7 @@ class Controller:
         self.gotchipus = Gotchipus(client=client, wallet=wallet)
         self.watchoor = Watchoor(client=client, wallet=wallet)
         self.asseto = Asseto(client=client, wallet=wallet)
+        self.bitverseSpot = BitverseSpot(client=client, wallet=wallet)
 
     @controller_log('CheckIn')
     async def check_in_task(self):
@@ -298,8 +300,12 @@ class Controller:
         amount = max(int(float(usdt_balance.Ether) * percent), 1)
         return await self.asseto.stake(TokenAmount(amount=amount, decimals=6))
 
+    async def bitverse_spot(self):
+        return await self.bitverseSpot.swap_controller()
+
+
     async def bitverse_positions(self, refill=None):
-        for _ in range(5):
+        for _ in range(1):
             balance = await self.bitverse.get_all_balance()
             logger.debug(balance)
             settings = Settings()
@@ -314,6 +320,7 @@ class Controller:
                 usdt_balance = await self.client.wallet.balance(token=Contracts.USDT.address)
 
                 if float(usdt_balance.Ether) < 2.5:
+
                     res = await self.faroswap._swap(amount=TokenAmount(amount=random.uniform(0.005, 0.01)), from_token=Contracts.PHRS, to_token=Contracts.USDT)
                     if "Failed" in res:
                         logger.error(res)
@@ -339,6 +346,7 @@ class Controller:
 
             amount = max(int(float(balance) * percent), 2)
             return await self.bitverse.bitverse_controller(amount=amount)
+
         return "Failed Deposit to Bitverse"
 
     async def r2_stake(self):
@@ -413,6 +421,8 @@ class Controller:
         tips_count = random.randint(settings.tips_count_min, settings.tips_count_max)
         bitverse_count = random.randint(settings.bitverse_count_min, settings.bitverse_count_max)
         asseto_count = random.randint(settings.asseto_count_min, settings.asseto_count_max)
+
+        bitverse_spot = random.randint(settings.bitverse_spot_count_min, settings.bitverse_spot_count_max)
 
         wallet_balance = await self.client.wallet.balance()
 
@@ -493,8 +503,13 @@ class Controller:
             
             build_array += await self.form_actions(user_tasks.get("125", 0), self.faroswap.swap_controller,
                                                    swaps_faroswap)
+
             build_array += await self.form_actions(user_tasks.get("124", 0),
                                                    self.faroswap_liqudity.liquidity_controller, faro_lp_count)
+
+            #129 BITWERSE SWAPS
+            #130 BITWESE LIQ
+            build_array += await self.form_actions(user_tasks.get("129", 0), self.bitverse_spot, bitverse_spot)
 
             build_array += await self.form_actions(user_tasks.get("126", 0), self.bitverse_positions, bitverse_count)
             build_array += await self.form_actions(user_tasks.get("121",0), self.asseto_position, asseto_count)
