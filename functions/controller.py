@@ -623,7 +623,7 @@ class Controller:
         random.shuffle(nft_badges)
         for nft_badge in nft_badges:
             wallet_balance = await self.client.wallet.balance()
-            if wallet_balance.Ether < 1:
+            if wallet_balance.Ether < 0.1:
                 logger.info(
                     f"{self.wallet} | Not enough balance {wallet_balance} for minting badged | Awaiting for next faucet")
                 break
