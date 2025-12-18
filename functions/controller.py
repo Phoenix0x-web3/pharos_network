@@ -628,7 +628,9 @@ class Controller:
                     f"{self.wallet} | Not enough balance {wallet_balance} for minting badged | Awaiting for next faucet")
                 break
 
-            await self.nfts.nfts_controller(not_minted=[nft_badge])
+            res = await self.nfts.nfts_controller(not_minted=[nft_badge])
+            if "Success" in res:
+                logger.success(res)
 
         return f"Done minting badges"
 
