@@ -44,11 +44,18 @@ NFT_ABI = [
     },
 ]
 
-PHAROS_ATLANTIC_BADGE = RawContract(
-    title="PHAROS",
-    address="0x22614Ca3393E83DA6411A45f012239Bafc258ABD",
-    abi=NFT_ABI,
-)
+PHAROS_ATLANTIC_BADGE = [
+    RawContract(
+        title="PHAROS",
+        address="0x22614Ca3393E83DA6411A45f012239Bafc258ABD",
+        abi=NFT_ABI,
+    ),
+    RawContract(
+        title="PHAROS Badge 2",
+        address="0x983f280af2d271244d08808ea023549278fdea9d",
+        abi=NFT_ABI,
+    ),
+]
 
 
 class NFTS(Base):
@@ -97,7 +104,7 @@ class NFTS(Base):
         return f"Success | Minted {contract.title}" if rcpt else f"Failed | Mint {contract.title}"
 
     async def check_badges(self):
-        nfts = [PHAROS_ATLANTIC_BADGE]
+        nfts = PHAROS_ATLANTIC_BADGE
 
         not_minted = []
 
