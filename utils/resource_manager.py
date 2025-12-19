@@ -261,7 +261,7 @@ async def replace_twitter_tokens(wallet: Wallet):
         # Save updated list back to file
         if ResourceManager._save_to_file(config.RESERVE_TWITTER_FILE, all_tokens):
             db.commit()
-            logger.success(f"{wallet} | Twitter token successfully selected and removed from file. Remaining: {len(all_tokens)}")
+            logger.success(f"{wallet} | Twitter token successfully replaced and removed from file. Remaining: {len(all_tokens)}")
         else:
             logger.warning("Failed to update Twitter token file, but token was selected")
 
