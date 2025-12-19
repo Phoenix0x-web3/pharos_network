@@ -25,6 +25,7 @@ class Wallet(Base):
     discord_status: Mapped[str] = mapped_column(default=None, nullable=True)
     completed: Mapped[bool] = mapped_column(default=False)
     next_faucet_time: Mapped[datetime] = mapped_column(default=datetime.now)
+    twitter_status: Mapped[str] = mapped_column(default=None, nullable=True)
 
     def __repr__(self):
         if Settings().hide_wallet_address_log:

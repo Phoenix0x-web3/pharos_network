@@ -7,10 +7,11 @@ from loguru import logger
 
 import libs.baseAsyncSession as BaseAsyncSession
 import libs.twitter as twitter
+from libs.twitter.errors import AccountLocked, AccountNotFound, AccountSuspended, AlreadyRetweeted, AlreadyTweeted, BadAccountToken
 from libs.twitter.utils import remove_at_sign
 from utils.browser import Browser
 from utils.db_api.models import Wallet
-from utils.db_api.wallet_api import update_twitter_token
+from utils.db_api.wallet_api import db, update_twitter_token
 
 
 # TODO Move to Exception file
@@ -24,6 +25,16 @@ class TwitterOauthData:
     state_verifier_token: str
     callback_url: str
     callback_response: Response
+
+
+@dataclass
+class TwitterStatuses:
+    ok: str = "OK"
+    bad_token: str = "BAD_TOKEN"
+    suspended: str = "SUSPENDED"
+    relogin: str = "RELOGIN"
+    locked: str = "LOCKED"
+    not_found: str = "NOT FOUND"
 
 
 class TwitterClient:
@@ -98,30 +109,41 @@ class TwitterClient:
         )
 
         # Establish connection
-        await self.twitter_client.__aenter__()
+        try:
+            await self.twitter_client.__aenter__()
 
-        # Check account status
-        await self.twitter_client.establish_status()
+            # Check account status
+            await self.twitter_client.establish_status()
 
-        if self.twitter_account.status == twitter.AccountStatus.GOOD:
-            logger.success(f"{self.user} Twitter client initialized")
-            update_twitter_token(private_key=self.user.private_key, updated_token=self.twitter_account.auth_token)
-            return True
-        else:
-            error_msg = f"Problem with Twitter account status: {self.twitter_account.status}"
-            logger.error(f"{self.user} {error_msg}")
-            self.last_error = error_msg
-            self.error_count += 1
+            if self.twitter_account.status == twitter.AccountStatus.GOOD:
+                logger.success(f"{self.user} Twitter client initialized")
+                update_twitter_token(id=self.user.id, updated_token=self.twitter_account.auth_token)
 
-            # If authorization issue, mark token as bad
-            if self.twitter_account.status in [
-                twitter.AccountStatus.BAD_TOKEN,
-                twitter.AccountStatus.SUSPENDED,
-            ]:
-                # TODO Replace Twitter Token to DB
-                raise BadTwitter
+                self.user.twitter_status = TwitterStatuses.ok
+                return True
 
+        except AccountSuspended:
+            self.user.twitter_status = TwitterStatuses.suspended
+            logger.error(f"{self.user} | Twitter Suspended, try to reauth manually")
             return False
+
+        except BadAccountToken:
+            self.user.twitter_status = TwitterStatuses.relogin
+            logger.error(f"{self.user} | Twitter BadToken, try to reauth manually")
+            return False
+
+        except AccountLocked:
+            self.user.twitter_status = TwitterStatuses.locked
+            logger.error(f"{self.user} | Twitter Locked, replace twitter token")
+            return False
+
+        except AccountNotFound:
+            self.user.twitter_status = TwitterStatuses.not_found
+            logger.error(f"{self.user} | Twitter Not Found, replace twitter token")
+            return False
+
+        finally:
+            db.commit()
 
     async def close(self):
         """Closes the Twitter connection"""
@@ -218,16 +240,19 @@ class TwitterClient:
             if not initialize:
                 raise Exception("Can't initialize twitter client")
         # Post the tweet
-        tweet = await self.twitter_client.tweet(text)
+        try:
+            tweet = await self.twitter_client.tweet(text)
 
-        if tweet:
-            logger.success(f"{self.user} Tweet posted (ID: {tweet.id})")
-            return tweet
-        else:
-            logger.warning(f"{self.user} Failed to post tweet")
-            return None
+            if tweet:
+                logger.success(f"{self.user} Tweet posted (ID: {tweet.id})")
+                return tweet
+            else:
+                logger.warning(f"{self.user} Failed to post tweet")
+                return None
+        except AlreadyTweeted as e:
+            return str(e)
 
-    async def retweet(self, tweet_id: int) -> bool:
+    async def retweet(self, tweet_id: int) -> bool | str:
         """
         Retweets the specified tweet
 
@@ -244,16 +269,21 @@ class TwitterClient:
                 raise Exception("Can't initialize twitter client")
 
         # Perform retweet
-        retweet_id = await self.twitter_client.repost(tweet_id)
+        try:
+            retweet_id = await self.twitter_client.repost(tweet_id)
 
-        if retweet_id:
-            logger.success(f"{self.user} Retweet successful")
-            return True
-        else:
-            logger.warning(f"{self.user} Failed to retweet")
-            return False
+            if retweet_id:
+                logger.success(f"{self.user} Retweet successful")
+                return f"Retweeted {retweet_id}"
 
-    async def reply(self, tweet_id: int, reply_text: str) -> bool:
+            else:
+                logger.warning(f"{self.user} Failed to retweet")
+                return False
+
+        except AlreadyRetweeted as e:
+            return str(e)
+
+    async def reply(self, tweet_id: int, reply_text: str) -> bool | str:
         """
         Reply the specified tweet
 
@@ -269,14 +299,17 @@ class TwitterClient:
             if not initialize:
                 raise Exception("Can't initialize twitter client")
 
-        reply_id = await self.twitter_client.reply(tweet_id=tweet_id, text=reply_text)
+        try:
+            reply_id = await self.twitter_client.reply(tweet_id=tweet_id, text=reply_text)
 
-        if reply_id:
-            logger.success(f"{self.user} Reply successful {reply_id}")
-            return True
-        else:
-            logger.warning(f"{self.user} Failed to reply ")
-            return False
+            if reply_id:
+                logger.success(f"{self.user} Reply successful {reply_id}")
+                return True
+            else:
+                logger.warning(f"{self.user} Failed to reply ")
+                return False
+        except AlreadyTweeted as e:
+            return str(e)
 
     async def like_tweet(self, tweet_id: int) -> bool:
         """
@@ -302,6 +335,53 @@ class TwitterClient:
             return True
         else:
             logger.warning(f"{self.user} Failed to like")
+            return False
+
+    async def change_name(self, name: str) -> bool:
+        """
+        Change name
+        Args:
+            name: New name for account
+        Returns:
+            Success status
+        """
+
+        if not self.twitter_client:
+            initialize = await self.initialize()
+            if not initialize:
+                raise Exception("Can't initialize twitter client")
+
+        logger.debug(self.twitter_account.name)
+        result = await self.twitter_client.change_name(name)
+
+        if result:
+            logger.success(f"{self.user} username change to {name} successful")
+            return True
+        else:
+            logger.warning(f"{self.user} Failed change to {name} username")
+            return False
+
+    async def change_username(self, username: str) -> bool:
+        """
+        Change username
+        Args:
+            username: New username for account
+        Returns:
+            Success status
+        """
+
+        if not self.twitter_client:
+            initialize = await self.initialize()
+            if not initialize:
+                raise Exception("Can't initialize twitter client")
+
+        username = await self.twitter_client.change_username(username)
+
+        if username:
+            logger.success(f"{self.user} username change to {username} successful")
+            return True
+        else:
+            logger.warning(f"{self.user} Failed change to {username} username")
             return False
 
     async def connect_twitter_to_site_oauth(self, twitter_auth_url: str) -> TwitterOauthData:
@@ -359,7 +439,10 @@ class TwitterClient:
         )
 
         return TwitterOauthData(
-            auth_token=oauth_token, state_verifier_token=oauth_verifer, callback_url=redirect_url, callback_response=resp
+            auth_token=oauth_token,
+            state_verifier_token=oauth_verifer,
+            callback_url=redirect_url,
+            callback_response=resp,
         )
 
     async def connect_twitter_to_site_oauth2(self, twitter_auth_url: str) -> TwitterOauthData:

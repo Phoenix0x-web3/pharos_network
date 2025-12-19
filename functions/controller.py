@@ -39,7 +39,7 @@ from utils.db_api.wallet_api import db
 from utils.discord.discord import DiscordOAuth, DiscordInviter, DiscordStatus
 from utils.logs_decorator import controller_log
 from utils.query_json import query_to_json
-from utils.twitter.twitter_client import TwitterClient
+from utils.twitter.twitter_client import TwitterClient, TwitterStatuses
 from utils.db_update import update_points_invites
 from utils.retry import async_retry
 
@@ -412,8 +412,9 @@ class Controller:
         now = datetime.now()
 
         if not self.wallet.next_faucet_time:
-            self.wallet.next_faucet_time = now + timedelta(minutes=random.randint(0, 100))
+            self.wallet.next_faucet_time = now + timedelta(minutes=random.randint(1440, 1600))
             db.commit()
+            if self.wallet.twitter_token: build_array.append(lambda: self.zenith_faucet())
 
         # swaps_count = random.randint(settings.swaps_count_min, settings.swaps_count_max)
         # domains_count = random.randint(settings.domains_count_min, settings.domains_count_max)
@@ -477,7 +478,8 @@ class Controller:
                     return f"{self.wallet} | Not enought balance for actions | Awaiting for next faucet"
 
             if self.wallet.next_faucet_time <= now:
-                build_array.append(lambda: self.zenith_faucet())
+                if self.wallet.twitter_token and self.wallet.twitter_status == TwitterStatuses.ok:
+                    build_array.append(lambda: self.zenith_faucet())
 
             # usdc_r2_balance = await self.client.wallet.balance(token=USDC_R2)
             #
