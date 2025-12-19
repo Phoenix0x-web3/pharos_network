@@ -14,6 +14,7 @@ REQUIRED_FILES = [
     "twitter_tokens.txt",
     "discord_tokens.txt",
     "discord_proxy.txt",
+    "reserve_twitter.txt"
 ]
 
 

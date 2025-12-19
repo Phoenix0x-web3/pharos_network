@@ -152,9 +152,11 @@ class Controller:
                     self.wallet.next_faucet_time = now + timedelta(minutes=random.randint(1440, 1540))
                     db.commit()
 
-                    await self.zenith.swaps_controller()
+                    await asyncio.sleep(random.randint(12, 20))
 
+                    await self.swap_usdc_from_zenith()
                     return faucet
+
                 if 'IP' in faucet:
 
                     logger.warning(f"{self.wallet} | Zenith Faucet | IP already fauceted today")
@@ -193,6 +195,15 @@ class Controller:
     async def brokex_faucet(self):
 
         return await self.brokex.claim_faucet()
+
+    @async_retry(retries=3, delay=5)
+    async def swap_usdc_from_zenith(self):
+        usdc_balance = await self.client.wallet.balance(token=Contracts.USDC)
+        percent = random.randint(85, 99) / 100
+        await self.zenith._swap(
+            amount=TokenAmount(amount=float(usdc_balance.Ether) * percent, decimals=6),
+            from_token=Contracts.USDC, to_token=Contracts.PHRS)
+
 
     @controller_log('Aquaflux Flow')
     async def aquaflux_flow(self, check_again=False):
@@ -459,6 +470,8 @@ class Controller:
 
             wphrs = await self.client.wallet.balance(token=Contracts.WPHRS)
 
+
+
             if float(wphrs.Ether) > 0:
                 await self.base.unwrap_eth(amount=wphrs)
 
@@ -476,6 +489,10 @@ class Controller:
             if float(wallet_balance.Ether) <= 0.0005:
                 if len(final_actions) == 0:
                     return f"{self.wallet} | Not enought balance for actions | Awaiting for next faucet"
+
+            usdc_balance = await self.client.wallet.balance(token=Contracts.USDC)
+            if float(usdc_balance.Ether) > 900:
+                await self.swap_usdc_from_zenith()
 
             if self.wallet.next_faucet_time <= now:
                 if self.wallet.twitter_token and self.wallet.twitter_status == TwitterStatuses.ok:
@@ -545,7 +562,8 @@ class Controller:
             build_array += await self.form_actions(user_tasks.get("127", 0), self.aquaflux.deposit, aquaflux_deposit)
 
             build_array += await self.form_actions(user_tasks.get("128", 0), self.aquaflux.earn, aquaflux_earn)
-            
+
+
             # if wallet_balance.Ether > 0.20:               
             #     build_array += await self.form_actions(user_tasks.get("104", 0),self.pns.mint, domains_count)
             # if wallet_balance.Ether > 0.25:
