@@ -476,7 +476,7 @@ class Controller:
                 if len(final_actions) == 0:
                     return f"{self.wallet} | Not enought balance for actions | Awaiting for next faucet"
 
-            if self.wallet.next_faucet_time >= now:
+            if self.wallet.next_faucet_time <= now:
                 build_array.append(lambda: self.zenith_faucet())
 
             # usdc_r2_balance = await self.client.wallet.balance(token=USDC_R2)
