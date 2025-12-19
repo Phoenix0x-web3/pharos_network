@@ -37,7 +37,6 @@ async def random_activity_task(wallet):
             TwitterStatuses.relogin,
             TwitterStatuses.locked,
             TwitterStatuses.not_found,
-            TwitterStatuses.suspended,
         ]:
             wallet = await replace_twitter_tokens(wallet=wallet)
 
