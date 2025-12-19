@@ -1,3 +1,5 @@
+from datetime import datetime
+
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
 
 from data.constants import PROJECT_SHORT_NAME
@@ -24,6 +26,9 @@ class Wallet(Base):
     discord_proxy: Mapped[str] = mapped_column(default=None, nullable=True)
     discord_status: Mapped[str] = mapped_column(default=None, nullable=True)
     completed: Mapped[bool] = mapped_column(default=False)
+    next_faucet_time: Mapped[datetime] = mapped_column(default=datetime.now)
+    twitter_status: Mapped[str] = mapped_column(default=None, nullable=True)
+    proxy_status: Mapped[str] = mapped_column(default=None, nullable=True)
 
     def __repr__(self):
         if Settings().hide_wallet_address_log:

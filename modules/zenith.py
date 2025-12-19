@@ -21,11 +21,11 @@ from utils.db_api.models import Wallet
 from utils.logs_decorator import controller_log
 
 ZENITH_SWAP_ROUTER = RawContract(
-    title="Zenith_router", address="0x1a4de519154ae51200b0ad7c90f7fac75547888a", abi=read_json(path=(ABIS_DIR, "zenith_router.json"))
+    title="Zenith_router", address="0x9b84996d519c6a046da9fb6b9be41bad217cb783", abi=read_json(path=(ABIS_DIR, "zenith_router.json"))
 )
 
 ZENITH_FACTORY = RawContract(
-    title="Zebith_factory", address="0x7CE5b44F2d05babd29caE68557F52ab051265F01", abi=read_json(path=(ABIS_DIR, "zenith_factory_v3.json"))
+    title="Zebith_factory", address="0xb056A6B9f61B2c0eBF4906aac341Bd118A1763fe", abi=read_json(path=(ABIS_DIR, "zenith_factory_v3.json"))
 )
 
 
@@ -39,8 +39,8 @@ class Zenith(Base):
             "accept": "*/*",
             "accept-language": "ru-RU,ru;q=0.9,en-US;q=0.8,en;q=0.7",
             "content-type": "application/json",
-            "origin": "https://testnet.zenithswap.xyz",
-            "referer": "https://testnet.zenithswap.xyz/",
+            "origin": "https://atlantic.zenithswap.xyz",
+            "referer": "https://atlantic.zenithswap.xyz/",
         }
         self.session = Browser(wallet=wallet)
 
@@ -53,7 +53,7 @@ class Zenith(Base):
 
         tokens = [
             Contracts.PHRS,
-            Contracts.USDT,
+            # Contracts.USDT,
             Contracts.USDC,
         ]
 
@@ -177,7 +177,13 @@ class Zenith(Base):
 
         return price, from_token, to_token, a_amt, b_amt
 
-    async def _swap(self, amount: TokenAmount, from_token: RawContract, to_token: RawContract, slippage: float = 3.0, fee: int = 500):
+    async def _get_factory(self):
+        contract = await self.client.contracts.get(contract_address=ZENITH_SWAP_ROUTER)
+
+        addrs = await contract.functions.factory().call()
+        print(addrs)
+
+    async def _swap(self, amount: TokenAmount, from_token: RawContract, to_token: RawContract, slippage: float = 5.0, fee: int = 500):
         contract = await self.client.contracts.get(contract_address=ZENITH_SWAP_ROUTER)
 
         from_token_is_phrs = from_token.address.upper() == Contracts.PHRS.address.upper()
@@ -249,7 +255,7 @@ class Zenith(Base):
     async def zenith_faucet_get_twitter(self):
         params = {"wallet": self.client.account.address}
 
-        r = await self.session.get(url="https://testnet-router.zenithswap.xyz/api/v1/oauth2/twitter_url", params=params)
+        r = await self.session.get(url="https://atlantic-api.zenithswap.xyz/api/v1/oauth2/twitter_url", params=params)
 
         try:
             data = r.json().get("data")
@@ -259,7 +265,7 @@ class Zenith(Base):
 
     async def zenith_faucet(self):
         site_key = "0x4AAAAAABesmP1SWw2G_ear"
-        web_site = "https://testnet.zenithswap.xyz"
+        web_site = "https://atlantic.zenithswap.xyz"
         settings = Settings()
 
         if settings.capmonster_api_key == "":
@@ -278,7 +284,7 @@ class Zenith(Base):
 
         faucet_payload = {"CFTurnstileResponse": turnstile_token}
 
-        r = await self.session.post(url="https://testnet-router.zenithswap.xyz/api/v1/faucet", json=faucet_payload, headers=self.headers)
+        r = await self.session.post(url="https://atlantic-api.zenithswap.xyz/api/v1/faucet", json=faucet_payload, headers=self.headers)
 
         try:
             data = r.json()
