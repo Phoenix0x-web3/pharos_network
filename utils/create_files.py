@@ -8,14 +8,7 @@ from ruamel.yaml.comments import CommentedMap
 from data.config import FILES_DIR, SETTINGS_FILE, TEMPLATE_SETTINGS_FILE
 from libs.eth_async.utils.files import touch
 
-REQUIRED_FILES = [
-    "private_keys.txt",
-    "proxy.txt",
-    "twitter_tokens.txt",
-    "discord_tokens.txt",
-    "discord_proxy.txt",
-    "reserve_twitter.txt"
-]
+REQUIRED_FILES = ["private_keys.txt", "proxy.txt", "twitter_tokens.txt", "discord_tokens.txt", "discord_proxy.txt", "reserve_twitter.txt"]
 
 
 def create_files() -> None:

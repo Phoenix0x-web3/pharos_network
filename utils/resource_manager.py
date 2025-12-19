@@ -7,12 +7,13 @@ from loguru import logger
 from data import config
 from utils.db_api.models import Wallet
 from utils.db_api.wallet_api import (
+    db,
     get_wallets_with_bad_proxy,
     get_wallets_with_bad_twitter,
     mark_proxy_as_bad,
     mark_twitter_as_bad,
     replace_bad_proxy,
-    replace_bad_twitter, db,
+    replace_bad_twitter,
 )
 
 
@@ -40,7 +41,7 @@ class ResourceManager:
         return []
 
     @staticmethod
-    def _save_to_file(self, file_path: str, data: List[str]) -> bool:
+    def _save_to_file(file_path: str, data: List[str]) -> bool:
         """
         Save data to a file
 
@@ -239,6 +240,7 @@ class ResourceManager:
 
         return replaced, len(bad_twitter)
 
+
 async def replace_twitter_tokens(wallet: Wallet):
     wallets = db.all(Wallet)
     all_twitter_tokens = [wallet.twitter_token for wallets in wallets]
@@ -252,14 +254,13 @@ async def replace_twitter_tokens(wallet: Wallet):
     token = random.choice(all_tokens)
 
     if token not in all_twitter_tokens:
-
-        wallet = wallet.twitter_token = token
+        wallet.twitter_token = token
 
         all_tokens.remove(token)
 
         # Save updated list back to file
         if ResourceManager._save_to_file(config.RESERVE_TWITTER_FILE, all_tokens):
-
+            db.commit()
             logger.success(f"{wallet} | Twitter token successfully selected and removed from file. Remaining: {len(all_tokens)}")
         else:
             logger.warning("Failed to update Twitter token file, but token was selected")

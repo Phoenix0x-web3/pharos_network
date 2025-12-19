@@ -33,11 +33,13 @@ async def random_activity_task(wallet):
         await random_sleep_before_start(wallet=wallet)
 
         if wallet.twitter_status and wallet.twitter_status in [
-            TwitterStatuses.bad_token, TwitterStatuses.relogin, TwitterStatuses.locked, TwitterStatuses.not_found, TwitterStatuses.suspended
-            ]:
-
+            TwitterStatuses.bad_token,
+            TwitterStatuses.relogin,
+            TwitterStatuses.locked,
+            TwitterStatuses.not_found,
+            TwitterStatuses.suspended,
+        ]:
             wallet = await replace_twitter_tokens(wallet=wallet)
-
 
         client = Client(private_key=wallet.private_key, network=Networks.PharosTestnet, proxy=wallet.proxy)
         controller = Controller(client=client, wallet=wallet)
