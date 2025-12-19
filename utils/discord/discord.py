@@ -26,7 +26,6 @@ DISCORD_SITE_KEY = "a9b5fb07-92ff-493f-86fe-352a2803b3df"
 
 class DiscordStatus:
     ok = "OK"
-    joined = "JOINED"
     bad_token = "BAD"
     duplicate = "DUPLICATE"
     captcha = "CAPTCHA"
@@ -76,10 +75,6 @@ def build_xsuperparams(
         referring_domain_current: str = "discord.com",
         release_channel: str = "stable",
         client_event_source: Optional[str] = None,
-        client_app_state: str = "focused",
-        client_launch_id: str = None,
-        client_heartbeat_session_id: str = None,
-        launch_signature: str = None,
 ) -> str:
     """
     client_build_number hardcoded  432548
@@ -99,10 +94,6 @@ def build_xsuperparams(
         "release_channel": release_channel,
         "client_build_number": 432548,
         "client_event_source": client_event_source,
-        "client_launch_id": client_launch_id,
-        "launch_signature": launch_signature,
-        "client_heartbeat_session_id": client_heartbeat_session_id,
-        "client_app_state": client_app_state,
     }
     return _b64j(payload)
 
@@ -151,7 +142,7 @@ class DiscordInviter:
 
         self.discord_token: str = wallet.discord_token
         self.invite_code = invite_code
-        self.channel = channel_id
+        self.channel = channel_id or "1270276651636232282"
         self.session_id = self._generate_session_id()
         self.timezone = timezone
         self.locale = locale
@@ -176,8 +167,6 @@ class DiscordInviter:
         self.tasks: list[asyncio.Task] = []
 
         self.x_content_properties: Optional[str] = None
-        self._init_launch_artifacts()
-        self._reset_heartbeat_session()
 
     @staticmethod
     def _generate_session_id() -> str:
@@ -189,7 +178,7 @@ class DiscordInviter:
 
     @staticmethod
     def _monotonic_ms() -> int:
-
+        # аналог performance.now(): монотонные миллисекунды от старта процесса
         return int(time.perf_counter() * 1000)
 
     def _init_launch_artifacts(self) -> None:
@@ -214,9 +203,6 @@ class DiscordInviter:
             referrer_current="https://discord.com/",
             referring_domain_current="discord.com",
             release_channel="stable",
-            client_launch_id=self.client_launch_id,
-            launch_signature=self.launch_signature,
-            client_heartbeat_session_id=self.client_heartbeat_session_id,
         )
 
     def base_headers(self) -> Dict[str, str]:
@@ -269,6 +255,8 @@ class DiscordInviter:
         return wrapper
 
     async def connect(self):
+        self._init_launch_artifacts()
+        self._reset_heartbeat_session()
 
         connector_args = {"proxy": self.proxy} if self.proxy else {}
         self.client_session = aiohttp.ClientSession(**connector_args)
@@ -318,11 +306,11 @@ class DiscordInviter:
                     "release_channel": "stable",
                     "client_build_number": 432548,
                     "client_event_source": None,
-                    "client_app_state": "focused",
-                    "client_launch_id": self.client_launch_id,
-                    "client_heartbeat_session_id": self.client_heartbeat_session_id,
-                    "launch_signature": self.launch_signature,
-                    "gateway_connect_reasons": "AppSkeleton",
+                    "client_app_state": "focused",  # или "background" если окно не в фокусе
+                    "client_launch_id": self.client_launch_id,  # UUIDv4 — на запуск
+                    "client_heartbeat_session_id": self.client_heartbeat_session_id,  # UUIDv4 — на connect
+                    "launch_signature": self.launch_signature,  # UUIDv4 — на запуск
+                    "gateway_connect_reasons": "AppSkeleton",  # как в твоём дампе
                     "is_fast_connect": False,
                 },
                 "presence": {
@@ -336,7 +324,6 @@ class DiscordInviter:
                 "client_heartbeat_initialization_timestamp": self.client_heartbeat_initialization_timestamp,
             },
         }
-
         try:
             await self.ws.send_json(payload)
         except Exception as e:
@@ -401,7 +388,7 @@ class DiscordInviter:
 
             if "You need to verify your account" in r.text:
                 logger.error(f"{self.wallet} | {self.__module_name__} | Account needs verification (Email code etc).")
-                self.wallet.discord_status = DiscordStatus.verify
+                self.wallet.discord_status = DiscordStatus.bad_token
                 db.commit()
                 return "verification_failed", "", False
 
@@ -442,14 +429,10 @@ class DiscordInviter:
                 user_agent=self.async_session.user_agent,
                 system_locale=self.locale,
                 os_version="10.15.7",
-                client_launch_id=self.client_launch_id,
-                launch_signature=self.launch_signature,
-                client_heartbeat_session_id=self.client_heartbeat_session_id,
             ),
             "host": "discord.com",
             "authorization": self.discord_token,
         }
-
         # print('headers', json.dumps(headers, indent=4))
 
         body = {'session_id': self.session_id}
@@ -615,72 +598,21 @@ class DiscordInviter:
         except Exception as e:
             logger.error(e)
 
-    # async def agree_with_server_rules(self, location_guild_id: str, location_channel_id: str) -> Tuple[bool, str]:
-    #
-    #     r = await self.async_session.get(
-    #         f"{self.REST_BASE}/guilds/{location_guild_id}/member-verification",
-    #         params={"with_guild": "false", "invite_code": self.invite_code}
-    #     )
-    #     if "Unknown Guild" in r.text:
-    #         return True, f"{self.wallet} | {self.__module_name__} | This guild does not require agreement with the rules."
-    #
-    #     headers = {
-    #         'authority': 'discord.com',
-    #         'accept': '*/*',
-    #         'content-type': 'application/json',
-    #         'origin': 'https://discord.com',
-    #         'referer': f'https://discord.com/channels/{location_guild_id}/{location_channel_id}',
-    #         'sec-ch-ua-mobile': '?0',
-    #         'sec-ch-ua-platform': f"\"{FINGERPRINT_MAC136['sec-ch-ua-platform']}\"",
-    #         'sec-fetch-dest': 'empty',
-    #         'sec-fetch-mode': 'cors',
-    #         'sec-fetch-site': 'same-origin',
-    #         'x-debug-options': 'bugReporterEnabled',
-    #         'x-discord-locale': self.locale,
-    #     }
-    #
-    #     data = r.json()
-    #     body = {
-    #         'version': data['version'],
-    #         'form_fields': [
-    #             {
-    #                 'field_type': data['form_fields'][0]['field_type'],
-    #                 'label': data['form_fields'][0]['label'],
-    #                 'description': data['form_fields'][0]['description'],
-    #                 'automations': data['form_fields'][0]['automations'],
-    #                 'required': True,
-    #                 'values': data['form_fields'][0]['values'],
-    #                 'response': True,
-    #             },
-    #         ],
-    #     }
-    #
-    #     r2 = await self.async_session.put(
-    #         f"{self.REST_BASE}/guilds/{location_guild_id}/requests/@me",
-    #         json=body,
-    #         headers=headers
-    #     )
-    #
-    #     if 'You need to verify your account' in r2.text:
-    #         return False, f"{self.wallet} | {self.__module_name__} | Account needs verification (Email code etc)."
-    #     if 'This user is already a member' in r2.text:
-    #         return True, f"{self.wallet} | {self.__module_name__} | This user is already a member!"
-    #     if "application_status" in r2.text:
-    #         if r2.json()['application_status'] == "APPROVED":
-    #             return True, f"{self.wallet} | {self.__module_name__} | Agreed to the server rules."
-    #         else:
-    #             return False, f"{self.wallet} | {self.__module_name__} | Failed to agree to the server rules: {r2.text}"
-    #     return False, f"{self.wallet} | {self.__module_name__} | Failed to agree to the server rules."
+    async def agree_with_server_rules(self, location_guild_id: str, location_channel_id: str) -> Tuple[bool, str]:
 
-    #
-    async def click_to_emoji(self, location_guild_id: str, location_channel_id: str) -> Tuple[bool, str]:
+        r = await self.async_session.get(
+            f"{self.REST_BASE}/guilds/{location_guild_id}/member-verification",
+            params={"with_guild": "false", "invite_code": self.invite_code}
+        )
+        if "Unknown Guild" in r.text:
+            return True, f"{self.wallet} | {self.__module_name__} | This guild does not require agreement with the rules."
+
         headers = {
+            'authority': 'discord.com',
             'accept': '*/*',
-            'accept-language': self.async_session.headers.get("accept-language", "en-US,en;q=0.9"),
+            'content-type': 'application/json',
             'origin': 'https://discord.com',
-            'priority': 'u=1, i',
             'referer': f'https://discord.com/channels/{location_guild_id}/{location_channel_id}',
-            'sec-ch-ua': self.async_session.headers.get("sec-ch-ua", FINGERPRINT_MAC136["sec-ch-ua"]),
             'sec-ch-ua-mobile': '?0',
             'sec-ch-ua-platform': f"\"{FINGERPRINT_MAC136['sec-ch-ua-platform']}\"",
             'sec-fetch-dest': 'empty',
@@ -688,20 +620,71 @@ class DiscordInviter:
             'sec-fetch-site': 'same-origin',
             'x-debug-options': 'bugReporterEnabled',
             'x-discord-locale': self.locale,
-            'x-discord-timezone': self.timezone,
-            'x-super-properties': self._super_props(),
         }
 
-        params = {'location': 'Message Inline Button', 'type': '0'}
+        data = r.json()
+        body = {
+            'version': data['version'],
+            'form_fields': [
+                {
+                    'field_type': data['form_fields'][0]['field_type'],
+                    'label': data['form_fields'][0]['label'],
+                    'description': data['form_fields'][0]['description'],
+                    'automations': data['form_fields'][0]['automations'],
+                    'required': True,
+                    'values': data['form_fields'][0]['values'],
+                    'response': True,
+                },
+            ],
+        }
 
-        r = await self.async_session.put(
-            f'{self.REST_BASE}/channels/1281443663469084703/messages/1336563387395473428/reactions/%E2%9C%85/%40me',
-            params=params,
-            headers=headers,
+        r2 = await self.async_session.put(
+            f"{self.REST_BASE}/guilds/{location_guild_id}/requests/@me",
+            json=body,
+            headers=headers
         )
-        if r.status_code == 204:
-            return True, f'{self.wallet} | {self.__module_name__} | Успешно нажал на emoji'
-        return False, f'{self.wallet} | {self.__module_name__} | Не смог нажать на emoji. Ответ сервера: {r.text} | Status_code: {r.status_code}'
+
+        if 'You need to verify your account' in r2.text:
+            return False, f"{self.wallet} | {self.__module_name__} | Account needs verification (Email code etc)."
+        if 'This user is already a member' in r2.text:
+            return True, f"{self.wallet} | {self.__module_name__} | This user is already a member!"
+        if "application_status" in r2.text:
+            if r2.json()['application_status'] == "APPROVED":
+                return True, f"{self.wallet} | {self.__module_name__} | Agreed to the server rules."
+            else:
+                return False, f"{self.wallet} | {self.__module_name__} | Failed to agree to the server rules: {r2.text}"
+        return False, f"{self.wallet} | {self.__module_name__} | Failed to agree to the server rules."
+
+    #
+    # async def click_to_emoji(self, location_guild_id: str, location_channel_id: str) -> Tuple[bool, str]:
+    #     headers = {
+    #         'accept': '*/*',
+    #         'accept-language': self.async_session.headers.get("accept-language", "en-US,en;q=0.9"),
+    #         'origin': 'https://discord.com',
+    #         'priority': 'u=1, i',
+    #         'referer': f'https://discord.com/channels/{location_guild_id}/{location_channel_id}',
+    #         'sec-ch-ua': self.async_session.headers.get("sec-ch-ua", FINGERPRINT_MAC136["sec-ch-ua"]),
+    #         'sec-ch-ua-mobile': '?0',
+    #         'sec-ch-ua-platform': f"\"{FINGERPRINT_MAC136['sec-ch-ua-platform']}\"",
+    #         'sec-fetch-dest': 'empty',
+    #         'sec-fetch-mode': 'cors',
+    #         'sec-fetch-site': 'same-origin',
+    #         'x-debug-options': 'bugReporterEnabled',
+    #         'x-discord-locale': self.locale,
+    #         'x-discord-timezone': self.timezone,
+    #         'x-super-properties': self._super_props(),
+    #     }
+    #
+    #     params = {'location': 'Message Inline Button', 'type': '0'}
+    #
+    #     r = await self.async_session.put(
+    #         f'{self.REST_BASE}/channels/1281443663469084703/messages/1336563387395473428/reactions/%E2%9C%85/%40me',
+    #         params=params,
+    #         headers=headers,
+    #     )
+    #     if r.status_code == 204:
+    #         return True, f'{self.wallet} | {self.__module_name__} | Успешно нажал на emoji'
+    #     return False, f'{self.wallet} | {self.__module_name__} | Не смог нажать на emoji. Ответ сервера: {r.text} | Status_code: {r.status_code}'
 
     @open_session
     async def start_accept_discord_invite(self):
@@ -709,7 +692,7 @@ class DiscordInviter:
         tz = await self.get_tz()
         self.timezone = tz
 
-        NUMBER_OF_ATTEMPTS = 1
+        NUMBER_OF_ATTEMPTS = 2
 
         for num in range(1, NUMBER_OF_ATTEMPTS + 1):
             try:
@@ -753,27 +736,15 @@ class DiscordInviter:
 
                 logger.success(answer)
 
-                # ok, answer = await self.agree_with_server_rules(location_guild_id, location_channel_id)
-                # if not ok:
-                #     logger.error(answer)
-                #     await self.close()
-                #     continue
-                #
-                # logger.success(answer)
+                ok, answer = await self.agree_with_server_rules(location_guild_id, location_channel_id)
+                if not ok:
+                    logger.error(answer)
+                    await self.close()
+                    continue
+
+                logger.success(answer)
 
                 # return of connected
-
-                if self.invite_code == 'chainopera':
-
-                    status, answer = await self.click_to_emoji(location_guild_id, location_channel_id)
-
-                    if not status:
-                        logger.error(answer)
-                        await self.close()
-                        continue
-
-                    logger.success(answer)
-
                 if invited:
                     await self.ws.close()
                     await self.close()
@@ -923,15 +894,13 @@ class DiscordOAuth:
         )
 
         if r2.status_code <= 202:
-
             try:
                 loc = r2.json().get("location")
-
                 if loc:
-                    return loc, post_params['state'] if post_params.get('state') else None
+                    return loc, post_params['state']
 
             except Exception:
                 pass
 
-        logger.exception(f'[OAuth] Status code {r2.status_code}. Response: {r2.text}')
+        logger.error(f'[OAuth] Status code {r2.status_code}. Response: {r2.text}')
         raise Exception(f'Status code {r2.status_code}. Response: {r2.text}')

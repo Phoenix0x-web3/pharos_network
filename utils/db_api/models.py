@@ -1,8 +1,10 @@
+from datetime import datetime
+
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
 
 from data.constants import PROJECT_SHORT_NAME
 from data.settings import Settings
-from datetime import datetime
+
 
 class Base(DeclarativeBase):
     pass

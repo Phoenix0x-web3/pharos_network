@@ -53,7 +53,7 @@ class Zenith(Base):
 
         tokens = [
             Contracts.PHRS,
-            #Contracts.USDT,
+            # Contracts.USDT,
             Contracts.USDC,
         ]
 
