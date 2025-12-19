@@ -412,7 +412,7 @@ class Controller:
         now = datetime.now()
 
         if not self.wallet.next_faucet_time:
-            self.wallet.next_faucet_time = now + timedelta(minutes=random.randint(1440, 1600))
+            self.wallet.next_faucet_time = now
             db.commit()
             if self.wallet.twitter_token: build_array.append(lambda: self.zenith_faucet())
 
