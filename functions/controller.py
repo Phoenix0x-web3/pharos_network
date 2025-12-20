@@ -152,9 +152,12 @@ class Controller:
                     self.wallet.next_faucet_time = now + timedelta(minutes=random.randint(1440, 1540))
                     db.commit()
 
-                    await asyncio.sleep(random.randint(12, 20))
+                    await asyncio.sleep(random.randint(12, 20)
+                    try:
+                        await self.swap_usdc_from_zenith()
+                    except:
+                        pass
 
-                    await self.swap_usdc_from_zenith()
                     return faucet
 
                 if 'IP' in faucet:
@@ -200,10 +203,12 @@ class Controller:
     async def swap_usdc_from_zenith(self):
         usdc_balance = await self.client.wallet.balance(token=Contracts.USDC)
         percent = random.randint(85, 99) / 100
-        await self.zenith._swap(
+        swap =  self.zenith._swap(
             amount=TokenAmount(amount=float(usdc_balance.Ether) * percent, decimals=6),
             from_token=Contracts.USDC, to_token=Contracts.PHRS)
 
+        if 'Failed not in swap':
+            logger.success(swap)
 
     @controller_log('Aquaflux Flow')
     async def aquaflux_flow(self, check_again=False):
@@ -493,8 +498,12 @@ class Controller:
                     return f"{self.wallet} | Not enought balance for actions | Awaiting for next faucet"
 
             usdc_balance = await self.client.wallet.balance(token=Contracts.USDC)
+            print(usdc_balance)
             if float(usdc_balance.Ether) > 900:
-                await self.swap_usdc_from_zenith()
+                try:
+                    await self.swap_usdc_from_zenith()
+                except:
+                    pass
 
             if self.wallet.next_faucet_time <= now:
                 if self.wallet.twitter_token and self.wallet.twitter_status == TwitterStatuses.ok:
