@@ -203,7 +203,7 @@ class Controller:
     async def swap_usdc_from_zenith(self):
         usdc_balance = await self.client.wallet.balance(token=Contracts.USDC)
         percent = random.randint(85, 99) / 100
-        swap =  self.zenith._swap(
+        swap = await self.zenith._swap(
             amount=TokenAmount(amount=float(usdc_balance.Ether) * percent, decimals=6),
             from_token=Contracts.USDC, to_token=Contracts.PHRS)
 
@@ -498,7 +498,6 @@ class Controller:
                     return f"{self.wallet} | Not enought balance for actions | Awaiting for next faucet"
 
             usdc_balance = await self.client.wallet.balance(token=Contracts.USDC)
-            print(usdc_balance)
             if float(usdc_balance.Ether) > 900:
                 try:
                     await self.swap_usdc_from_zenith()
