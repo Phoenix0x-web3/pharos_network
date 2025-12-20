@@ -152,9 +152,14 @@ class Controller:
                     self.wallet.next_faucet_time = now + timedelta(minutes=random.randint(1440, 1540))
                     db.commit()
 
-                    await self.zenith.swaps_controller()
+                    await asyncio.sleep(random.randint(12, 20))
+                    try:
+                        await self.swap_usdc_from_zenith()
+                    except:
+                        pass
 
                     return faucet
+
                 if 'IP' in faucet:
 
                     logger.warning(f"{self.wallet} | Zenith Faucet | IP already fauceted today")
@@ -193,6 +198,17 @@ class Controller:
     async def brokex_faucet(self):
 
         return await self.brokex.claim_faucet()
+
+    @async_retry(retries=3, delay=5)
+    async def swap_usdc_from_zenith(self):
+        usdc_balance = await self.client.wallet.balance(token=Contracts.USDC)
+        percent = random.randint(85, 99) / 100
+        swap =  self.zenith._swap(
+            amount=TokenAmount(amount=float(usdc_balance.Ether) * percent, decimals=6),
+            from_token=Contracts.USDC, to_token=Contracts.PHRS)
+
+        if 'Failed not in swap':
+            logger.success(swap)
 
     @controller_log('Aquaflux Flow')
     async def aquaflux_flow(self, check_again=False):
@@ -445,6 +461,7 @@ class Controller:
 
         wallet_balance = await self.client.wallet.balance()
 
+
         if wallet_balance.Ether == 0:
             register = await self.faucet_task(registration=True)
             logger.success(register)
@@ -459,6 +476,8 @@ class Controller:
 
             wphrs = await self.client.wallet.balance(token=Contracts.WPHRS)
 
+
+
             if float(wphrs.Ether) > 0:
                 await self.base.unwrap_eth(amount=wphrs)
 
@@ -471,11 +490,20 @@ class Controller:
             faucet_status = await self.pharos_portal.get_faucet_status()
 
             if faucet_status.get('data').get('is_able_to_faucet'):
-                final_actions.append(lambda: self.faucet_task())
+                await self.faucet_task()
 
-            if float(wallet_balance.Ether) <= 0.0005:
+            if float(wallet_balance.Ether) <= 0.0003:
                 if len(final_actions) == 0:
+                    logger.warning(f"{self.wallet} | Not enought balance for actions | Awaiting for next faucet")
                     return f"{self.wallet} | Not enought balance for actions | Awaiting for next faucet"
+
+            usdc_balance = await self.client.wallet.balance(token=Contracts.USDC)
+            print(usdc_balance)
+            if float(usdc_balance.Ether) > 900:
+                try:
+                    await self.swap_usdc_from_zenith()
+                except:
+                    pass
 
             if self.wallet.next_faucet_time <= now:
                 if self.wallet.twitter_token and self.wallet.twitter_status == TwitterStatuses.ok:
@@ -545,7 +573,8 @@ class Controller:
             build_array += await self.form_actions(user_tasks.get("127", 0), self.aquaflux.deposit, aquaflux_deposit)
 
             build_array += await self.form_actions(user_tasks.get("128", 0), self.aquaflux.earn, aquaflux_earn)
-            
+
+
             # if wallet_balance.Ether > 0.20:               
             #     build_array += await self.form_actions(user_tasks.get("104", 0),self.pns.mint, domains_count)
             # if wallet_balance.Ether > 0.25:

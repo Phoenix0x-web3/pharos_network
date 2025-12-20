@@ -22,6 +22,9 @@ ABIS_DIR = os.path.join(ROOT_DIR, "data", "abis")
 
 SALT_PATH = os.path.join(FILES_DIR, "salt.dat")
 
+RESERVE_PROXY_FILE = os.path.join(FILES_DIR, "reserve_proxy.txt")
+RESERVE_TWITTER_FILE = os.path.join(FILES_DIR, "reserve_twitter.txt")
+
 CIPHER_SUITE = None
 LOCK = asyncio.Lock()
 

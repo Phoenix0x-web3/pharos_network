@@ -16,6 +16,8 @@ from utils.db_api.models import Wallet
 from utils.db_api.wallet_api import db
 from utils.discord.discord import DiscordStatus
 from utils.encryption import check_encrypt_param
+from utils.resource_manager import replace_twitter_tokens
+from utils.twitter.twitter_client import TwitterStatuses
 
 
 async def random_sleep_before_start(wallet):
@@ -29,6 +31,14 @@ async def random_sleep_before_start(wallet):
 async def random_activity_task(wallet):
     try:
         await random_sleep_before_start(wallet=wallet)
+
+        if wallet.twitter_status and wallet.twitter_status in [
+            TwitterStatuses.bad_token,
+            TwitterStatuses.relogin,
+            TwitterStatuses.locked,
+            TwitterStatuses.not_found,
+        ]:
+            wallet = await replace_twitter_tokens(wallet=wallet)
 
         client = Client(private_key=wallet.private_key, network=Networks.PharosTestnet, proxy=wallet.proxy)
         controller = Controller(client=client, wallet=wallet)
