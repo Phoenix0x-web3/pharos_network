@@ -456,6 +456,7 @@ class Controller:
 
         wallet_balance = await self.client.wallet.balance()
 
+
         if wallet_balance.Ether == 0:
             register = await self.faucet_task(registration=True)
             logger.success(register)
@@ -484,10 +485,11 @@ class Controller:
             faucet_status = await self.pharos_portal.get_faucet_status()
 
             if faucet_status.get('data').get('is_able_to_faucet'):
-                final_actions.append(lambda: self.faucet_task())
+                await self.faucet_task()
 
-            if float(wallet_balance.Ether) <= 0.0005:
+            if float(wallet_balance.Ether) <= 0.0003:
                 if len(final_actions) == 0:
+                    logger.warning(f"{self.wallet} | Not enought balance for actions | Awaiting for next faucet")
                     return f"{self.wallet} | Not enought balance for actions | Awaiting for next faucet"
 
             usdc_balance = await self.client.wallet.balance(token=Contracts.USDC)
