@@ -152,7 +152,7 @@ class Controller:
                     self.wallet.next_faucet_time = now + timedelta(minutes=random.randint(1440, 1540))
                     db.commit()
 
-                    await asyncio.sleep(random.randint(12, 20)
+                    await asyncio.sleep(random.randint(12, 20))
                     try:
                         await self.swap_usdc_from_zenith()
                     except:
