@@ -26,6 +26,8 @@ class Wallet(Base):
     discord_proxy: Mapped[str] = mapped_column(default=None, nullable=True)
     discord_status: Mapped[str] = mapped_column(default=None, nullable=True)
     completed: Mapped[bool] = mapped_column(default=False)
+    eligble: Mapped[bool] = mapped_column(default=False)
+    drop: Mapped[float] = mapped_column(default=0.0)
     next_faucet_time: Mapped[datetime] = mapped_column(default=datetime.now)
     twitter_status: Mapped[str] = mapped_column(default=None, nullable=True)
     proxy_status: Mapped[str] = mapped_column(default=None, nullable=True)
