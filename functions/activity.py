@@ -170,6 +170,9 @@ async def activity(action: int):
     elif action == 6:
         await execute(wallets, transfer_from_monad)
 
+    elif action == 7:
+        await execute(wallets, pharos_checker)
+
 
 async def transfer_from_monad(wallet):
     await random_sleep_before_start(wallet=wallet)
@@ -276,6 +279,24 @@ async def update_points(wallet):
     controller = Controller(client=client, wallet=wallet)
 
     await controller.update_db_by_user_info()
+
+
+async def pharos_checker(wallet):
+    client = Client(private_key=wallet.private_key, proxy=wallet.proxy, network=Networks.PharosTestnet, check_proxy=False)
+
+    controller = Controller(client=client, wallet=wallet)
+
+    try:
+        result = await controller.pharos_checker()
+
+        if "Failed" not in result:
+            # logger.success(result)
+            return result
+
+        logger.error(result)
+
+    except Exception as e:
+        logger.error(e)
 
 
 async def mint_nft_badges(wallet):

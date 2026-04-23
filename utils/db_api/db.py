@@ -128,8 +128,12 @@ class DB:
             return
 
         try:
+            preparer = self.engine.dialect.identifier_preparer
+            quoted_table_name = preparer.quote(table_name)
+            quoted_column_name = preparer.quote(column_name)
+
             # Формируем SQL-запрос для добавления колонки
-            alter_table_query = f"ALTER TABLE {table_name} ADD COLUMN {column_name} {column_type}"
+            alter_table_query = f"ALTER TABLE {quoted_table_name} ADD COLUMN {quoted_column_name} {column_type}"
 
             # Устанавливаем только DEFAULT, если оно задано
             if default_value is not None:

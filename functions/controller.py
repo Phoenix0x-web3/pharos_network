@@ -20,6 +20,7 @@ from modules.bitverse import Bitverse
 from modules.bitverse_liq import BitverseLiquidity
 from modules.bitwerse_swap import BitverseSpot
 from modules.brokex import Brokex
+from modules.checker import Checker
 from modules.faroswap import Faroswap, FaroswapLiquidity
 from modules.gotchipus import Gotchipus
 from modules.nft_badges import NFTS
@@ -74,6 +75,7 @@ class Controller:
         self.asseto = Asseto(client=client, wallet=wallet)
         self.bitverse_spot_swap = BitverseSpot(client=client, wallet=wallet)
         self.bitverse_spot_liquidity = BitverseLiquidity(client=client, wallet=wallet)
+        self.checker = Checker(client=client, wallet=wallet)
 
     @controller_log('CheckIn')
     async def check_in_task(self):
@@ -177,6 +179,9 @@ class Controller:
             logger.error(e)
             return f'Failed | {e}'
 
+    @controller_log('Pharos Checker')
+    async def pharos_checker(self):
+        return await self.checker.check_token()
 
     async def discord_tasks(self, tasks: list):
         try:

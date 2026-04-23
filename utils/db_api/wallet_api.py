@@ -136,3 +136,4 @@ def get_wallets_with_bad_twitter() -> list:
 
 db = DB(f"sqlite:///{WALLETS_DB}", echo=False, pool_recycle=3600, connect_args={"check_same_thread": False})
 db.create_tables(Base)
+db.ensure_model_columns(Wallet)

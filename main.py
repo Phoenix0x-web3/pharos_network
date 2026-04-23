@@ -26,6 +26,7 @@ PROJECT_ACTIONS = [
     "4. Update Points",
     "5. Mint All Badges",
     "6. Transfer from Monad",
+    "7. Pharos Checker",
     "Back",
 ]
 
@@ -88,6 +89,8 @@ async def choose_action():
         await activity(action=5)
     elif "6" in action:
         await activity(action=6)
+    elif "7" in action:
+        await activity(action=7)
 
     elif action == "Exit":
         console.print(f"[bold red]Exiting {PROJECT_NAME}...[/bold red]")
