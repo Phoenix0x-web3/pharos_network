@@ -1,23 +1,13 @@
-import asyncio
-import datetime as dt
-import json
-import random
 import time
 from datetime import datetime, timezone
-from urllib.parse import parse_qs, unquote, urlparse
 
 from loguru import logger
 
-from data.settings import Settings
 from libs.base import Base
 from libs.eth_async.client import Client
 from utils.browser import Browser
 from utils.db_api.models import Wallet
 from utils.db_api.wallet_api import db
-from utils.logs_decorator import action_log, controller_log
-from utils.query_json import query_to_json
-from utils.retry import async_retry
-from utils.twitter.twitter_client import TwitterClient
 
 
 class Checker(Base):
@@ -70,9 +60,6 @@ class Checker(Base):
         return items[idx]
 
     async def login(self):
-        settings = Settings()
-        nonce = await self.client.wallet.nonce()
-
         message = await self._siwe_message()
 
         sig = await self.sign_message(text=message)
@@ -103,7 +90,7 @@ class Checker(Base):
         await self.login()
 
         params = {
-            'address': self.client.account.address,
+            "address": self.client.account.address,
         }
 
         headers = {
@@ -127,8 +114,7 @@ class Checker(Base):
 
         r.raise_for_status()
 
-        if r.json().get('data'):
-
+        if r.json().get("data"):
             logger.success(f"{self.wallet.id} | {self.client.account.address} | ELIGBLE | {r.json()}")
             self.wallet.eligble = True
             db.commit()

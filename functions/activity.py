@@ -290,7 +290,7 @@ async def pharos_checker(wallet):
         result = await controller.pharos_checker()
 
         if "Failed" not in result:
-            #logger.success(result)
+            # logger.success(result)
             return result
 
         logger.error(result)
